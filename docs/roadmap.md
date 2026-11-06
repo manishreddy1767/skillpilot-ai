@@ -75,13 +75,20 @@ the Electron decision is revisited here.
 
 ## Testing
 
+Every feature ships with unit tests and integration tests, and they must pass before it counts as
+done. `npm run test:all` runs every layer.
+
 | Layer | Tool | Covers |
 |---|---|---|
-| Logic and data | Vitest | Progress calculations, repositories, migrations |
-| Windows | `tests/desktop/widget.ps1` | Real mouse input against the built app, reading state from Windows |
+| Unit | Vitest, tests beside the code | Logic, windows, tray, bridge, screens, scripts |
+| Integration | Playwright, `tests/integration` | The real app with a faked cursor: IPC, security, windows, tray, quit, errors |
+| Desktop | `tests/desktop/widget.ps1` | Real mouse input against the built app, reading state from Windows |
 | Manual checklist | By hand | Hover feel, tray menu, sleep and wake, fullscreen apps |
 
 Mouse feel cannot be fully automated, so it stays on the manual checklist.
+
+Integration tests build to `out-test/` and use their own data folder, so they cannot disturb a running
+copy of the app or real data. The desktop test uses the real mouse and `out/`, so close the app first.
 
 ## Commit approach
 
