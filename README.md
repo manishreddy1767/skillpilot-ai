@@ -5,7 +5,8 @@ widget. It tracks skills, goals, projects, and learning, and uses AI to recommen
 
 Status: MVP complete. The floating widget works, with free dragging, remembered position, a hover
 overview, and click to open. The full window stores your profile, education, experience, and
-certifications locally. Skills, goals, and projects come next. See the [roadmap](docs/roadmap.md).
+certifications locally, along with skills, evidence, goals, and projects, and a dashboard shows your
+progress. AI features come next. See the [roadmap](docs/roadmap.md).
 
 ## Running it
 

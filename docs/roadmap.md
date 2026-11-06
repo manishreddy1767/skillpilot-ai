@@ -41,7 +41,7 @@ the Electron decision is revisited here.
 - Profile, education, experience, and certification screens
 - Goal and career details feeding the hover overview
 
-### M3: Career data (Phase 2)
+### M3: Career data (Phase 2), complete
 
 - Skills with claimed and demonstrated levels, and evidence
 - Goals with milestones
