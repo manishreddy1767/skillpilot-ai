@@ -12,7 +12,18 @@ beforeEach(() => {
     openApp: vi.fn(),
     minimizeToWidget: vi.fn(),
     getOverview: vi.fn(() =>
-      Promise.resolve({ ok: true as const, value: { name: '', currentGoal: '', targetRoles: '' } })
+      Promise.resolve({
+        ok: true as const,
+        value: {
+          name: '',
+          currentGoal: '',
+          targetRoles: '',
+          progress: null,
+          learning: [],
+          nextDeadline: null,
+          latestAchievement: null
+        }
+      })
     ),
     onOverviewChanged: vi.fn(() => () => undefined),
     getProfile: vi.fn(() => Promise.resolve({ ok: true as const, value: {} })),
@@ -21,7 +32,15 @@ beforeEach(() => {
     saveRecord: vi.fn((_kind, id, values) =>
       Promise.resolve({ ok: true as const, value: { id: id ?? 1, values } })
     ),
-    deleteRecord: vi.fn(() => Promise.resolve({ ok: true as const, value: true }))
+    deleteRecord: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    listLinks: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
+    setLink: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    getDashboard: vi.fn(() =>
+      Promise.resolve({
+        ok: true as const,
+        value: { overall: null, skills: [], goals: [], projects: [], deadlines: [], achievements: [] }
+      })
+    )
   }
   window.skillpilot = api
   // jsdom has no pointer capture.

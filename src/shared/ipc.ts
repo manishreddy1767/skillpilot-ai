@@ -1,4 +1,5 @@
-import type { FieldValues, OverviewData, RecordKind, Result, StoredRecord } from './career'
+import type { FieldValues, Link, LinkKind, OverviewData, RecordKind, Result, StoredRecord } from './career'
+import type { Dashboard } from './progress'
 
 export const Channel = {
   DragPress: 'widget:drag-press',
@@ -14,7 +15,10 @@ export const Channel = {
   SaveProfile: 'profile:save',
   ListRecords: 'records:list',
   SaveRecord: 'records:save',
-  DeleteRecord: 'records:delete'
+  DeleteRecord: 'records:delete',
+  ListLinks: 'links:list',
+  SetLink: 'links:set',
+  GetDashboard: 'dashboard:get'
 } as const
 
 /** The whole surface renderers can reach. They get nothing else from the main process. */
@@ -31,9 +35,23 @@ export interface SkillPilotApi {
   onOverviewChanged(listener: () => void): () => void
   getProfile(): Promise<Result<FieldValues>>
   saveProfile(values: FieldValues): Promise<Result<FieldValues>>
-  listRecords(kind: RecordKind): Promise<Result<StoredRecord[]>>
-  saveRecord(kind: RecordKind, id: number | null, values: FieldValues): Promise<Result<StoredRecord>>
-  deleteRecord(kind: RecordKind, id: number): Promise<Result<boolean>>
+  listRecords(kind: RecordKind, parentId?: number): Promise<Result<StoredRecord[]>>
+  saveRecord(
+    kind: RecordKind,
+    id: number | null,
+    values: FieldValues,
+    parentId?: number
+  ): Promise<Result<StoredRecord>>
+  deleteRecord(kind: RecordKind, id: number, parentId?: number): Promise<Result<boolean>>
+  listLinks(kind: LinkKind, parentId: number): Promise<Result<Link[]>>
+  setLink(
+    kind: LinkKind,
+    parentId: number,
+    childId: number,
+    linked: boolean,
+    level?: number
+  ): Promise<Result<boolean>>
+  getDashboard(): Promise<Result<Dashboard>>
 }
 
 declare global {

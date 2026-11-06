@@ -18,9 +18,14 @@ const api: SkillPilotApi = {
   },
   getProfile: () => ipcRenderer.invoke(Channel.GetProfile),
   saveProfile: (values) => ipcRenderer.invoke(Channel.SaveProfile, values),
-  listRecords: (kind) => ipcRenderer.invoke(Channel.ListRecords, kind),
-  saveRecord: (kind, id, values) => ipcRenderer.invoke(Channel.SaveRecord, kind, id, values),
-  deleteRecord: (kind, id) => ipcRenderer.invoke(Channel.DeleteRecord, kind, id)
+  listRecords: (kind, parentId) => ipcRenderer.invoke(Channel.ListRecords, kind, parentId),
+  saveRecord: (kind, id, values, parentId) =>
+    ipcRenderer.invoke(Channel.SaveRecord, kind, id, values, parentId),
+  deleteRecord: (kind, id, parentId) => ipcRenderer.invoke(Channel.DeleteRecord, kind, id, parentId),
+  listLinks: (kind, parentId) => ipcRenderer.invoke(Channel.ListLinks, kind, parentId),
+  setLink: (kind, parentId, childId, linked, level) =>
+    ipcRenderer.invoke(Channel.SetLink, kind, parentId, childId, linked, level),
+  getDashboard: () => ipcRenderer.invoke(Channel.GetDashboard)
 }
 
 contextBridge.exposeInMainWorld('skillpilot', api)

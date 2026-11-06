@@ -36,16 +36,19 @@ describe('preload bridge', () => {
       'dragPress',
       'dragRelease',
       'deleteRecord',
+      'getDashboard',
       'getOverview',
       'getProfile',
       'hoverEnter',
       'hoverLeave',
+      'listLinks',
       'listRecords',
       'minimizeToWidget',
       'onOverviewChanged',
       'openApp',
       'saveProfile',
-      'saveRecord'
+      'saveRecord',
+      'setLink'
     ].sort())
   })
 
@@ -75,12 +78,18 @@ describe('preload bridge', () => {
     expect(invoke).toHaveBeenLastCalledWith(Channel.GetProfile)
     await api.saveProfile(values)
     expect(invoke).toHaveBeenLastCalledWith(Channel.SaveProfile, values)
-    await api.listRecords('work')
-    expect(invoke).toHaveBeenLastCalledWith(Channel.ListRecords, 'work')
-    await api.saveRecord('work', 3, values)
-    expect(invoke).toHaveBeenLastCalledWith(Channel.SaveRecord, 'work', 3, values)
-    await api.deleteRecord('work', 3)
-    expect(invoke).toHaveBeenLastCalledWith(Channel.DeleteRecord, 'work', 3)
+    await api.listRecords('evidence', 5)
+    expect(invoke).toHaveBeenLastCalledWith(Channel.ListRecords, 'evidence', 5)
+    await api.saveRecord('evidence', 3, values, 5)
+    expect(invoke).toHaveBeenLastCalledWith(Channel.SaveRecord, 'evidence', 3, values, 5)
+    await api.deleteRecord('evidence', 3, 5)
+    expect(invoke).toHaveBeenLastCalledWith(Channel.DeleteRecord, 'evidence', 3, 5)
+    await api.listLinks('goalSkill', 2)
+    expect(invoke).toHaveBeenLastCalledWith(Channel.ListLinks, 'goalSkill', 2)
+    await api.setLink('goalSkill', 2, 4, true, 3)
+    expect(invoke).toHaveBeenLastCalledWith(Channel.SetLink, 'goalSkill', 2, 4, true, 3)
+    await api.getDashboard()
+    expect(invoke).toHaveBeenLastCalledWith(Channel.GetDashboard)
   })
 
   it('forwards overview changes without the event, and can stop', () => {
