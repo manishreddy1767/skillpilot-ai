@@ -35,10 +35,10 @@ the Electron decision is revisited here.
 - Main window with minimize-to-widget
 - Reset widget position in the tray
 
-### M2: Profile and storage (Phase 2 start, completes the MVP)
+### M2: Profile and storage (Phase 2 start, completes the MVP), complete
 
 - SQLite, migrations, and backups
-- Profile, education, and experience screens
+- Profile, education, experience, and certification screens
 - Goal and career details feeding the hover overview
 
 ### M3: Career data (Phase 2)

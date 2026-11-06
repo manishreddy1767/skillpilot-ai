@@ -3,8 +3,9 @@
 A private, single-user career assistant for Windows that lives on the desktop as a small floating
 widget. It tracks skills, goals, projects, and learning, and uses AI to recommend what to do next.
 
-Status: early development. The floating widget works: free dragging, remembered position, hover
-overview, and click to open. Career features come next. See the [roadmap](docs/roadmap.md).
+Status: MVP complete. The floating widget works, with free dragging, remembered position, a hover
+overview, and click to open. The full window stores your profile, education, experience, and
+certifications locally. Skills, goals, and projects come next. See the [roadmap](docs/roadmap.md).
 
 ## Running it
 
@@ -22,6 +23,8 @@ npm run test:all       # everything
 
 Use `npm run dev` or `npm start`. They build the app first, whereas `npx electron .` fails with
 "Error launching app" if there is no build yet.
+
+Your data stays on this laptop in `%APPDATA%\SkillPilot AI`, with daily backups in its `backups` folder.
 
 To exit, right-click the tray icon and choose Quit SkillPilot AI. Unexpected errors are saved to
 `%APPDATA%\SkillPilot AI\logs\errors.log`.
