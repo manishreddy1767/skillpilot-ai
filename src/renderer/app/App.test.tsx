@@ -5,10 +5,17 @@ import { App } from './App'
 const go = (name: string) => fireEvent.click(screen.getByRole('button', { name }))
 
 describe('App', () => {
-  it('opens on the profile', async () => {
+  it('opens on the dashboard', async () => {
     render(<App />)
-    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Profile' }).getAttribute('aria-current')).toBe('page')
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Dashboard' }).getAttribute('aria-current')).toBe('page')
+  })
+
+  it.each(['Skills', 'Goals', 'Projects', 'Profile'])('switches to %s', async (label) => {
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Dashboard' })
+    go(label)
+    expect(await screen.findByRole('heading', { name: label })).toBeTruthy()
   })
 
   it.each([
@@ -19,7 +26,7 @@ describe('App', () => {
     render(<App />)
     go(label)
     expect(await screen.findByRole('heading', { name: label })).toBeTruthy()
-    expect(window.skillpilot.listRecords).toHaveBeenLastCalledWith(kind)
+    expect(window.skillpilot.listRecords).toHaveBeenLastCalledWith(kind, undefined)
   })
 
   it('reloads records when moving between sections', async () => {
@@ -33,7 +40,7 @@ describe('App', () => {
 
   it('minimizes back to the widget', async () => {
     render(<App />)
-    await screen.findByRole('heading', { name: 'Profile' })
+    await screen.findByRole('heading', { name: 'Dashboard' })
     go('Minimize to widget')
     expect(window.skillpilot.minimizeToWidget).toHaveBeenCalledOnce()
   })

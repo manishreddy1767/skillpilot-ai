@@ -14,6 +14,7 @@ body,
 
 button,
 input,
+select,
 textarea {
   font: inherit;
   color: inherit;
@@ -33,6 +34,7 @@ button:hover {
 
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid #5eead4;
   outline-offset: 1px;
@@ -155,6 +157,7 @@ main h1 {
 }
 
 .field input,
+.field select,
 .field textarea {
   box-sizing: border-box;
   width: 100%;
@@ -210,18 +213,80 @@ main h1 {
 }
 
 .records li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   padding: 10px 14px;
   border-radius: 8px;
   background: #1e293b;
 }
 
-.records li > div:first-child {
+.record-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.record-text {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.record-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #334155;
+}
+
+.record-details .records li {
+  background: #0f172a;
+}
+
+.record-details .field input,
+.record-details .field select,
+.record-details .field textarea,
+.record-details .links select {
+  background: #0f172a;
+}
+
+.record-details h3 {
+  margin: 16px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.record-details .lead {
+  margin-bottom: 8px;
+}
+
+.links {
+  margin: 16px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.links legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.link-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.link-row select {
+  padding: 2px 6px;
+  border: 1px solid #334155;
+  border-radius: 6px;
 }
 
 .records p {
@@ -235,6 +300,217 @@ main h1 {
   flex: none;
   align-items: center;
   gap: 8px;
+}
+
+.dashboard section {
+  margin-top: 24px;
+}
+
+main h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, 1fr);
+  gap: 12px;
+  max-width: 900px;
+  margin-top: 16px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #1e293b;
+}
+
+.tile strong {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.tile.hero strong {
+  font-size: 48px;
+  line-height: 1.1;
+}
+
+.tile-label,
+.tile-note,
+.muted {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.goal-line {
+  max-width: 760px;
+  margin-bottom: 14px;
+}
+
+.goal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+
+.goal-note {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.meter,
+.level-track {
+  border-radius: 4px;
+  background: #334155;
+}
+
+.meter {
+  height: 8px;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #0d9488;
+}
+
+.skill-chart {
+  max-width: 760px;
+  margin: 12px 0 20px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.legend-note {
+  margin-left: auto;
+  color: #94a3b8;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 2px;
+}
+
+.skill-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  align-items: center;
+  gap: 16px;
+  padding: 6px 0;
+}
+
+.skill-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.skill-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.level-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.level-track {
+  flex: 1;
+  height: 8px;
+}
+
+.level-bar {
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+}
+
+.level-claimed {
+  background: #8b5cf6;
+}
+
+.level-demonstrated {
+  background: #0d9488;
+}
+
+.level-value {
+  width: 12px;
+  color: #cbd5e1;
+  font-size: 12px;
+  text-align: right;
+}
+
+.proof {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  max-width: 900px;
+}
+
+.plain {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plain li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #1e293b;
+  overflow-wrap: anywhere;
+}
+
+.plain li > .muted {
+  flex: none;
+}
+
+.wide-list {
+  max-width: 760px;
+}
+
+.rules {
+  max-width: 760px;
+  margin-top: 24px;
+  color: #94a3b8;
+}
+
+.rules summary {
+  cursor: pointer;
+}
+
+.rules ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
 }
 
 form .fields:first-child {
