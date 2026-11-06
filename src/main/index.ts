@@ -1,19 +1,17 @@
-import { BrowserWindow, app, ipcMain, screen, type IpcMainEvent } from 'electron'
+import { join } from 'node:path'
+import { BrowserWindow, app, dialog, ipcMain, screen, type IpcMainEvent } from 'electron'
 import { Channel } from '../shared/ipc'
+import { installErrorLog } from './error-log'
 import { DragTracker } from './logic/drag-tracker'
-import { placePanel, type Point } from './logic/geometry'
+import { placePanel } from './logic/geometry'
 import { HoverController } from './logic/hover-controller'
+import { isPoint } from './logic/validation'
 import { createTray } from './tray'
 import { createAppWindow } from './windows/app-window'
 import { OVERVIEW_SIZE, createOverviewWindow } from './windows/overview'
 import { WIDGET_SIZE, createWidgetWindow } from './windows/widget'
 
 const PANEL_GAP = 8
-
-function isPoint(value: unknown): value is Point {
-  const point = value as Point | null
-  return Number.isFinite(point?.x) && Number.isFinite(point?.y)
-}
 
 function start(): void {
   const widget = createWidgetWindow()
@@ -62,7 +60,7 @@ function start(): void {
   /** Handles a message only if it came from the window allowed to send it. */
   const from = (window: BrowserWindow, handler: (event: IpcMainEvent, ...args: unknown[]) => void) => {
     return (event: IpcMainEvent, ...args: unknown[]) => {
-      if (event.sender === window.webContents) handler(event, ...args)
+      if (!window.isDestroyed() && event.sender === window.webContents) handler(event, ...args)
     }
   }
 
@@ -114,7 +112,8 @@ function start(): void {
 
   app.on('before-quit', () => {
     quitting = true
-    hover.close()
+    // Suspended, not just closed: a late hover must not reach a destroyed window.
+    hover.suspend()
     tray.destroy()
   })
 }
@@ -122,6 +121,9 @@ function start(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
+  installErrorLog(join(app.getPath('userData'), 'logs', 'errors.log'), (title, message) =>
+    dialog.showErrorBox(title, message)
+  )
   // Windows are hidden rather than closed, so the app runs until Quit is chosen.
   app.on('window-all-closed', () => undefined)
   void app.whenReady().then(start)
