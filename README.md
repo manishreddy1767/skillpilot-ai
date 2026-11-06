@@ -24,7 +24,7 @@ Use `npm run dev` or `npm start`. They build the app first, whereas `npx electro
 "Error launching app" if there is no build yet.
 
 To exit, right-click the tray icon and choose Quit SkillPilot AI. Unexpected errors are saved to
-`%APPDATA%skillpilot-ailogserrors.log`.
+`%APPDATA%\SkillPilot AI\logs\errors.log`.
 
 ## Documents
 
