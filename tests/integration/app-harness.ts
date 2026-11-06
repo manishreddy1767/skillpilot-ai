@@ -16,6 +16,7 @@ export const backupFolder = join(dataFolder, 'backups')
 /** Removes everything a test could have saved. */
 export function clearSavedData(): void {
   for (const name of ['', '-wal', '-shm']) rmSync(databaseFile + name, { force: true })
+  rmSync(join(dataFolder, 'api-key.enc'), { force: true })
   rmSync(backupFolder, { recursive: true, force: true })
 }
 
@@ -44,10 +45,17 @@ export class Harness {
   private constructor(readonly app: ElectronApplication) {}
 
   /** Starts clean unless told to keep the saved position or data. */
-  static async launch({ keepPosition = false, keepData = false, quietErrors = false } = {}): Promise<Harness> {
+  static async launch({
+    keepPosition = false,
+    keepData = false,
+    quietErrors = false,
+    aiBase = ''
+  } = {}): Promise<Harness> {
     if (!keepPosition) rmSync(positionFile, { force: true })
     if (!keepData) clearSavedData()
-    const env = quietErrors ? { ...cleanEnv(), SKILLPILOT_QUIET_ERRORS: '1' } : cleanEnv()
+    const env = cleanEnv()
+    if (quietErrors) env['SKILLPILOT_QUIET_ERRORS'] = '1'
+    if (aiBase) env['ANTHROPIC_BASE_URL'] = aiBase
     const app = await _electron.launch({ args: [harness], cwd: root, env })
     const harnessApp = new Harness(app)
     await expect.poll(() => harnessApp.windowCount()).toBe(2)

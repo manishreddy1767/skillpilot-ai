@@ -84,23 +84,40 @@ test.describe('security', () => {
   test('the page sees only the bridge functions', async () => {
     const keys = await (await h.page(WIDGET)).evaluate(() => Object.keys(window.skillpilot).sort())
     expect(keys).toEqual([
+      'acceptProposal',
+      'clearChat',
+      'createGapReport',
       'deleteRecord',
+      'draftRequirements',
       'dragMove',
       'dragPress',
       'dragRelease',
+      'generateRoadmap',
+      'getAiLog',
+      'getAiStatus',
+      'getChat',
       'getDashboard',
+      'getGapAnalysis',
       'getOverview',
       'getProfile',
+      'getSettings',
       'hoverEnter',
       'hoverLeave',
       'listLinks',
+      'listProposals',
       'listRecords',
       'minimizeToWidget',
       'onOverviewChanged',
       'openApp',
+      'rejectProposal',
+      'removeApiKey',
+      'saveApiKey',
       'saveProfile',
       'saveRecord',
-      'setLink'
+      'saveSettings',
+      'sendChat',
+      'setLink',
+      'suggestTasks'
     ])
   })
 
