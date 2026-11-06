@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import {
   emptyValues,
   recordFields,
@@ -8,13 +8,21 @@ import {
   type StoredRecord
 } from '../../shared/career'
 import { FieldInput } from './FieldInput'
+import { describeRecord } from './summary'
 import { useFocusFirstError } from './useFocusFirstError'
 
 interface RecordEditorProps {
   kind: RecordKind
-  title: string
+  /** Left out when the editor sits inside a screen that has its own heading. */
+  title?: string
   addLabel: string
   emptyText: string
+  /** The owning record, for kinds that belong to one. */
+  parentId?: number
+  /** Extra content a record can expand to show. */
+  details?: (record: StoredRecord) => ReactNode
+  /** Called after anything is added, changed, or removed. */
+  onChange?: () => void
 }
 
 interface Draft {
@@ -22,31 +30,28 @@ interface Draft {
   values: FieldValues
 }
 
-function summary(kind: RecordKind, values: FieldValues): { main: string; detail: string } {
-  const [first, second] = recordFields[kind]
-  const dates = recordFields[kind]
-    .filter((field) => field.type === 'month')
-    .map((field) => values[field.key])
-    .filter(Boolean)
-    .join(' to ')
-  const main = kind === 'work' ? `${values['role']} at ${values['company']}` : (values[first!.key] ?? '')
-  const extra = kind === 'work' ? '' : (values[second!.key] ?? '')
-  return { main, detail: [extra, dates].filter(Boolean).join(' · ') }
-}
-
-export function RecordEditor({ kind, title, addLabel, emptyText }: RecordEditorProps) {
+export function RecordEditor({
+  kind,
+  title,
+  addLabel,
+  emptyText,
+  parentId,
+  details,
+  onChange
+}: RecordEditorProps) {
   const [records, setRecords] = useState<StoredRecord[]>([])
   const [draft, setDraft] = useState<Draft | null>(null)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [message, setMessage] = useState('')
   const [confirming, setConfirming] = useState<number | null>(null)
+  const [expanded, setExpanded] = useState<number | null>(null)
   const form = useFocusFirstError(errors)
 
   const load = useCallback(async (): Promise<void> => {
-    const result = await window.skillpilot.listRecords(kind)
+    const result = await window.skillpilot.listRecords(kind, parentId)
     if (result.ok) setRecords(result.value)
     else setMessage(result.message)
-  }, [kind])
+  }, [kind, parentId])
 
   useEffect(() => {
     void load()
@@ -68,12 +73,11 @@ export function RecordEditor({ kind, title, addLabel, emptyText }: RecordEditorP
   const save = async (event: FormEvent): Promise<void> => {
     event.preventDefault()
     if (!draft) return
-    const result = await window.skillpilot.saveRecord(kind, draft.id, draft.values)
+    const result = await window.skillpilot.saveRecord(kind, draft.id, draft.values, parentId)
     if (result.ok) {
-      setDraft(null)
-      setErrors({})
-      setMessage('')
+      cancel()
       await load()
+      onChange?.()
     } else {
       setErrors(result.errors ?? {})
       setMessage(result.message)
@@ -81,50 +85,68 @@ export function RecordEditor({ kind, title, addLabel, emptyText }: RecordEditorP
   }
 
   const remove = async (id: number): Promise<void> => {
-    const result = await window.skillpilot.deleteRecord(kind, id)
+    const result = await window.skillpilot.deleteRecord(kind, id, parentId)
     setConfirming(null)
-    if (result.ok) await load()
-    else setMessage(result.message)
+    if (result.ok) {
+      await load()
+      onChange?.()
+    } else {
+      setMessage(result.message)
+    }
   }
 
   return (
     <div>
-      <h1>{title}</h1>
+      {title ? <h1>{title}</h1> : null}
       {records.length === 0 && !draft ? <p className="lead">{emptyText}</p> : null}
 
       <ul className="records">
         {records.map((record) => {
-          const { main, detail } = summary(kind, record.values)
+          const { main, detail } = describeRecord(kind, record.values)
+          const open = expanded === record.id
           return (
             <li key={record.id}>
-              <div>
-                <strong>{main}</strong>
-                {detail ? <p>{detail}</p> : null}
+              <div className="record-row">
+                <div className="record-text">
+                  <strong>{main}</strong>
+                  {detail ? <p>{detail}</p> : null}
+                </div>
+                {confirming === record.id ? (
+                  <div className="row-actions">
+                    <span>Delete this?</span>
+                    <button type="button" className="danger" onClick={() => void remove(record.id)}>
+                      Yes, delete
+                    </button>
+                    <button type="button" onClick={() => setConfirming(null)}>
+                      Keep
+                    </button>
+                  </div>
+                ) : (
+                  <div className="row-actions">
+                    {details ? (
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-label={`Details for ${main}`}
+                        onClick={() => setExpanded(open ? null : record.id)}
+                      >
+                        {open ? 'Hide' : 'Details'}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      aria-label={`Edit ${main}`}
+                      onClick={() => startEditing({ id: record.id, values: record.values })}
+                    >
+                      Edit
+                    </button>
+                    <button type="button" aria-label={`Delete ${main}`} onClick={() => setConfirming(record.id)}>
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
-              {confirming === record.id ? (
-                <div className="row-actions">
-                  <span>Delete this?</span>
-                  <button type="button" className="danger" onClick={() => void remove(record.id)}>
-                    Yes, delete
-                  </button>
-                  <button type="button" onClick={() => setConfirming(null)}>
-                    Keep
-                  </button>
-                </div>
-              ) : (
-                <div className="row-actions">
-                  <button
-                    type="button"
-                    aria-label={`Edit ${main}`}
-                    onClick={() => startEditing({ id: record.id, values: record.values })}
-                  >
-                    Edit
-                  </button>
-                  <button type="button" aria-label={`Delete ${main}`} onClick={() => setConfirming(record.id)}>
-                    Delete
-                  </button>
-                </div>
-              )}
+              {open && details ? <div className="record-details">{details(record)}</div> : null}
             </li>
           )
         })}
@@ -137,6 +159,7 @@ export function RecordEditor({ kind, title, addLabel, emptyText }: RecordEditorP
               <FieldInput
                 key={field.key}
                 field={field}
+                idPrefix={kind}
                 value={draft.values[field.key] ?? ''}
                 error={errors[field.key]}
                 onChange={(value) => setDraft({ ...draft, values: { ...draft.values, [field.key]: value } })}

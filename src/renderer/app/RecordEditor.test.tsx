@@ -70,6 +70,65 @@ describe('RecordEditor', () => {
     expect(api().saveRecord.mock.calls[0]?.[1]).toBe(7)
   })
 
+  it('passes the parent through for child records', async () => {
+    render(<RecordEditor kind="evidence" {...props} parentId={5} />)
+    await screen.findByText('Nothing yet.')
+    expect(api().listRecords).toHaveBeenLastCalledWith('evidence', 5)
+    click('Add education')
+    type(/What shows/, 'Built an app')
+    click('Save')
+    await waitFor(() => expect(api().saveRecord).toHaveBeenCalled())
+    expect(api().saveRecord.mock.calls[0]?.[3]).toBe(5)
+  })
+
+  it('reports changes after saving and deleting', async () => {
+    withRecord()
+    const onChange = vi.fn()
+    render(<RecordEditor kind="education" {...props} onChange={onChange} />)
+    await screen.findByText('State University')
+    click('Delete State University')
+    click('Yes, delete')
+    await waitFor(() => expect(onChange).toHaveBeenCalledOnce())
+  })
+
+  it('does not report a change when saving fails', async () => {
+    api().saveRecord.mockResolvedValue({ ok: false, message: 'No.' })
+    const onChange = vi.fn()
+    render(<RecordEditor kind="education" {...props} onChange={onChange} />)
+    await screen.findByText('Nothing yet.')
+    click('Add education')
+    click('Save')
+    await screen.findByRole('alert')
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('expands and collapses details for one record', async () => {
+    withRecord()
+    render(<RecordEditor kind="education" {...props} details={(r) => <p>Details of {r.id}</p>} />)
+    await screen.findByText('State University')
+    expect(screen.queryByText('Details of 7')).toBeNull()
+    click('Details for State University')
+    expect(screen.getByText('Details of 7')).toBeTruthy()
+    click('Details for State University')
+    expect(screen.queryByText('Details of 7')).toBeNull()
+  })
+
+  it('offers no details button without details', async () => {
+    withRecord()
+    render(<RecordEditor kind="education" {...props} />)
+    await screen.findByText('State University')
+    expect(screen.queryByRole('button', { name: 'Details for State University' })).toBeNull()
+  })
+
+  it('offers choices for select fields', async () => {
+    render(<RecordEditor kind="skill" {...props} />)
+    await screen.findByText('Nothing yet.')
+    click('Add education')
+    const level = screen.getByLabelText<HTMLSelectElement>('My level')
+    expect(level.value).toBe('0')
+    expect(screen.getByRole('option', { name: '5 - Expert' })).toBeTruthy()
+  })
+
   it('keeps the form open and shows errors when saving fails', async () => {
     api().saveRecord.mockResolvedValue({
       ok: false,
@@ -107,7 +166,7 @@ describe('RecordEditor', () => {
     api().listRecords.mockResolvedValue({ ok: true, value: [] })
     click('Yes, delete')
     expect(await screen.findByText('Nothing yet.')).toBeTruthy()
-    expect(api().deleteRecord).toHaveBeenCalledExactlyOnceWith('education', 7)
+    expect(api().deleteRecord).toHaveBeenCalledExactlyOnceWith('education', 7, undefined)
   })
 
   it('shows a message when records cannot load', async () => {
