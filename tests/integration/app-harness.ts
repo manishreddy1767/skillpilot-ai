@@ -1,4 +1,6 @@
-import { resolve } from 'node:path'
+import { rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 import { _electron, expect, type ElectronApplication, type Page } from '@playwright/test'
 
 export const root = resolve(__dirname, '../..')
@@ -6,11 +8,19 @@ export const harness = resolve(__dirname, 'harness.cjs')
 export const WIDGET = 'SkillPilot Widget'
 export const OVERVIEW = 'SkillPilot Overview'
 export const APP = 'SkillPilot AI'
+export const dataFolder = join(tmpdir(), 'skillpilot-ai-test')
+export const positionFile = join(dataFolder, 'widget-position.json')
 
 export function cleanEnv(): Record<string, string> {
   const env = { ...process.env } as Record<string, string>
   delete env['ELECTRON_RUN_AS_NODE']
   return env
+}
+
+export interface FakeDisplay {
+  id: number
+  bounds: { x: number; y: number; width: number; height: number }
+  workArea: { x: number; y: number; width: number; height: number }
 }
 
 export interface WindowState {
@@ -25,7 +35,9 @@ export interface WindowState {
 export class Harness {
   private constructor(readonly app: ElectronApplication) {}
 
-  static async launch(): Promise<Harness> {
+  /** Starts with no saved position unless `keepPosition` is set. */
+  static async launch({ keepPosition = false } = {}): Promise<Harness> {
+    if (!keepPosition) rmSync(positionFile, { force: true })
     const app = await _electron.launch({ args: [harness], cwd: root, env: cleanEnv() })
     const harnessApp = new Harness(app)
     await expect.poll(() => harnessApp.windowCount()).toBe(2)
@@ -120,6 +132,23 @@ export class Harness {
     await this.moveCursor(x, y)
     await this.call(WIDGET, 'dragMove')
     await this.call(WIDGET, 'dragRelease')
+  }
+
+  /** Replaces the connected displays, as if monitors changed, and announces it. */
+  setDisplays(displays: FakeDisplay[], event = 'display-removed'): Promise<void> {
+    return this.app.evaluate(({ screen }, { list, name }) => {
+      screen.getAllDisplays = () => list as never
+      screen.getPrimaryDisplay = () => list[0] as never
+      ;(screen as unknown as { emit(name: string): void }).emit(name)
+    }, { list: displays, name: event })
+  }
+
+  /** The real display, for building fake layouts around it. */
+  realDisplay(): Promise<FakeDisplay> {
+    return this.app.evaluate(({ screen }) => {
+      const { id, bounds, workArea } = screen.getPrimaryDisplay()
+      return { id, bounds, workArea }
+    })
   }
 
   clickTrayItem(label: string): Promise<void> {
