@@ -1,7 +1,8 @@
 # Real-input test of the floating widget. Launches the built app, moves the real
 # mouse, and reads window state from Windows itself, so the app needs no test hooks.
 # A temporary form stands in for "another app" behind the widget.
-# Takes over the mouse for about 30 seconds. Run `npm run build` first.
+# Takes over the mouse for about 30 seconds. Run `npm run build:test` first.
+# It uses the test build and test data folder, so a saved widget position is safe.
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
@@ -37,6 +38,9 @@ public static class W {
 
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $electron = Join-Path $root 'node_modules/electron/dist/electron.exe'
+$harness = Join-Path $root 'tests/integration/harness.cjs'
+$positionFile = Join-Path $env:TEMP 'skillpilot-ai-test/widget-position.json'
+Remove-Item $positionFile -ErrorAction SilentlyContinue
 $script:failures = 0
 $script:app = $null
 
@@ -75,7 +79,7 @@ function Click($x, $y) { Glide $x $y 4; Wait 60; Press; Release }
 
 function Start-App([string[]]$extra = @()) {
   Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
-  $script:app = Start-Process -FilePath $electron -ArgumentList (@('.') + $extra) -WorkingDirectory $root -PassThru
+  $script:app = Start-Process -FilePath $electron -ArgumentList (@($harness) + $extra) -WorkingDirectory $root -PassThru
   $pid32 = [uint32]$script:app.Id
   for ($i = 0; $i -lt 100; $i++) {
     Wait 100
@@ -181,6 +185,12 @@ try {
   Check 'widget re-opens the app' (AppOpen)
   $a = Rect $appHwnd
   Click ($a.X + $a.W - 210) ($a.Y + 20); Wait 400
+  Stop-App
+
+  # Reopening returns to the dragged spot, even after a forced stop.
+  $widget = Start-App
+  $reopened = Rect $widget
+  Check 'widget reopens where it was left' ($reopened.X -eq $r.X -and $reopened.Y -eq $r.Y) "at $($reopened.X),$($reopened.Y)"
   Stop-App
 
   # Click-through mode: clicks reach the app behind.
