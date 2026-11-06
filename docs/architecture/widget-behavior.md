@@ -1,8 +1,8 @@
 # Widget behaviour
 
 This is the core of the product. Dragging, hover, click, and focus behaviour were proven with real
-mouse input in milestone 0 (`npm run test:desktop`). Saved position, the size and opacity options, and
-monitor recovery come in later milestones.
+mouse input in milestone 0 (`npm run test:desktop`). Saved position and display recovery came in
+milestone 1. The size and opacity options come in a later milestone.
 
 ## States
 
@@ -49,14 +49,23 @@ The widget goes wherever the cursor takes it, on any monitor.
 
 ## Remembering position
 
-The saved position holds x, y, the display id, and that display's bounds and scale factor.
+The position is saved to `widget-position.json` in the app's data folder the moment a drag ends, so a
+crash loses nothing. It holds x, y, the display id, and that display's bounds. A missing or damaged file
+means the widget starts at its default spot.
 
-On launch, and when a monitor is removed:
+At launch, after any display change, and after waking from sleep:
 
-- If the saved point is on any connected display, the widget returns there exactly.
-- If that monitor is gone, it moves to the same relative position on the primary display. This is the
-  only time the app ever moves the widget, and it exists so the widget cannot be stranded on a
-  monitor that no longer exists. The original position is kept, so it returns when the monitor does.
+- If at least half of the widget would be on a connected display, it returns to its spot exactly. That
+  includes a spot the user chose partly off the screen edge.
+- Otherwise it moves to the same relative position on its own display, or on the primary display if
+  that display is gone, fully inside the work area.
+- The user's spot is kept through a recovery, so the widget returns when the display does. Only a drag
+  or a reset changes it.
+
+This recovery is the only time the app moves the widget by itself, and it never happens during a drag.
+Dragging cannot strand the widget, because the point being held always stays under the cursor.
+
+As a final safety net, **Reset widget position** in the tray returns it to the default spot.
 
 ## Hover overview
 
@@ -80,8 +89,9 @@ never waits on the network.
 ## Expanding
 
 A click opens the main window: a normal, opaque, resizable window with a taskbar entry and the
-standard title bar controls through `titleBarOverlay`, which keeps Windows 11 Snap working. It opens on
-the same monitor as the widget.
+standard title bar controls through `titleBarOverlay`, which keeps Windows 11 Snap working. It opens
+centred on the widget's display, and moves there on reopening if it is on another display. Launching
+the app a second time opens this window instead of starting another copy.
 
 Its minimize-to-widget button hides the window. The widget stays where it was throughout.
 

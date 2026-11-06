@@ -8,7 +8,8 @@
   is backed up before any migration runs.
 - **Backups:** one automatic copy a day, with the last 7 kept.
 - **Portability:** full JSON export and import in Settings.
-- **Small settings:** widget position and appearance are stored in the same database.
+- **Widget position:** kept in a small `widget-position.json` file, so the widget can appear before the
+  database opens. Other settings are stored in the database.
 
 ## Claimed versus demonstrated skills
 

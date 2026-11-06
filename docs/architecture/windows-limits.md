@@ -23,9 +23,9 @@ Tested with real mouse input on Windows 11 at 125% display scaling, on one monit
 | Round hit area | `setShape` works. Clicks at the corners reached the app behind. No fallback is needed. |
 | Click-through mode | Clicks reach the app behind, and hover and click on the widget are off. It uses plain `setIgnoreMouseEvents`, with no event forwarding. The mode is reversed from the tray. |
 
-Not tested, because there is only one monitor: dragging between monitors with different scaling, and
-unplugging a monitor. Fixed-size `setBounds` is in place for the first, and milestone 1 adds recovery
-for the second, tested with simulated display layouts.
+Not tested on real hardware, because there is only one monitor: dragging between monitors with
+different scaling, and unplugging a monitor. Fixed-size `setBounds` is in place for the first. Recovery
+for the second is tested with simulated display layouts.
 
 ## Consequences of the design
 
