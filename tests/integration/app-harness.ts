@@ -10,6 +10,14 @@ export const OVERVIEW = 'SkillPilot Overview'
 export const APP = 'SkillPilot AI'
 export const dataFolder = join(tmpdir(), 'skillpilot-ai-test')
 export const positionFile = join(dataFolder, 'widget-position.json')
+export const databaseFile = join(dataFolder, 'skillpilot.db')
+export const backupFolder = join(dataFolder, 'backups')
+
+/** Removes everything a test could have saved. */
+export function clearSavedData(): void {
+  for (const name of ['', '-wal', '-shm']) rmSync(databaseFile + name, { force: true })
+  rmSync(backupFolder, { recursive: true, force: true })
+}
 
 export function cleanEnv(): Record<string, string> {
   const env = { ...process.env } as Record<string, string>
@@ -35,10 +43,12 @@ export interface WindowState {
 export class Harness {
   private constructor(readonly app: ElectronApplication) {}
 
-  /** Starts with no saved position unless `keepPosition` is set. */
-  static async launch({ keepPosition = false } = {}): Promise<Harness> {
+  /** Starts clean unless told to keep the saved position or data. */
+  static async launch({ keepPosition = false, keepData = false, quietErrors = false } = {}): Promise<Harness> {
     if (!keepPosition) rmSync(positionFile, { force: true })
-    const app = await _electron.launch({ args: [harness], cwd: root, env: cleanEnv() })
+    if (!keepData) clearSavedData()
+    const env = quietErrors ? { ...cleanEnv(), SKILLPILOT_QUIET_ERRORS: '1' } : cleanEnv()
+    const app = await _electron.launch({ args: [harness], cwd: root, env })
     const harnessApp = new Harness(app)
     await expect.poll(() => harnessApp.windowCount()).toBe(2)
     await harnessApp.page(WIDGET)
@@ -132,6 +142,10 @@ export class Harness {
     await this.moveCursor(x, y)
     await this.call(WIDGET, 'dragMove')
     await this.call(WIDGET, 'dragRelease')
+  }
+
+  errorBoxes(): Promise<string[]> {
+    return this.app.evaluate(() => (globalThis as unknown as { __errorBoxes: string[] }).__errorBoxes)
   }
 
   /** Replaces the connected displays, as if monitors changed, and announces it. */
