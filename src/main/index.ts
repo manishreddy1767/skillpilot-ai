@@ -11,6 +11,7 @@ import {
 } from 'electron'
 import { Channel } from '../shared/ipc'
 import { createDataHandlers } from './data-handlers'
+import { localDate } from './db/backup'
 import { openCareerData } from './db/open-career-data'
 import { installErrorLog, writeErrorLog } from './error-log'
 import { DragTracker } from './logic/drag-tracker'
@@ -153,7 +154,8 @@ function start(): void {
     notifyOverview: () => {
       if (!overview.isDestroyed()) overview.webContents.send(Channel.OverviewChanged)
     },
-    logError: (error) => writeErrorLog(errorLogPath, error)
+    logError: (error) => writeErrorLog(errorLogPath, error),
+    today: () => localDate(new Date())
   })
 
   const denied = { ok: false, message: 'Not allowed.' } as const
@@ -171,6 +173,9 @@ function start(): void {
   ipcMain.handle(Channel.ListRecords, fromApp(handlers.listRecords))
   ipcMain.handle(Channel.SaveRecord, fromApp(handlers.saveRecord))
   ipcMain.handle(Channel.DeleteRecord, fromApp(handlers.deleteRecord))
+  ipcMain.handle(Channel.ListLinks, fromApp(handlers.listLinks))
+  ipcMain.handle(Channel.SetLink, fromApp(handlers.setLink))
+  ipcMain.handle(Channel.GetDashboard, fromApp(handlers.getDashboard))
   ipcMain.handle(Channel.GetOverview, (event) =>
     !overview.isDestroyed() && event.sender === overview.webContents ? handlers.getOverview() : denied
   )
