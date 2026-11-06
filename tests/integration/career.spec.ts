@@ -12,8 +12,12 @@ test.afterEach(async () => {
 async function openApp(): Promise<Page> {
   await h.clickWidget()
   await expect.poll(() => h.visible(APP)).toBe(true)
-  return h.page(APP)
+  const page = await h.page(APP)
+  await goToProfile(page)
+  return page
 }
+
+const goToProfile = (page: Page) => page.getByRole('button', { name: 'Profile', exact: true }).click()
 
 async function fillProfile(page: Page, name: string, goal: string): Promise<void> {
   await page.getByLabel('Full name').fill(name)
@@ -43,6 +47,7 @@ test.describe('profile', () => {
     await expect(page.getByText('Enter a valid email address')).toBeVisible()
     await expect(page.getByLabel('Full name')).toBeFocused()
     await page.reload()
+    await goToProfile(page)
     await expect(page.getByLabel('Email')).toHaveValue('')
   })
 
@@ -52,6 +57,7 @@ test.describe('profile', () => {
     const page = await openApp()
     await fillProfile(page, name, 'x')
     await page.reload()
+    await goToProfile(page)
     await expect(page.getByLabel('Full name')).toHaveValue(name)
   })
 

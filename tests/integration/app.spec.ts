@@ -60,7 +60,7 @@ test.describe('startup', () => {
     await expect((await h.page(OVERVIEW)).getByText('Current goal')).toBeAttached()
     await h.clickWidget()
     const app = await h.page(APP)
-    await expect(app.getByRole('heading', { name: 'Profile' })).toBeVisible()
+    await expect(app.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
   })
 })
 
@@ -88,16 +88,19 @@ test.describe('security', () => {
       'dragMove',
       'dragPress',
       'dragRelease',
+      'getDashboard',
       'getOverview',
       'getProfile',
       'hoverEnter',
       'hoverLeave',
+      'listLinks',
       'listRecords',
       'minimizeToWidget',
       'onOverviewChanged',
       'openApp',
       'saveProfile',
-      'saveRecord'
+      'saveRecord',
+      'setLink'
     ])
   })
 
