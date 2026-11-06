@@ -1,4 +1,4 @@
-export type FieldType = 'text' | 'long' | 'month' | 'date' | 'email' | 'url' | 'select'
+export type FieldType = 'text' | 'long' | 'month' | 'date' | 'time' | 'number' | 'email' | 'url' | 'select'
 export type FieldValues = Record<string, string>
 export type FieldErrors = Record<string, string>
 
@@ -14,6 +14,9 @@ export interface FieldDef {
   options?: { value: string; label: string }[]
   /** Starting value for a new record. */
   initial?: string
+  /** The allowed range for a number field. */
+  min?: number
+  max?: number
 }
 
 export const recordKinds = [
@@ -25,12 +28,23 @@ export const recordKinds = [
   'project',
   'evidence',
   'goalMilestone',
-  'projectMilestone'
+  'projectMilestone',
+  'targetRole',
+  'roleRequirement',
+  'roadmap',
+  'roadmapItem',
+  'task'
 ] as const
 export type RecordKind = (typeof recordKinds)[number]
 
 /** Kinds that belong to a parent record, and so need its id. */
-export const childKinds: readonly RecordKind[] = ['evidence', 'goalMilestone', 'projectMilestone']
+export const childKinds: readonly RecordKind[] = [
+  'evidence',
+  'goalMilestone',
+  'projectMilestone',
+  'roleRequirement',
+  'roadmapItem'
+]
 
 export const linkKinds = ['goalSkill', 'goalProject', 'projectSkill'] as const
 export type LinkKind = (typeof linkKinds)[number]
@@ -232,7 +246,86 @@ export const recordFields: Record<RecordKind, FieldDef[]> = {
     { key: 'observedOn', column: 'observed_on', label: 'When', type: 'month' }
   ],
   goalMilestone: milestoneFields,
-  projectMilestone: milestoneFields
+  projectMilestone: milestoneFields,
+  targetRole: [
+    { key: 'title', column: 'title', label: 'Target role', type: 'text', required: true },
+    { key: 'notes', column: 'notes', label: 'Notes', type: 'long' }
+  ],
+  roleRequirement: [
+    { key: 'skillName', column: 'skill_name', label: 'Required skill', type: 'text', required: true },
+    {
+      key: 'requiredLevel',
+      column: 'required_level',
+      label: 'Level needed',
+      type: 'select',
+      initial: '3',
+      options: levelOptions.slice(1)
+    },
+    {
+      key: 'importance',
+      column: 'importance',
+      label: 'Importance',
+      type: 'select',
+      initial: '2',
+      options: [
+        { value: '1', label: 'Nice to have' },
+        { value: '2', label: 'Important' },
+        { value: '3', label: 'Essential' }
+      ]
+    }
+  ],
+  roadmap: [
+    { key: 'title', column: 'title', label: 'Roadmap', type: 'text', required: true },
+    { key: 'startDate', column: 'start_date', label: 'Start date', type: 'date' }
+  ],
+  roadmapItem: [
+    { key: 'title', column: 'title', label: 'Topic', type: 'text', required: true },
+    { key: 'week', column: 'week', label: 'Week', type: 'number', initial: '1', min: 1, max: 104 },
+    { key: 'effortHours', column: 'effort_hours', label: 'Effort (hours)', type: 'number', initial: '0', min: 0, max: 500 },
+    {
+      key: 'status',
+      column: 'status',
+      label: 'Status',
+      type: 'select',
+      initial: 'open',
+      options: [
+        { value: 'open', label: 'Not done' },
+        { value: 'done', label: 'Done' }
+      ]
+    },
+    { key: 'details', column: 'details', label: 'Details', type: 'long' },
+    { key: 'exercise', column: 'exercise', label: 'Practical exercise', type: 'long' },
+    { key: 'resources', column: 'resources', label: 'Resources', type: 'long' }
+  ],
+  task: [
+    { key: 'title', column: 'title', label: 'Task', type: 'text', required: true },
+    {
+      key: 'kind',
+      column: 'kind',
+      label: 'Type',
+      type: 'select',
+      initial: 'learning',
+      options: [
+        { value: 'learning', label: 'Learning' },
+        { value: 'practice', label: 'Practice' },
+        { value: 'project', label: 'Project' },
+        { value: 'other', label: 'Other' }
+      ]
+    },
+    { key: 'dueDate', column: 'due_date', label: 'Due', type: 'date' },
+    { key: 'minutes', column: 'minutes', label: 'Minutes', type: 'number', initial: '30', min: 5, max: 480 },
+    {
+      key: 'status',
+      column: 'status',
+      label: 'Status',
+      type: 'select',
+      initial: 'open',
+      options: [
+        { value: 'open', label: 'To do' },
+        { value: 'done', label: 'Done' }
+      ]
+    }
+  ]
 }
 
 export const MAX_TEXT_LENGTH = 200
@@ -265,6 +358,14 @@ function fieldError(field: FieldDef, value: string): string | null {
   }
   if (field.type === 'date' && !isRealDate(value)) {
     return `${field.label} must be a date, like 2026-03-15`
+  }
+  if (field.type === 'time' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+    return `${field.label} must be a time, like 22:00`
+  }
+  if (field.type === 'number') {
+    const number = Number(value)
+    const inRange = Number.isInteger(number) && number >= (field.min ?? 0) && number <= (field.max ?? Infinity)
+    if (!inRange) return `${field.label} must be a whole number from ${field.min ?? 0} to ${field.max}`
   }
   if (field.type === 'select' && !field.options?.some((option) => option.value === value)) {
     return `Choose a valid ${field.label.toLowerCase()}`

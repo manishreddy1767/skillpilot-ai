@@ -75,6 +75,23 @@ describe('select fields', () => {
   })
 })
 
+describe('number and time fields', () => {
+  it('accept numbers in range', () => {
+    expect(validateFields(recordFields.task, { title: 'T', minutes: '45' }).errors).toEqual({})
+  })
+
+  it.each(['4', '481', '1.5', 'soon'])('reject %s minutes', (minutes) => {
+    expect(validateFields(recordFields.task, { title: 'T', minutes }).errors['minutes']).toBeDefined()
+  })
+
+  it('accept a valid time and reject others', () => {
+    const field = [{ key: 't', column: 't', label: 'T', type: 'time' as const }]
+    expect(validateFields(field, { t: '22:00' }).errors).toEqual({})
+    expect(validateFields(field, { t: '24:00' }).errors['t']).toBeDefined()
+    expect(validateFields(field, { t: '9:00' }).errors['t']).toBeDefined()
+  })
+})
+
 describe('date fields', () => {
   const goal = recordFields.goal
 

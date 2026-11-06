@@ -10,7 +10,15 @@ interface FieldInputProps {
   onChange(value: string): void
 }
 
-const inputType = { text: 'text', email: 'email', url: 'url', month: 'month', date: 'date' } as const
+const inputType = {
+  text: 'text',
+  email: 'email',
+  url: 'url',
+  month: 'month',
+  date: 'date',
+  time: 'time',
+  number: 'number'
+} as const
 
 export function FieldInput({ field, value, error, idPrefix = 'field', onChange }: FieldInputProps) {
   const id = `${idPrefix}-${field.key}`
