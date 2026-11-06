@@ -4,10 +4,13 @@
 
 - **Location:** `%APPDATA%\SkillPilot AI\skillpilot.db`, outside the repository.
 - **Mode:** SQLite in WAL mode, with foreign keys enforced.
-- **Migrations:** numbered SQL files applied at startup, tracked by `PRAGMA user_version`. The database
-  is backed up before any migration runs.
-- **Backups:** one automatic copy a day, with the last 7 kept.
-- **Portability:** full JSON export and import in Settings.
+- **Migrations:** an ordered list in `src/main/db/migrations.ts`, applied at startup and tracked by
+  `PRAGMA user_version`. Each step is all-or-nothing, and an existing database is backed up first. A
+  database from a newer version of the app is refused and left unchanged.
+- **Backups:** one automatic copy a day in the `backups` folder, with the last 7 kept. Copies made before
+  a migration are kept separately and never removed automatically.
+- **If it cannot open:** the widget keeps running, the file is left untouched, and the app says why.
+- **Portability:** full JSON export and import in Settings, planned for a later milestone.
 - **Widget position:** kept in a small `widget-position.json` file, so the widget can appear before the
   database opens. Other settings are stored in the database.
 
