@@ -19,6 +19,7 @@
     "build:test": "electron-vite build --mode test"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
