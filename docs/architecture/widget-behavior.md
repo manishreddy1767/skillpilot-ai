@@ -2,7 +2,7 @@
 
 This is the core of the product. Dragging, hover, click, and focus behaviour were proven with real
 mouse input in milestone 0 (`npm run test:desktop`). Saved position and display recovery came in
-milestone 1. The size and opacity options come in a later milestone.
+milestone 1, and the options below in milestone 6.
 
 ## States
 
@@ -102,8 +102,11 @@ Its minimize-to-widget button hides the window. The widget stays where it was th
 | Always on top | On |
 | Widget size | 72 px, adjustable from 48 to 128 |
 | Opacity | 100%, adjustable down to 30% |
+| Always on top | On |
 | Click-through mode | Off. When on, clicks pass through the widget. Turned off from the tray. |
-| Start at login | Off |
+| Start at login | Off. Only the installed app registers this. |
+
+These are in Settings, apply at once, and are remembered. The tray's toggles change the same settings.
 
 Hover and drag stay active at every opacity. Click-through is the one mode that disables them, which
 is why it can only be reversed from the tray.

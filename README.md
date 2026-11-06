@@ -20,6 +20,7 @@ npm test               # unit tests
 npm run test:integration   # real app, leaves the mouse alone
 npm run test:desktop   # real mouse test; takes over the mouse for about 30 seconds
 npm run test:all       # everything
+npm run dist           # build the Windows installer into release/
 ```
 
 Use `npm run dev` or `npm start`. They build the app first, whereas `npx electron .` fails with

@@ -30,8 +30,8 @@ for the second is tested with simulated display layouts.
 ## Consequences of the design
 
 - **Notifications only fire while the app runs.** There is no separate background service, so reminders
-  are missed if the app is closed. Start at login covers most of this. On wake, overdue reminders are
-  combined into one notification.
+  are missed if the app is closed. Start at login covers most of this. The app checks every 15 minutes
+  and after waking from sleep, shows each notification once, and respects the quiet hours and daily limit.
 - **Toasts need the installed app.** They rely on an AppUserModelID and a Start Menu shortcut, so they
   may not behave the same when run from source.
 - **SmartScreen.** The installer is unsigned, so Windows warns on first run. For one personal laptop,

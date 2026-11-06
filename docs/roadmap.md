@@ -62,7 +62,7 @@ the Electron decision is revisited here.
 - Roadmap adjusts as progress changes
 - Full dashboard
 
-### M6: Desktop integration (Phase 5)
+### M6: Desktop integration (Phase 5), complete
 
 - Start at login, configurable notifications with quiet hours and a daily limit
 - Multi-monitor refinement, widget size and opacity, click-through mode, transitions
