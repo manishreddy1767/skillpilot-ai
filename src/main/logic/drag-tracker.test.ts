@@ -33,6 +33,12 @@ describe('DragTracker', () => {
     expect(tracker.move({ x: -500, y: -300 })).toEqual({ x: -530, y: -320 })
   })
 
+  it('always returns whole pixels, even with a fractional grab offset', () => {
+    const tracker = new DragTracker()
+    tracker.press({ x: 100, y: 100 }, { x: 30.4, y: 20.8 })
+    expect(tracker.move({ x: 140, y: 140 })).toEqual({ x: 110, y: 119 })
+  })
+
   it('ignores movement and release when nothing is pressed', () => {
     const tracker = new DragTracker()
     expect(tracker.move({ x: 1, y: 1 })).toBeNull()

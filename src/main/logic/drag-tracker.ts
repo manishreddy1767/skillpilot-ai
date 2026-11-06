@@ -30,7 +30,11 @@ export class DragTracker {
       if (distance < DRAG_THRESHOLD) return null
       this.dragging = true
     }
-    return { x: cursor.x - this.grabOffset.x, y: cursor.y - this.grabOffset.y }
+    // Display scaling makes grab offsets fractional, but windows sit on whole pixels.
+    return {
+      x: Math.round(cursor.x - this.grabOffset.x),
+      y: Math.round(cursor.y - this.grabOffset.y)
+    }
   }
 
   /** Ends the press. `null` means no press was active. */
