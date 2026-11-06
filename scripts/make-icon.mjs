@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { crc32, deflateSync } from 'node:zlib'
 
-const size = 64
+const size = 256
 const pixels = Buffer.alloc(size * (size * 4 + 1))
 
 // A slim diamond pointing up and to the right, like a compass needle.

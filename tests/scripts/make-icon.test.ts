@@ -6,7 +6,7 @@ import { crc32, inflateSync } from 'node:zlib'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 const root = resolve(__dirname, '../..')
-const size = 64
+const size = 256
 let folder: string
 let png: Buffer
 
@@ -53,7 +53,7 @@ describe('make-icon', () => {
     for (const chunk of chunks) expect(crc32(chunk.body)).toBe(chunk.crc)
   })
 
-  it('is 64 by 64 with an alpha channel', () => {
+  it('is 256 by 256, as the installer needs, with an alpha channel', () => {
     const header = readChunks(png)[0]!.data
     expect(header.readUInt32BE(0)).toBe(size)
     expect(header.readUInt32BE(4)).toBe(size)

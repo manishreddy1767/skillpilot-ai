@@ -16,7 +16,8 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "npm run build:test && playwright test",
     "test:all": "npm run typecheck && npm test && npm run test:integration && npm run test:desktop",
-    "build:test": "electron-vite build --mode test"
+    "build:test": "electron-vite build --mode test",
+    "dist": "electron-vite build && electron-builder --win nsis"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
@@ -33,10 +34,35 @@
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "^5.1.0",
     "electron": "^45.2.3",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "jsdom": "^31.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.6",
     "vitest": "^5.1.0"
+  },
+  "build": {
+    "appId": "com.skillpilot.ai",
+    "productName": "SkillPilot AI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**",
+      "resources/**",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SkillPilot AI"
+    }
   }
 }
