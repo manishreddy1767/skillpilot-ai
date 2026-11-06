@@ -122,6 +122,22 @@ export class AiStore {
     return Number(result.changes) > 0
   }
 
+  notifiedKeys(): Set<string> {
+    const rows = this.db.prepare('SELECT dedupe_key FROM notification_log').all() as { dedupe_key: string }[]
+    return new Set(rows.map((row) => row.dedupe_key))
+  }
+
+  notifiedCount(day: string): number {
+    const row = this.db.prepare('SELECT count(*) AS n FROM notification_log WHERE sent_on = ?').get(day) as { n: number }
+    return row.n
+  }
+
+  markNotified(key: string, day: string): void {
+    this.db
+      .prepare('INSERT INTO notification_log (dedupe_key, sent_on) VALUES (?, ?) ON CONFLICT DO NOTHING')
+      .run(key, day)
+  }
+
   logRequest(entry: Omit<AiLogEntry, 'id' | 'createdAt'>): void {
     this.db
       .prepare(
