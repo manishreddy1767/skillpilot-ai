@@ -1,16 +1,13 @@
-import { BrowserWindow, screen } from 'electron'
-import { circleRows } from '../logic/geometry'
+import { BrowserWindow } from 'electron'
+import { circleRows, type Point } from '../logic/geometry'
 import { loadPage, secureWebPreferences } from './common'
 
 export const WIDGET_SIZE = 72
 
-export function createWidgetWindow(): BrowserWindow {
-  const { workArea } = screen.getPrimaryDisplay()
-
+export function createWidgetWindow(position: Point): BrowserWindow {
   const widget = new BrowserWindow({
     title: 'SkillPilot Widget',
-    x: workArea.x + workArea.width - WIDGET_SIZE - 48,
-    y: workArea.y + workArea.height - WIDGET_SIZE - 48,
+    ...position,
     width: WIDGET_SIZE,
     height: WIDGET_SIZE,
     show: false,

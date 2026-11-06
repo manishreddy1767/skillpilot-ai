@@ -25,22 +25,20 @@ const mock = vi.hoisted(() => {
     }
   }
   return {
-    FakeWindow,
-    screen: {
-      getPrimaryDisplay: () => ({ workArea: { x: 0, y: 0, width: 1536, height: 816 } })
-    }
+    FakeWindow
   }
 })
 
-vi.mock('electron', () => ({ BrowserWindow: mock.FakeWindow, screen: mock.screen }))
+vi.mock('electron', () => ({ BrowserWindow: mock.FakeWindow }))
 
-import { createAppWindow } from './app-window'
+import { APP_WINDOW_SIZE, createAppWindow } from './app-window'
 import { loadPage, secureWebPreferences } from './common'
 import { OVERVIEW_SIZE, createOverviewWindow } from './overview'
 import { WIDGET_SIZE, createWidgetWindow } from './widget'
 
 type Fake = InstanceType<typeof mock.FakeWindow>
 const asFake = (window: unknown) => window as Fake
+const spot = { x: 300, y: 200 }
 
 beforeEach(() => {
   mock.FakeWindow.created = []
@@ -60,7 +58,7 @@ describe('secure web preferences', () => {
 
 describe('loadPage', () => {
   it('loads the built file in production', () => {
-    const window = asFake(createWidgetWindow())
+    const window = asFake(createWidgetWindow(spot))
     expect(window.loadFile.mock.calls[0]?.[0]).toMatch(/renderer[\\/]widget[\\/]index\.html$/)
     expect(window.loadURL).not.toHaveBeenCalled()
   })
@@ -84,7 +82,7 @@ describe('loadPage', () => {
 
 describe('widget window', () => {
   it('floats without a frame, taskbar entry, or keyboard focus', () => {
-    expect(asFake(createWidgetWindow()).options).toMatchObject({
+    expect(asFake(createWidgetWindow(spot)).options).toMatchObject({
       width: WIDGET_SIZE,
       height: WIDGET_SIZE,
       frame: false,
@@ -97,19 +95,17 @@ describe('widget window', () => {
     })
   })
 
-  it('starts inside the work area', () => {
-    const { x, y } = asFake(createWidgetWindow()).options as { x: number; y: number }
-    expect(x).toBe(1416)
-    expect(y).toBe(696)
+  it('opens at the position it is given', () => {
+    expect(asFake(createWidgetWindow(spot)).options).toMatchObject(spot)
   })
 
   it('uses a round clickable shape', () => {
-    const shape = asFake(createWidgetWindow()).setShape.mock.calls[0]?.[0] as unknown[]
+    const shape = asFake(createWidgetWindow(spot)).setShape.mock.calls[0]?.[0] as unknown[]
     expect(shape).toHaveLength(WIDGET_SIZE)
   })
 
   it('appears without taking focus, only once it is ready', () => {
-    const window = asFake(createWidgetWindow())
+    const window = asFake(createWidgetWindow(spot))
     expect(window.showInactive).not.toHaveBeenCalled()
     window.handlers['ready-to-show']?.()
     expect(window.showInactive).toHaveBeenCalledOnce()
@@ -137,8 +133,12 @@ describe('overview window', () => {
 })
 
 describe('app window', () => {
+  it('opens at the position it is given', () => {
+    expect(asFake(createAppWindow(spot)).options).toMatchObject({ ...spot, ...APP_WINDOW_SIZE })
+  })
+
   it('is an ordinary resizable window with native title bar buttons', () => {
-    const { options } = asFake(createAppWindow())
+    const { options } = asFake(createAppWindow(spot))
     expect(options).toMatchObject({ titleBarStyle: 'hidden', show: false })
     expect(options).not.toHaveProperty('transparent')
     expect(options).not.toHaveProperty('alwaysOnTop')
@@ -146,7 +146,7 @@ describe('app window', () => {
   })
 
   it('shows normally once ready', () => {
-    const window = asFake(createAppWindow())
+    const window = asFake(createAppWindow(spot))
     window.handlers['ready-to-show']?.()
     expect(window.show).toHaveBeenCalledOnce()
   })

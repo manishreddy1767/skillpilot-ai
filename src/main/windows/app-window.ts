@@ -1,12 +1,15 @@
 import { BrowserWindow } from 'electron'
+import type { Point } from '../logic/geometry'
 import { loadPage, secureWebPreferences } from './common'
 
+export const APP_WINDOW_SIZE = { width: 1100, height: 720 }
+
 /** The full interface: a normal resizable window, created the first time it is opened. */
-export function createAppWindow(): BrowserWindow {
+export function createAppWindow(position: Point): BrowserWindow {
   const appWindow = new BrowserWindow({
     title: 'SkillPilot AI',
-    width: 1100,
-    height: 720,
+    ...APP_WINDOW_SIZE,
+    ...position,
     minWidth: 760,
     minHeight: 520,
     show: false,
