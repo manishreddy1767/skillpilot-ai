@@ -78,9 +78,10 @@ describe('record handlers', () => {
 
   it.each(['profile', 'sqlite_master', '', null, 1])('rejects the kind %s', (kind) => {
     const { h } = setup()
-    expect(h.listRecords(kind).ok).toBe(false)
-    expect(h.saveRecord(kind, null, education).ok).toBe(false)
-    expect(h.deleteRecord(kind, 1).ok).toBe(false)
+    const refused = { ok: false, message: 'Unknown record type.' }
+    expect(h.listRecords(kind)).toEqual(refused)
+    expect(h.saveRecord(kind, null, education)).toEqual(refused)
+    expect(h.deleteRecord(kind, 1)).toEqual(refused)
   })
 
   it.each(['1', 0, -1, 1.5, Number.NaN, {}, undefined])('rejects the id %s', (id) => {
