@@ -2,14 +2,12 @@ import { BrowserWindow } from 'electron'
 import { circleRows, type Point } from '../logic/geometry'
 import { loadPage, secureWebPreferences } from './common'
 
-export const WIDGET_SIZE = 72
-
-export function createWidgetWindow(position: Point): BrowserWindow {
+export function createWidgetWindow(position: Point, size: number): BrowserWindow {
   const widget = new BrowserWindow({
     title: 'SkillPilot Widget',
     ...position,
-    width: WIDGET_SIZE,
-    height: WIDGET_SIZE,
+    width: size,
+    height: size,
     show: false,
     frame: false,
     thickFrame: false,
@@ -28,7 +26,7 @@ export function createWidgetWindow(position: Point): BrowserWindow {
   })
 
   // The window is square but the icon is round: let clicks through at the corners.
-  widget.setShape(circleRows(WIDGET_SIZE))
+  widget.setShape(circleRows(size))
   loadPage(widget, 'widget')
   widget.once('ready-to-show', () => widget.showInactive())
   return widget

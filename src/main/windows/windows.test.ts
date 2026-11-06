@@ -34,7 +34,7 @@ vi.mock('electron', () => ({ BrowserWindow: mock.FakeWindow }))
 import { APP_WINDOW_SIZE, createAppWindow } from './app-window'
 import { loadPage, secureWebPreferences } from './common'
 import { OVERVIEW_SIZE, createOverviewWindow } from './overview'
-import { WIDGET_SIZE, createWidgetWindow } from './widget'
+import { createWidgetWindow } from './widget'
 
 type Fake = InstanceType<typeof mock.FakeWindow>
 const asFake = (window: unknown) => window as Fake
@@ -58,7 +58,7 @@ describe('secure web preferences', () => {
 
 describe('loadPage', () => {
   it('loads the built file in production', () => {
-    const window = asFake(createWidgetWindow(spot))
+    const window = asFake(createWidgetWindow(spot, 72))
     expect(window.loadFile.mock.calls[0]?.[0]).toMatch(/renderer[\\/]widget[\\/]index\.html$/)
     expect(window.loadURL).not.toHaveBeenCalled()
   })
@@ -82,9 +82,9 @@ describe('loadPage', () => {
 
 describe('widget window', () => {
   it('floats without a frame, taskbar entry, or keyboard focus', () => {
-    expect(asFake(createWidgetWindow(spot)).options).toMatchObject({
-      width: WIDGET_SIZE,
-      height: WIDGET_SIZE,
+    expect(asFake(createWidgetWindow(spot, 72)).options).toMatchObject({
+      width: 72,
+      height: 72,
       frame: false,
       transparent: true,
       alwaysOnTop: true,
@@ -96,16 +96,22 @@ describe('widget window', () => {
   })
 
   it('opens at the position it is given', () => {
-    expect(asFake(createWidgetWindow(spot)).options).toMatchObject(spot)
+    expect(asFake(createWidgetWindow(spot, 72)).options).toMatchObject(spot)
+  })
+
+  it('uses the size it is given', () => {
+    const window = asFake(createWidgetWindow(spot, 128))
+    expect(window.options).toMatchObject({ width: 128, height: 128 })
+    expect(window.setShape.mock.calls[0]?.[0]).toHaveLength(128)
   })
 
   it('uses a round clickable shape', () => {
-    const shape = asFake(createWidgetWindow(spot)).setShape.mock.calls[0]?.[0] as unknown[]
-    expect(shape).toHaveLength(WIDGET_SIZE)
+    const shape = asFake(createWidgetWindow(spot, 72)).setShape.mock.calls[0]?.[0] as unknown[]
+    expect(shape).toHaveLength(72)
   })
 
   it('appears without taking focus, only once it is ready', () => {
-    const window = asFake(createWidgetWindow(spot))
+    const window = asFake(createWidgetWindow(spot, 72))
     expect(window.showInactive).not.toHaveBeenCalled()
     window.handlers['ready-to-show']?.()
     expect(window.showInactive).toHaveBeenCalledOnce()

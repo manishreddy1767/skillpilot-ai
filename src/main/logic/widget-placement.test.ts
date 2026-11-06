@@ -17,7 +17,7 @@ function setup(saved: SavedPosition | null = null, connected = [laptop, external
   let displays = connected
   const save = vi.fn()
   const placement = new WidgetPlacement({
-    size: 72,
+    getSize: () => 72,
     getDisplays: () => displays,
     getPrimary: () => laptop,
     load: () => saved,
