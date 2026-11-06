@@ -1,4 +1,4 @@
-export type FieldType = 'text' | 'long' | 'month' | 'email' | 'url'
+export type FieldType = 'text' | 'long' | 'month' | 'date' | 'email' | 'url' | 'select'
 export type FieldValues = Record<string, string>
 export type FieldErrors = Record<string, string>
 
@@ -10,10 +10,36 @@ export interface FieldDef {
   required?: boolean
   /** Key of the date field this one cannot come before. */
   notBefore?: string
+  /** The allowed choices for a select field. */
+  options?: { value: string; label: string }[]
+  /** Starting value for a new record. */
+  initial?: string
 }
 
-export const recordKinds = ['education', 'work', 'certification'] as const
+export const recordKinds = [
+  'education',
+  'work',
+  'certification',
+  'skill',
+  'goal',
+  'project',
+  'evidence',
+  'goalMilestone',
+  'projectMilestone'
+] as const
 export type RecordKind = (typeof recordKinds)[number]
+
+/** Kinds that belong to a parent record, and so need its id. */
+export const childKinds: readonly RecordKind[] = ['evidence', 'goalMilestone', 'projectMilestone']
+
+export const linkKinds = ['goalSkill', 'goalProject', 'projectSkill'] as const
+export type LinkKind = (typeof linkKinds)[number]
+
+export interface Link {
+  id: number
+  /** The level a goal needs. Other links have no level. */
+  level: number | null
+}
 
 export interface StoredRecord {
   id: number
@@ -24,11 +50,35 @@ export interface OverviewData {
   name: string
   currentGoal: string
   targetRoles: string
+  progress: number | null
+  learning: string[]
+  nextDeadline: { title: string; date: string; overdue: boolean } | null
+  latestAchievement: string | null
 }
 
 export type Result<T> =
   | { ok: true; value: T }
   | { ok: false; message: string; errors?: FieldErrors }
+
+const levelOptions = ['0 - None', '1 - Beginner', '2 - Basic', '3 - Working', '4 - Strong', '5 - Expert'].map(
+  (label, value) => ({ value: String(value), label })
+)
+
+const milestoneFields: FieldDef[] = [
+  { key: 'title', column: 'title', label: 'Milestone', type: 'text', required: true },
+  { key: 'dueDate', column: 'due_date', label: 'Due', type: 'date' },
+  {
+    key: 'status',
+    column: 'status',
+    label: 'Status',
+    type: 'select',
+    initial: 'open',
+    options: [
+      { value: 'open', label: 'Not done' },
+      { value: 'done', label: 'Done' }
+    ]
+  }
+]
 
 export const profileFields: FieldDef[] = [
   { key: 'fullName', column: 'full_name', label: 'Full name', type: 'text', required: true },
@@ -67,7 +117,122 @@ export const recordFields: Record<RecordKind, FieldDef[]> = {
     { key: 'issueDate', column: 'issue_date', label: 'Issued', type: 'month' },
     { key: 'expiryDate', column: 'expiry_date', label: 'Expires', type: 'month', notBefore: 'issueDate' },
     { key: 'credentialUrl', column: 'credential_url', label: 'Credential link', type: 'url' }
-  ]
+  ],
+  skill: [
+    { key: 'name', column: 'name', label: 'Skill', type: 'text', required: true },
+    {
+      key: 'category',
+      column: 'category',
+      label: 'Category',
+      type: 'select',
+      initial: 'technical',
+      options: [
+        { value: 'technical', label: 'Technical' },
+        { value: 'non-technical', label: 'Non-technical' }
+      ]
+    },
+    {
+      key: 'claimedLevel',
+      column: 'claimed_level',
+      label: 'My level',
+      type: 'select',
+      initial: '0',
+      options: levelOptions
+    },
+    {
+      key: 'status',
+      column: 'status',
+      label: 'Status',
+      type: 'select',
+      initial: 'learning',
+      options: [
+        { value: 'learning', label: 'Learning now' },
+        { value: 'using', label: 'Using' },
+        { value: 'completed', label: 'Completed' }
+      ]
+    },
+    { key: 'notes', column: 'notes', label: 'Notes', type: 'long' }
+  ],
+  goal: [
+    { key: 'title', column: 'title', label: 'Goal', type: 'text', required: true },
+    { key: 'targetDate', column: 'target_date', label: 'Target date', type: 'date' },
+    {
+      key: 'priority',
+      column: 'priority',
+      label: 'Priority',
+      type: 'select',
+      initial: '2',
+      options: [
+        { value: '1', label: 'Low' },
+        { value: '2', label: 'Medium' },
+        { value: '3', label: 'High' }
+      ]
+    },
+    {
+      key: 'status',
+      column: 'status',
+      label: 'Status',
+      type: 'select',
+      initial: 'active',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'paused', label: 'Paused' },
+        { value: 'done', label: 'Done' }
+      ]
+    },
+    { key: 'description', column: 'description', label: 'Description', type: 'long' }
+  ],
+  project: [
+    { key: 'name', column: 'name', label: 'Project', type: 'text', required: true },
+    { key: 'technologies', column: 'technologies', label: 'Technologies', type: 'text' },
+    {
+      key: 'status',
+      column: 'status',
+      label: 'Status',
+      type: 'select',
+      initial: 'planned',
+      options: [
+        { value: 'planned', label: 'Planned' },
+        { value: 'active', label: 'In progress' },
+        { value: 'complete', label: 'Complete' }
+      ]
+    },
+    { key: 'completedOn', column: 'completed_on', label: 'Completed', type: 'month' },
+    { key: 'repoUrl', column: 'repo_url', label: 'GitHub link', type: 'url' },
+    { key: 'description', column: 'description', label: 'Description', type: 'long' }
+  ],
+  evidence: [
+    { key: 'description', column: 'description', label: 'What shows this skill', type: 'text', required: true },
+    {
+      key: 'kind',
+      column: 'kind',
+      label: 'Type',
+      type: 'select',
+      initial: 'practice',
+      options: [
+        { value: 'practice', label: 'Practice' },
+        { value: 'course', label: 'Course' },
+        { value: 'certification', label: 'Certification' },
+        { value: 'work', label: 'Work' },
+        { value: 'other', label: 'Other' }
+      ]
+    },
+    {
+      key: 'strength',
+      column: 'strength',
+      label: 'Strength',
+      type: 'select',
+      initial: '2',
+      options: [
+        { value: '1', label: 'Minor (1 point)' },
+        { value: '2', label: 'Solid (2 points)' },
+        { value: '3', label: 'Strong (3 points)' }
+      ]
+    },
+    { key: 'observedOn', column: 'observed_on', label: 'When', type: 'month' }
+  ],
+  goalMilestone: milestoneFields,
+  projectMilestone: milestoneFields
 }
 
 export const MAX_TEXT_LENGTH = 200
@@ -77,8 +242,18 @@ export function isRecordKind(value: unknown): value is RecordKind {
   return recordKinds.includes(value as RecordKind)
 }
 
+export function isLinkKind(value: unknown): value is LinkKind {
+  return linkKinds.includes(value as LinkKind)
+}
+
 export function emptyValues(fields: FieldDef[]): FieldValues {
-  return Object.fromEntries(fields.map((field) => [field.key, '']))
+  return Object.fromEntries(fields.map((field) => [field.key, field.initial ?? '']))
+}
+
+function isRealDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value)
 }
 
 function fieldError(field: FieldDef, value: string): string | null {
@@ -87,6 +262,12 @@ function fieldError(field: FieldDef, value: string): string | null {
   if (value.length > limit) return `${field.label} must be ${limit} characters or fewer`
   if (field.type === 'month' && !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
     return `${field.label} must be a month, like 2026-03`
+  }
+  if (field.type === 'date' && !isRealDate(value)) {
+    return `${field.label} must be a date, like 2026-03-15`
+  }
+  if (field.type === 'select' && !field.options?.some((option) => option.value === value)) {
+    return `Choose a valid ${field.label.toLowerCase()}`
   }
   if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
     return 'Enter a valid email address'
@@ -108,7 +289,8 @@ export function validateFields(
 
   for (const field of fields) {
     const raw = source[field.key]
-    values[field.key] = typeof raw === 'string' ? raw.trim() : ''
+    const text = typeof raw === 'string' ? raw.trim() : ''
+    values[field.key] = text || (field.initial ?? '')
     const error = fieldError(field, values[field.key]!)
     if (error) errors[field.key] = error
   }

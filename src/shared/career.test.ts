@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   MAX_LONG_LENGTH,
   MAX_TEXT_LENGTH,
+  childKinds,
   emptyValues,
+  isLinkKind,
   isRecordKind,
   profileFields,
   recordFields,
@@ -33,6 +35,55 @@ describe('isRecordKind', () => {
     expect(isRecordKind('work')).toBe(true)
     expect(isRecordKind('profile; DROP TABLE')).toBe(false)
     expect(isRecordKind(undefined)).toBe(false)
+  })
+})
+
+describe('isLinkKind', () => {
+  it('accepts known links only', () => {
+    expect(isLinkKind('goalSkill')).toBe(true)
+    expect(isLinkKind('skill')).toBe(false)
+  })
+})
+
+describe('childKinds', () => {
+  it('lists only known kinds', () => {
+    for (const kind of childKinds) expect(isRecordKind(kind)).toBe(true)
+  })
+})
+
+describe('select fields', () => {
+  const skill = recordFields.skill
+
+  it('start at their initial value', () => {
+    expect(emptyValues(skill)).toMatchObject({ category: 'technical', claimedLevel: '0', status: 'learning' })
+  })
+
+  it('fall back to their initial value when left out', () => {
+    const { values, errors } = validateFields(skill, { name: 'React' })
+    expect(errors).toEqual({})
+    expect(values['claimedLevel']).toBe('0')
+  })
+
+  it.each([['6'], ['-1'], ['high'], ['1; DROP']])('reject the level %s', (claimedLevel) => {
+    expect(validateFields(skill, { name: 'React', claimedLevel }).errors['claimedLevel']).toBeDefined()
+  })
+
+  it('accept every offered option', () => {
+    for (const { value } of skill.find((f) => f.key === 'status')!.options!) {
+      expect(validateFields(skill, { name: 'React', status: value }).errors).toEqual({})
+    }
+  })
+})
+
+describe('date fields', () => {
+  const goal = recordFields.goal
+
+  it('accept a real date', () => {
+    expect(validateFields(goal, { title: 'G', targetDate: '2028-02-29' }).errors).toEqual({})
+  })
+
+  it.each(['2026-02-30', '2027-02-29', '2026-13-01', '2026-1-1', 'soon'])('reject %s', (targetDate) => {
+    expect(validateFields(goal, { title: 'G', targetDate }).errors['targetDate']).toBeDefined()
   })
 })
 
