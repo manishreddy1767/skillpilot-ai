@@ -13,6 +13,8 @@ export function Widget() {
 
   const onPointerMove = () => {
     if (pressed.current) window.skillpilot.dragMove()
+    // After a drag the page can miss the pointer leaving, and so never see it re-enter.
+    else window.skillpilot.hoverEnter()
   }
 
   const finishPress = () => {

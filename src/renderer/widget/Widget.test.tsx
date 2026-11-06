@@ -56,6 +56,15 @@ describe('Widget', () => {
     expect(window.skillpilot.dragRelease).not.toHaveBeenCalled()
   })
 
+  it('treats movement over the widget as hovering, but not during a drag', () => {
+    const el = widget()
+    fireEvent.pointerMove(el)
+    expect(window.skillpilot.hoverEnter).toHaveBeenCalledOnce()
+    fireEvent.pointerDown(el, { button: 0 })
+    fireEvent.pointerMove(el)
+    expect(window.skillpilot.hoverEnter).toHaveBeenCalledOnce()
+  })
+
   it('reports the pointer entering and leaving', () => {
     const el = widget()
     fireEvent.pointerEnter(el)
