@@ -411,11 +411,11 @@ test('tests use their own data folder, away from the real app', async () => {
   expect(folder).toContain('skillpilot-ai-test')
 })
 
-test('a second copy exits and leaves the first running', async () => {
+test('a second copy exits and opens the full app in the first', async () => {
   const electron = resolve(root, 'node_modules/electron/dist/electron.exe')
   const second = spawn(electron, [harnessFile], { cwd: root, env: cleanEnv() })
   const code = await new Promise<number | null>((done) => second.once('exit', done))
   expect(code).toBe(0)
   expect(await h.visible(WIDGET)).toBe(true)
-  expect(await h.windowCount()).toBe(2)
+  await expect.poll(() => h.visible(APP)).toBe(true)
 })
