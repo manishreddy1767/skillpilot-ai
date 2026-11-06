@@ -10,6 +10,7 @@ import {
   type RecordKind,
   type StoredRecord
 } from '../../shared/career'
+import type { LearningRows } from '../../shared/learning'
 import type { CareerRows } from '../../shared/progress'
 
 // Table and column names come only from these constants. User values are always bound.
@@ -154,8 +155,34 @@ export class CareerStore {
       milestones: all(
         `SELECT goal_id AS goalId, project_id AS projectId, title, due_date AS dueDate, status,
          completed_on AS completedOn FROM milestone`
+      ),
+      dueTasks: all(
+        "SELECT title, due_date AS dueDate FROM task WHERE status <> 'done' AND due_date <> ''"
       )
     }
+  }
+
+  readLearningRows(): LearningRows {
+    const all = <T>(sql: string): T[] => this.db.prepare(sql).all() as T[]
+    return {
+      tasks: all(
+        `SELECT id, title, kind, due_date AS dueDate, minutes, status, completed_on AS completedOn FROM task`
+      ),
+      roadmaps: all('SELECT id, title, start_date AS startDate FROM roadmap ORDER BY id DESC'),
+      items: all(
+        `SELECT roadmap_id AS roadmapId, title, week, effort_hours AS effortHours, status FROM roadmap_item`
+      )
+    }
+  }
+
+  completeTask(id: number): boolean {
+    const result = this.db.prepare("UPDATE task SET status = 'done' WHERE id = ?").run(id)
+    return Number(result.changes) > 0
+  }
+
+  setRoadmapStart(id: number, startDate: string): boolean {
+    const result = this.db.prepare('UPDATE roadmap SET start_date = ? WHERE id = ?').run(startDate, id)
+    return Number(result.changes) > 0
   }
 }
 
