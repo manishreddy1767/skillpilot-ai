@@ -48,7 +48,7 @@ the Electron decision is revisited here.
 - Projects linked to skills
 - Computed progress, skill visualizations, and the first dashboard
 
-### M4: Career intelligence (Phase 3)
+### M4: Career intelligence (Phase 3), complete
 
 - API key handling, provider layer, and the "what was sent" view
 - Target roles, skill-gap reports, and recommendations

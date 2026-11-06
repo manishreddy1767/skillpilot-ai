@@ -34,11 +34,11 @@ and can always be traced back to the evidence behind it.
 | Skills | `skill`, `skill_level_history`, `evidence` |
 | Goals | `goal`, `goal_skill`, `goal_project`, `milestone` |
 | Projects | `project`, `project_skill` |
-| Target roles | `target_role`, `role_requirement` |
-| Roadmap | `roadmap`, `roadmap_item`, `resource` |
-| Daily work | `task`, `activity_log` |
-| AI | `conversation`, `message`, `gap_report`, `proposed_change` |
-| App | `setting`, `notification_rule`, `notification_log` |
+| Target roles | `target_role`, `role_requirement`, `gap_report` |
+| Roadmap | `roadmap`, `roadmap_item` |
+| Daily work | `task` |
+| AI | `chat_message`, `proposed_change`, `ai_request` |
+| App | `setting`, `notification_log` |
 
 `milestone` serves both goals and projects. Skills and evidence link to projects so that finishing a
 project feeds straight into skill and goal progress.
@@ -54,6 +54,6 @@ every number can be explained.
 | Skill proof | Unproven with no demonstrated level, partly proven below the claim, proven at or above it |
 | Goal progress | The average of milestones done and required skills reached. A skill counts fully for its demonstrated level and half for any claimed level beyond that. A done goal is 100%. |
 | Overall progress | Average of active goals, weighted by priority: low 1, medium 2, high 3 |
-| Role readiness | Planned for milestone 4: each requirement weighted by importance, with partial credit for claimed-only skills |
+| Role readiness | Each requirement weighted by importance, scored like goal skills, so claimed-only levels earn half credit. See `src/shared/gap.ts`. |
 | Learning streak | Planned for milestone 5: consecutive days with a completed learning task |
 | Pace | Planned for milestone 5: tasks and topics completed in the last 14 days against the prior 14 days |

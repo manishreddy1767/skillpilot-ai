@@ -15,7 +15,7 @@ and AI guidance. There is no server, no accounts, and no public deployment.
 | UI | React + Vite (electron-vite) | Runs from local files inside Electron. No web server, no browser. |
 | Charts | Plain CSS and HTML | The charts are simple bars and meters, so no chart library is needed. |
 | Storage | SQLite through built-in `node:sqlite` | Local file, no native module to rebuild. See [ADR 0002](../decisions/0002-built-in-sqlite.md). |
-| AI | Claude API through `@anthropic-ai/sdk`, behind a provider interface | See [AI and privacy](ai-and-privacy.md). |
+| AI | Off by default. Claude through `@anthropic-ai/sdk`, or a local Ollama model | See [AI and privacy](ai-and-privacy.md). |
 | Secrets | Electron `safeStorage` (Windows DPAPI) | The API key is encrypted on disk and never enters source control. |
 | Packaging | electron-builder, NSIS installer | One installer with a Start Menu shortcut, which toasts need. |
 | Tests | Vitest, real-input PowerShell test | Logic and database tests, plus real mouse tests against the built app. |
