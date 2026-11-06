@@ -224,6 +224,32 @@ test.describe('dragging', () => {
     expect((await h.state(WIDGET))!.bounds).toMatchObject({ width: 72, height: 72 })
   })
 
+  test('follows the cursor even if the page sends no move events', async () => {
+    const { x, y } = await h.cursorToWidget()
+    await h.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await h.moveCursor(x - 400, y - 300)
+    await expect.poll(async () => (await h.state(WIDGET))!.bounds.x).toBe(x - 400 - 36)
+    await h.call(WIDGET, 'dragRelease')
+  })
+
+  test('ends exactly under the cursor when released', async () => {
+    const { x, y } = await h.cursorToWidget()
+    await h.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await h.moveCursor(x - 400, y - 300)
+    await h.call(WIDGET, 'dragRelease')
+    expect((await h.state(WIDGET))!.bounds).toMatchObject({ x: x - 436, y: y - 336 })
+  })
+
+  test('stops following once released', async () => {
+    const { x, y } = await h.cursorToWidget()
+    await h.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await h.moveCursor(x - 400, y - 300)
+    await h.call(WIDGET, 'dragRelease')
+    await h.moveCursor(5, 5)
+    await pause(100)
+    expect((await h.state(WIDGET))!.bounds).toMatchObject({ x: x - 436, y: y - 336 })
+  })
+
   test('has no position limits', async () => {
     for (const [x, y] of [
       [768, 432],

@@ -38,6 +38,7 @@ const NOTIFICATION_CHECK_INTERVAL = 15 * 60 * 1000
 const FIRST_NOTIFICATION_CHECK = 60 * 1000
 const FADE_STEP = 0.2
 const FADE_INTERVAL = 16
+const DRAG_FOLLOW_INTERVAL = 16
 
 const toPair = ({ x, y }: Point): [number, number] => [x, y]
 
@@ -156,26 +157,39 @@ function start(): void {
     }
   }
 
+  let dragTimer: NodeJS.Timeout | null = null
+
+  const stopFollowing = (): void => {
+    if (dragTimer) clearInterval(dragTimer)
+    dragTimer = null
+  }
+
+  const followCursor = (): void => {
+    const position = drag.move(screen.getCursorScreenPoint())
+    if (!position) return
+    hover.suspend()
+    moveWidget(position)
+  }
+
   ipcMain.on(
     Channel.DragPress,
     from(widget, (_event, offset) => {
-      if (isPoint(offset)) drag.press(screen.getCursorScreenPoint(), offset)
+      if (!isPoint(offset)) return
+      drag.press(screen.getCursorScreenPoint(), offset)
+      // The page's move events can lag or stop, so the cursor is followed from here.
+      stopFollowing()
+      dragTimer = setInterval(followCursor, DRAG_FOLLOW_INTERVAL)
     })
   )
 
-  ipcMain.on(
-    Channel.DragMove,
-    from(widget, () => {
-      const position = drag.move(screen.getCursorScreenPoint())
-      if (!position) return
-      hover.suspend()
-      moveWidget(position)
-    })
-  )
+  ipcMain.on(Channel.DragMove, from(widget, followCursor))
 
   ipcMain.on(
     Channel.DragRelease,
     from(widget, () => {
+      // One last placement, so the widget always ends up exactly under the cursor.
+      followCursor()
+      stopFollowing()
       const result = drag.release()
       hover.resume()
       if (result === 'click') openApp()
@@ -364,6 +378,7 @@ function start(): void {
     clearTimeout(firstCheck)
     clearInterval(regularCheck)
     stopFade()
+    stopFollowing()
     // Suspended, not just closed: a late hover must not reach a destroyed window.
     hover.suspend()
     if (settleTimer) clearTimeout(settleTimer)
