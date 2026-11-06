@@ -11,7 +11,16 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Dashboard' }).getAttribute('aria-current')).toBe('page')
   })
 
-  it.each(['Skills', 'Goals', 'Projects', 'Profile'])('switches to %s', async (label) => {
+  it.each([
+    ['Skills', 'Skills'],
+    ['Goals', 'Goals'],
+    ['Projects', 'Projects'],
+    ['Profile', 'Profile'],
+    ['Assistant', 'Assistant'],
+    ['Target roles', 'Target roles'],
+    ['Roadmaps', 'Roadmaps'],
+    ['Settings', 'Settings']
+  ])('switches to %s', async (label) => {
     render(<App />)
     await screen.findByRole('heading', { name: 'Dashboard' })
     go(label)

@@ -1,14 +1,22 @@
 import { useState } from 'react'
+import { AssistantView } from './AssistantView'
 import { DashboardView } from './DashboardView'
 import { GoalsView } from './GoalsView'
 import { ProfileForm } from './ProfileForm'
 import { ProjectsView } from './ProjectsView'
 import { RecordEditor } from './RecordEditor'
+import { RoadmapsView } from './RoadmapsView'
+import { RolesView } from './RolesView'
+import { SettingsView } from './SettingsView'
 import { SkillsView } from './SkillsView'
 import './app.css'
 
 type Section =
   | 'dashboard'
+  | 'assistant'
+  | 'roles'
+  | 'roadmaps'
+  | 'settings'
   | 'skills'
   | 'goals'
   | 'projects'
@@ -19,19 +27,31 @@ type Section =
 
 const sections: { id: Section; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
+  { id: 'assistant', label: 'Assistant' },
   { id: 'skills', label: 'Skills' },
   { id: 'goals', label: 'Goals' },
   { id: 'projects', label: 'Projects' },
+  { id: 'roles', label: 'Target roles' },
+  { id: 'roadmaps', label: 'Roadmaps' },
   { id: 'profile', label: 'Profile' },
   { id: 'education', label: 'Education' },
   { id: 'work', label: 'Experience' },
-  { id: 'certification', label: 'Certifications' }
+  { id: 'certification', label: 'Certifications' },
+  { id: 'settings', label: 'Settings' }
 ]
 
 function Screen({ section }: { section: Section }) {
   switch (section) {
     case 'dashboard':
       return <DashboardView />
+    case 'assistant':
+      return <AssistantView />
+    case 'roles':
+      return <RolesView />
+    case 'roadmaps':
+      return <RoadmapsView />
+    case 'settings':
+      return <SettingsView />
     case 'skills':
       return <SkillsView />
     case 'goals':
