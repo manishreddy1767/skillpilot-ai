@@ -25,7 +25,24 @@ const api: SkillPilotApi = {
   listLinks: (kind, parentId) => ipcRenderer.invoke(Channel.ListLinks, kind, parentId),
   setLink: (kind, parentId, childId, linked, level) =>
     ipcRenderer.invoke(Channel.SetLink, kind, parentId, childId, linked, level),
-  getDashboard: () => ipcRenderer.invoke(Channel.GetDashboard)
+  getDashboard: () => ipcRenderer.invoke(Channel.GetDashboard),
+  getSettings: () => ipcRenderer.invoke(Channel.GetSettings),
+  saveSettings: (values) => ipcRenderer.invoke(Channel.SaveSettings, values),
+  getAiStatus: () => ipcRenderer.invoke(Channel.GetAiStatus),
+  saveApiKey: (key) => ipcRenderer.invoke(Channel.SaveApiKey, key),
+  removeApiKey: () => ipcRenderer.invoke(Channel.RemoveApiKey),
+  getChat: () => ipcRenderer.invoke(Channel.GetChat),
+  sendChat: (message) => ipcRenderer.invoke(Channel.SendChat, message),
+  clearChat: () => ipcRenderer.invoke(Channel.ClearChat),
+  getGapAnalysis: (roleId) => ipcRenderer.invoke(Channel.GetGapAnalysis, roleId),
+  draftRequirements: (roleId) => ipcRenderer.invoke(Channel.DraftRequirements, roleId),
+  createGapReport: (roleId) => ipcRenderer.invoke(Channel.CreateGapReport, roleId),
+  generateRoadmap: (roleId) => ipcRenderer.invoke(Channel.GenerateRoadmap, roleId),
+  suggestTasks: () => ipcRenderer.invoke(Channel.SuggestTasks),
+  listProposals: () => ipcRenderer.invoke(Channel.ListProposals),
+  acceptProposal: (id) => ipcRenderer.invoke(Channel.AcceptProposal, id),
+  rejectProposal: (id) => ipcRenderer.invoke(Channel.RejectProposal, id),
+  getAiLog: () => ipcRenderer.invoke(Channel.GetAiLog)
 }
 
 contextBridge.exposeInMainWorld('skillpilot', api)

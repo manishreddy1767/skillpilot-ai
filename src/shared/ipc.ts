@@ -1,5 +1,8 @@
+import type { AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from './ai'
 import type { FieldValues, Link, LinkKind, OverviewData, RecordKind, Result, StoredRecord } from './career'
+import type { GapAnalysis } from './gap'
 import type { Dashboard } from './progress'
+import type { Settings } from './settings'
 
 export const Channel = {
   DragPress: 'widget:drag-press',
@@ -18,7 +21,24 @@ export const Channel = {
   DeleteRecord: 'records:delete',
   ListLinks: 'links:list',
   SetLink: 'links:set',
-  GetDashboard: 'dashboard:get'
+  GetDashboard: 'dashboard:get',
+  GetSettings: 'settings:get',
+  SaveSettings: 'settings:save',
+  GetAiStatus: 'ai:status',
+  SaveApiKey: 'ai:save-key',
+  RemoveApiKey: 'ai:remove-key',
+  GetChat: 'chat:get',
+  SendChat: 'chat:send',
+  ClearChat: 'chat:clear',
+  GetGapAnalysis: 'gap:get',
+  DraftRequirements: 'ai:draft-requirements',
+  CreateGapReport: 'ai:gap-report',
+  GenerateRoadmap: 'ai:roadmap',
+  SuggestTasks: 'ai:suggest-tasks',
+  ListProposals: 'proposals:list',
+  AcceptProposal: 'proposals:accept',
+  RejectProposal: 'proposals:reject',
+  GetAiLog: 'ai:log'
 } as const
 
 /** The whole surface renderers can reach. They get nothing else from the main process. */
@@ -52,6 +72,23 @@ export interface SkillPilotApi {
     level?: number
   ): Promise<Result<boolean>>
   getDashboard(): Promise<Result<Dashboard>>
+  getSettings(): Promise<Result<Settings>>
+  saveSettings(values: Settings): Promise<Result<Settings>>
+  getAiStatus(): Promise<Result<AiStatus>>
+  saveApiKey(key: string): Promise<Result<boolean>>
+  removeApiKey(): Promise<Result<boolean>>
+  getChat(): Promise<Result<ChatMessage[]>>
+  sendChat(message: string): Promise<Result<ChatMessage[]>>
+  clearChat(): Promise<Result<boolean>>
+  getGapAnalysis(roleId: number): Promise<Result<{ analysis: GapAnalysis; report: GapReport | null }>>
+  draftRequirements(roleId: number): Promise<Result<number>>
+  createGapReport(roleId: number): Promise<Result<GapReport>>
+  generateRoadmap(roleId: number): Promise<Result<boolean>>
+  suggestTasks(): Promise<Result<number>>
+  listProposals(): Promise<Result<Proposal[]>>
+  acceptProposal(id: number): Promise<Result<boolean>>
+  rejectProposal(id: number): Promise<Result<boolean>>
+  getAiLog(): Promise<Result<AiLogEntry[]>>
 }
 
 declare global {

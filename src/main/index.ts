@@ -5,11 +5,14 @@ import {
   dialog,
   ipcMain,
   powerMonitor,
+  safeStorage,
   screen,
   type IpcMainEvent,
   type IpcMainInvokeEvent
 } from 'electron'
 import { Channel } from '../shared/ipc'
+import { KeyStore } from './ai/key-store'
+import { createAiHandlers } from './ai-handlers'
 import { createDataHandlers } from './data-handlers'
 import { localDate } from './db/backup'
 import { openCareerData } from './db/open-career-data'
@@ -176,6 +179,41 @@ function start(): void {
   ipcMain.handle(Channel.ListLinks, fromApp(handlers.listLinks))
   ipcMain.handle(Channel.SetLink, fromApp(handlers.setLink))
   ipcMain.handle(Channel.GetDashboard, fromApp(handlers.getDashboard))
+
+  const keys = new KeyStore(join(dataPath, 'api-key.enc'), {
+    isAvailable: () => safeStorage.isAsyncEncryptionAvailable(),
+    encrypt: (text) => safeStorage.encryptStringAsync(text),
+    decrypt: async (encrypted) => (await safeStorage.decryptStringAsync(encrypted)).result
+  })
+
+  const aiHandlers = createAiHandlers({
+    getStores: () => (data.store && data.aiStore ? { store: data.store, aiStore: data.aiStore } : null),
+    keys,
+    notifyOverview: () => {
+      if (!overview.isDestroyed()) overview.webContents.send(Channel.OverviewChanged)
+    },
+    logError: (error) => writeErrorLog(errorLogPath, error),
+    today: () => localDate(new Date()),
+    applySettings: () => undefined
+  })
+
+  ipcMain.handle(Channel.GetSettings, fromApp(aiHandlers.getSettings))
+  ipcMain.handle(Channel.SaveSettings, fromApp(aiHandlers.saveSettings))
+  ipcMain.handle(Channel.GetAiStatus, fromApp(aiHandlers.getAiStatus))
+  ipcMain.handle(Channel.SaveApiKey, fromApp(aiHandlers.saveApiKey))
+  ipcMain.handle(Channel.RemoveApiKey, fromApp(aiHandlers.removeApiKey))
+  ipcMain.handle(Channel.GetChat, fromApp(aiHandlers.getChat))
+  ipcMain.handle(Channel.SendChat, fromApp(aiHandlers.sendChat))
+  ipcMain.handle(Channel.ClearChat, fromApp(aiHandlers.clearChat))
+  ipcMain.handle(Channel.GetGapAnalysis, fromApp(aiHandlers.getGapAnalysis))
+  ipcMain.handle(Channel.DraftRequirements, fromApp(aiHandlers.draftRequirements))
+  ipcMain.handle(Channel.CreateGapReport, fromApp(aiHandlers.createGapReport))
+  ipcMain.handle(Channel.GenerateRoadmap, fromApp(aiHandlers.generateRoadmap))
+  ipcMain.handle(Channel.SuggestTasks, fromApp(aiHandlers.suggestTasks))
+  ipcMain.handle(Channel.ListProposals, fromApp(aiHandlers.listProposals))
+  ipcMain.handle(Channel.AcceptProposal, fromApp(aiHandlers.acceptProposal))
+  ipcMain.handle(Channel.RejectProposal, fromApp(aiHandlers.rejectProposal))
+  ipcMain.handle(Channel.GetAiLog, fromApp(aiHandlers.getAiLog))
   ipcMain.handle(Channel.GetOverview, (event) =>
     !overview.isDestroyed() && event.sender === overview.webContents ? handlers.getOverview() : denied
   )

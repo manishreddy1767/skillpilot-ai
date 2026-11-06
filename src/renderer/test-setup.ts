@@ -40,7 +40,30 @@ beforeEach(() => {
         ok: true as const,
         value: { overall: null, skills: [], goals: [], projects: [], deadlines: [], achievements: [] }
       })
-    )
+    ),
+    getSettings: vi.fn(() => Promise.resolve({ ok: true as const, value: {} })),
+    saveSettings: vi.fn((values) => Promise.resolve({ ok: true as const, value: values })),
+    getAiStatus: vi.fn(() =>
+      Promise.resolve({ ok: true as const, value: { provider: 'off', model: '', hasKey: false, blocked: '' } })
+    ),
+    saveApiKey: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    removeApiKey: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    getChat: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
+    sendChat: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
+    clearChat: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    getGapAnalysis: vi.fn(() =>
+      Promise.resolve({ ok: true as const, value: { analysis: { readiness: null, items: [] }, report: null } })
+    ),
+    draftRequirements: vi.fn(() => Promise.resolve({ ok: true as const, value: 0 })),
+    createGapReport: vi.fn(() =>
+      Promise.resolve({ ok: true as const, value: { id: 1, summary: '', priorities: [], createdAt: '' } })
+    ),
+    generateRoadmap: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    suggestTasks: vi.fn(() => Promise.resolve({ ok: true as const, value: 0 })),
+    listProposals: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
+    acceptProposal: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    rejectProposal: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    getAiLog: vi.fn(() => Promise.resolve({ ok: true as const, value: [] }))
   }
   window.skillpilot = api
   // jsdom has no pointer capture.
