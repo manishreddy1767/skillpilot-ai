@@ -12,17 +12,20 @@ Target: Windows 11 Home, the laptop this is developed on. Windows is the only su
 | Do Not Disturb | Windows can hold back toasts. The app cannot override this and should not try. |
 | Task Manager startup control | I can disable startup there, and it overrides the app setting. The app reads the real state. |
 
-## Needs testing in milestone 0
+## Milestone 0 results
 
-These are the behaviours the documentation does not settle.
+Tested with real mouse input on Windows 11 at 125% display scaling, on one monitor.
 
-| Question | Why it is uncertain | Fallback |
-|---|---|---|
-| Virtual desktops | Electron's all-workspaces API does not cover Windows, so the widget may stay on one desktop. | Accept it, or use a small native call. |
-| Win+D (Show Desktop) | The widget may be hidden with everything else. | Bring it back from the tray or a global shortcut. |
-| Round hit area | `setShape` is experimental. | Hit-testing with forwarded mouse events. |
-| Hover in click-through mode | The docs do not cover combining forwarded events with every mode. | Reverse the mode from the tray only. |
-| Dragging across monitors with different scaling | Window size can drift. Fixed-size `setBounds` should prevent it. | Re-apply the size after crossing. Testing this needs a second monitor. |
+| Question | Result |
+|---|---|
+| Virtual desktops | The widget stayed visible after switching to a newly created desktop. |
+| Win+D (Show Desktop) | The widget stayed visible. |
+| Round hit area | `setShape` works. Clicks at the corners reached the app behind. No fallback is needed. |
+| Click-through mode | Clicks reach the app behind, and hover and click on the widget are off. It uses plain `setIgnoreMouseEvents`, with no event forwarding. The mode is reversed from the tray. |
+
+Not tested, because there is only one monitor: dragging between monitors with different scaling, and
+unplugging a monitor. Fixed-size `setBounds` is in place for the first, and milestone 1 adds recovery
+for the second, tested with simulated display layouts.
 
 ## Consequences of the design
 

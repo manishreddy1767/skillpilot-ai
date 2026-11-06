@@ -1,8 +1,8 @@
 # Widget behaviour
 
-This is the core of the product. Everything here is proven in the milestone 0 spike before other
-features are built. The design comes from Electron's documentation. It has not yet been run as a
-working widget.
+This is the core of the product. Dragging, hover, click, and focus behaviour were proven with real
+mouse input in milestone 0 (`npm run test:desktop`). Saved position, the size and opacity options, and
+monitor recovery come in later milestones.
 
 ## States
 
@@ -25,9 +25,7 @@ The widget is a 72 x 72 px window: transparent, frameless, always on top, not re
 taskbar, and `focusable: false`, so clicking it never takes keyboard focus from the app you are using.
 
 The icon is round but the window is square. `setShape` limits the window's clickable area to the
-circle on Windows, so the corners do not block clicks on whatever is behind them. If that API
-misbehaves, the fallback is `setIgnoreMouseEvents(true, { forward: true })` switched on and off by
-hit-testing the circle. `setShape` is marked experimental, so the spike decides between them.
+circle on Windows, so the corners do not block clicks on whatever is behind them.
 
 ## Free dragging
 
