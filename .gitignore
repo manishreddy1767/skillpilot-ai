@@ -1,0 +1,16 @@
+node_modules/
+out/
+dist/
+release/
+coverage/
+test-results/
+playwright-report/
+*.log
+
+# Secrets and local data never belong in the repository
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
