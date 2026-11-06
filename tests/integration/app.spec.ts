@@ -60,7 +60,7 @@ test.describe('startup', () => {
     await expect((await h.page(OVERVIEW)).getByText('Current goal')).toBeAttached()
     await h.clickWidget()
     const app = await h.page(APP)
-    await expect(app.getByRole('heading', { name: 'Welcome to SkillPilot AI' })).toBeVisible()
+    await expect(app.getByRole('heading', { name: 'Profile' })).toBeVisible()
   })
 })
 
@@ -81,16 +81,23 @@ test.describe('security', () => {
     expect(globals).toEqual({ require: 'undefined', process: 'undefined' })
   })
 
-  test('the page sees only the seven bridge functions', async () => {
+  test('the page sees only the bridge functions', async () => {
     const keys = await (await h.page(WIDGET)).evaluate(() => Object.keys(window.skillpilot).sort())
     expect(keys).toEqual([
+      'deleteRecord',
       'dragMove',
       'dragPress',
       'dragRelease',
+      'getOverview',
+      'getProfile',
       'hoverEnter',
       'hoverLeave',
+      'listRecords',
       'minimizeToWidget',
-      'openApp'
+      'onOverviewChanged',
+      'openApp',
+      'saveProfile',
+      'saveRecord'
     ])
   })
 
