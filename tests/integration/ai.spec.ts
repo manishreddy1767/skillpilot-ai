@@ -252,7 +252,7 @@ test('a target role goes from AI requirements to report to roadmap', async () =>
   await page.getByRole('button', { name: 'Accept Add roadmap: Frontend path' }).click()
   await go(page, 'Roadmaps')
   await page.getByRole('button', { name: 'Details for Frontend path' }).click()
-  await expect(page.getByText('CSS layout')).toBeVisible()
+  await expect(page.getByText('CSS layout', { exact: true })).toBeVisible()
 })
 
 test('roadmaps can be created and edited without AI', async () => {
@@ -267,7 +267,7 @@ test('roadmaps can be created and edited without AI', async () => {
   await page.getByLabel('Topic').fill('Read a book')
   await page.getByLabel('Week').fill('3')
   await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect(page.getByText('Read a book')).toBeVisible()
+  await expect(page.getByText('Read a book', { exact: true })).toBeVisible()
   expect(requests).toHaveLength(0)
 })
 
