@@ -197,6 +197,41 @@ describe('LinkPicker', () => {
     await waitFor(() => expect(api().setLink).toHaveBeenCalledWith('goalSkill', 9, 1, true, 5))
   })
 
+  it('ticks at once, before saving has finished', async () => {
+    withOptions()
+    api().setLink.mockReturnValue(new Promise(() => undefined))
+    render(<LinkPicker link="projectSkill" {...props} />)
+    const box = await screen.findByLabelText<HTMLInputElement>('React')
+    fireEvent.click(box)
+    expect(box.checked).toBe(true)
+  })
+
+  it('undoes the tick if saving fails', async () => {
+    withOptions()
+    api().setLink.mockResolvedValue({ ok: false, message: 'Link failed.' })
+    render(<LinkPicker link="projectSkill" {...props} />)
+    const box = await screen.findByLabelText<HTMLInputElement>('React')
+    fireEvent.click(box)
+    await screen.findByRole('alert')
+    await waitFor(() => expect(box.checked).toBe(false))
+  })
+
+  it('ignores an out-of-date answer', async () => {
+    withOptions()
+    let finishFirst: (value: { ok: true; value: { id: number; level: null }[] }) => void = () => undefined
+    api().listLinks
+      .mockResolvedValueOnce({ ok: true, value: [] })
+      .mockReturnValueOnce(new Promise((done) => (finishFirst = done)))
+      .mockResolvedValue({ ok: true, value: [{ id: 1, level: null }, { id: 2, level: null }] })
+    render(<LinkPicker link="projectSkill" {...props} />)
+    fireEvent.click(await screen.findByLabelText('React'))
+    await waitFor(() => expect(api().listLinks).toHaveBeenCalledTimes(2))
+    fireEvent.click(screen.getByLabelText('SQL'))
+    await waitFor(() => expect(api().listLinks).toHaveBeenCalledTimes(3))
+    finishFirst({ ok: true, value: [{ id: 1, level: null }] })
+    await waitFor(() => expect(screen.getByLabelText<HTMLInputElement>('SQL').checked).toBe(true))
+  })
+
   it('shows a message when a link fails', async () => {
     withOptions()
     api().setLink.mockResolvedValue({ ok: false, message: 'Link failed.' })

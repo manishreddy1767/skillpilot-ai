@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Link, LinkKind, StoredRecord } from '../../shared/career'
 import { MAX_LEVEL } from '../../shared/progress'
 
@@ -21,12 +21,16 @@ export function LinkPicker({ link, parentId, optionKind, title, emptyText, withL
   const [options, setOptions] = useState<StoredRecord[]>([])
   const [linked, setLinked] = useState<Link[]>([])
   const [message, setMessage] = useState('')
+  const latestLoad = useRef(0)
 
   const load = useCallback(async (): Promise<void> => {
+    const thisLoad = ++latestLoad.current
     const [records, current] = await Promise.all([
       window.skillpilot.listRecords(optionKind),
       window.skillpilot.listLinks(link, parentId)
     ])
+    // A newer load has started, so this answer may already be out of date.
+    if (thisLoad !== latestLoad.current) return
     if (records.ok) setOptions(records.value)
     if (current.ok) setLinked(current.value)
     if (!records.ok) setMessage(records.message)
@@ -38,6 +42,11 @@ export function LinkPicker({ link, parentId, optionKind, title, emptyText, withL
   }, [load])
 
   const update = async (id: number, on: boolean, level?: number): Promise<void> => {
+    // Show the change straight away. The reload below corrects it if saving fails.
+    setLinked((items) => {
+      const others = items.filter((item) => item.id !== id)
+      return on ? [...others, { id, level: level ?? null }] : others
+    })
     const result = await window.skillpilot.setLink(link, parentId, id, on, level)
     if (result.ok) {
       setMessage('')
@@ -45,6 +54,7 @@ export function LinkPicker({ link, parentId, optionKind, title, emptyText, withL
       onChange?.()
     } else {
       setMessage(result.message)
+      await load()
     }
   }
 
