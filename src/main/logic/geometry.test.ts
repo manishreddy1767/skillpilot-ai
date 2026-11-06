@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bridgeBetween, circleRows, contains, placePanel } from './geometry'
+import { bridgeBetween, centreIn, circleRows, contains, overlaps, placePanel } from './geometry'
 
 const workArea = { x: 0, y: 0, width: 1536, height: 816 }
 const panel = { width: 340, height: 420 }
@@ -10,6 +10,36 @@ describe('contains', () => {
     const rect = { x: 10, y: 10, width: 5, height: 5 }
     expect(contains(rect, { x: 10, y: 10 })).toBe(true)
     expect(contains(rect, { x: 15, y: 12 })).toBe(false)
+  })
+})
+
+describe('overlaps', () => {
+  const rect = { x: 10, y: 10, width: 10, height: 10 }
+
+  it('finds shared area', () => {
+    expect(overlaps(rect, { x: 15, y: 15, width: 10, height: 10 })).toBe(true)
+  })
+
+  it('does not count touching edges', () => {
+    expect(overlaps(rect, { x: 20, y: 10, width: 10, height: 10 })).toBe(false)
+  })
+
+  it('finds no overlap when apart', () => {
+    expect(overlaps(rect, { x: 100, y: 100, width: 10, height: 10 })).toBe(false)
+  })
+})
+
+describe('centreIn', () => {
+  it('centres inside an area', () => {
+    expect(centreIn({ x: 0, y: 0, width: 1536, height: 816 }, { width: 1100, height: 720 })).toEqual({
+      x: 218,
+      y: 48
+    })
+  })
+
+  it('respects an area that does not start at zero', () => {
+    const area = { x: -1920, y: 100, width: 1920, height: 1040 }
+    expect(centreIn(area, { width: 1100, height: 720 })).toEqual({ x: -1510, y: 260 })
   })
 })
 

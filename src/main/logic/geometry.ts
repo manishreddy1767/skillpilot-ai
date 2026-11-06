@@ -19,6 +19,18 @@ export function contains(rect: Rect, point: Point): boolean {
   )
 }
 
+export function overlaps(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+}
+
+/** The top-left corner that centres something of this size in an area. */
+export function centreIn(area: Rect, size: Size): Point {
+  return {
+    x: Math.round(area.x + (area.width - size.width) / 2),
+    y: Math.round(area.y + (area.height - size.height) / 2)
+  }
+}
+
 /**
  * Picks where the hover panel opens beside the widget. This only ever moves the
  * panel: the widget stays wherever it was put, even partly off screen.
