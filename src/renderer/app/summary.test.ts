@@ -27,6 +27,12 @@ describe('describeRecord', () => {
     ).toEqual({ main: 'App', detail: 'In progress' })
   })
 
+  it('labels numbers, so they make sense on their own', () => {
+    expect(describeRecord('roadmapItem', { title: 'CSS', week: '2', effortHours: '6', status: 'open' }).detail).toBe(
+      'Week: 2 · Effort (hours): 6 · Not done'
+    )
+  })
+
   it('keeps values with no matching option', () => {
     expect(describeRecord('goalMilestone', { title: 'Step', status: 'odd' }).detail).toBe('odd')
   })
