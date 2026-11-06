@@ -48,6 +48,119 @@ export const migrations: string[] = [
     expiry_date TEXT NOT NULL DEFAULT '',
     credential_url TEXT NOT NULL DEFAULT ''
   );
+  `,
+  `
+  CREATE TABLE skill (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    category TEXT NOT NULL DEFAULT 'technical' CHECK (category IN ('technical', 'non-technical')),
+    claimed_level INTEGER NOT NULL DEFAULT 0 CHECK (claimed_level BETWEEN 0 AND 5),
+    status TEXT NOT NULL DEFAULT 'learning' CHECK (status IN ('learning', 'using', 'completed')),
+    notes TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TABLE skill_level_history (
+    id INTEGER PRIMARY KEY,
+    skill_id INTEGER NOT NULL REFERENCES skill (id) ON DELETE CASCADE,
+    level INTEGER NOT NULL,
+    recorded_on TEXT NOT NULL DEFAULT (date('now', 'localtime'))
+  );
+
+  CREATE TRIGGER skill_level_added AFTER INSERT ON skill BEGIN
+    INSERT INTO skill_level_history (skill_id, level) VALUES (new.id, new.claimed_level);
+  END;
+
+  CREATE TRIGGER skill_level_changed AFTER UPDATE OF claimed_level ON skill
+  WHEN new.claimed_level <> old.claimed_level BEGIN
+    INSERT INTO skill_level_history (skill_id, level) VALUES (new.id, new.claimed_level);
+  END;
+
+  CREATE TABLE evidence (
+    id INTEGER PRIMARY KEY,
+    skill_id INTEGER NOT NULL REFERENCES skill (id) ON DELETE CASCADE,
+    description TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'practice',
+    strength INTEGER NOT NULL DEFAULT 2 CHECK (strength BETWEEN 1 AND 3),
+    observed_on TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TABLE project (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    technologies TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'active', 'complete')),
+    completed_on TEXT NOT NULL DEFAULT '',
+    repo_url TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TABLE project_skill (
+    project_id INTEGER NOT NULL REFERENCES project (id) ON DELETE CASCADE,
+    skill_id INTEGER NOT NULL REFERENCES skill (id) ON DELETE CASCADE,
+    PRIMARY KEY (project_id, skill_id)
+  );
+
+  CREATE TABLE goal (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    target_date TEXT NOT NULL DEFAULT '',
+    priority INTEGER NOT NULL DEFAULT 2 CHECK (priority BETWEEN 1 AND 3),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'done')),
+    description TEXT NOT NULL DEFAULT '',
+    completed_on TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TRIGGER goal_done AFTER UPDATE OF status ON goal
+  WHEN new.status = 'done' AND old.status <> 'done' BEGIN
+    UPDATE goal SET completed_on = date('now', 'localtime') WHERE id = new.id;
+  END;
+
+  CREATE TRIGGER goal_reopened AFTER UPDATE OF status ON goal
+  WHEN new.status <> 'done' AND old.status = 'done' BEGIN
+    UPDATE goal SET completed_on = '' WHERE id = new.id;
+  END;
+
+  CREATE TRIGGER goal_added_done AFTER INSERT ON goal WHEN new.status = 'done' BEGIN
+    UPDATE goal SET completed_on = date('now', 'localtime') WHERE id = new.id;
+  END;
+
+  CREATE TABLE goal_skill (
+    goal_id INTEGER NOT NULL REFERENCES goal (id) ON DELETE CASCADE,
+    skill_id INTEGER NOT NULL REFERENCES skill (id) ON DELETE CASCADE,
+    required_level INTEGER NOT NULL DEFAULT 3 CHECK (required_level BETWEEN 1 AND 5),
+    PRIMARY KEY (goal_id, skill_id)
+  );
+
+  CREATE TABLE goal_project (
+    goal_id INTEGER NOT NULL REFERENCES goal (id) ON DELETE CASCADE,
+    project_id INTEGER NOT NULL REFERENCES project (id) ON DELETE CASCADE,
+    PRIMARY KEY (goal_id, project_id)
+  );
+
+  CREATE TABLE milestone (
+    id INTEGER PRIMARY KEY,
+    goal_id INTEGER REFERENCES goal (id) ON DELETE CASCADE,
+    project_id INTEGER REFERENCES project (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    due_date TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+    completed_on TEXT NOT NULL DEFAULT '',
+    CHECK ((goal_id IS NULL) <> (project_id IS NULL))
+  );
+
+  CREATE TRIGGER milestone_done AFTER UPDATE OF status ON milestone
+  WHEN new.status = 'done' AND old.status <> 'done' BEGIN
+    UPDATE milestone SET completed_on = date('now', 'localtime') WHERE id = new.id;
+  END;
+
+  CREATE TRIGGER milestone_reopened AFTER UPDATE OF status ON milestone
+  WHEN new.status = 'open' AND old.status = 'done' BEGIN
+    UPDATE milestone SET completed_on = '' WHERE id = new.id;
+  END;
+
+  CREATE TRIGGER milestone_added_done AFTER INSERT ON milestone WHEN new.status = 'done' BEGIN
+    UPDATE milestone SET completed_on = date('now', 'localtime') WHERE id = new.id;
+  END;
   `
 ]
 

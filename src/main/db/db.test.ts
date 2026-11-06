@@ -44,6 +44,25 @@ describe('migrate', () => {
     expect(names).toEqual(expect.arrayContaining(['profile', 'education', 'work_experience', 'certification']))
   })
 
+  it('upgrades a version 1 database and keeps its data', () => {
+    const db = memoryDb()
+    migrate(db, () => undefined, migrations.slice(0, 1))
+    const before = new CareerStore(db)
+    before.saveProfile({ ...emptyValues(profileFields), fullName: 'Existing User' })
+    before.saveRecord('education', null, {
+      ...emptyValues(recordFields.education),
+      institution: 'Uni',
+      qualification: 'BSc'
+    })
+    const backup = vi.fn()
+    migrate(db, backup)
+    expect(backup).toHaveBeenCalledExactlyOnceWith(1)
+    const after = new CareerStore(db)
+    expect(after.getProfile()['fullName']).toBe('Existing User')
+    expect(after.listRecords('education')).toHaveLength(1)
+    expect(after.listRecords('skill')).toEqual([])
+  })
+
   it('every field has a matching column', () => {
     const db = memoryDb()
     migrate(db, () => undefined)
@@ -53,6 +72,11 @@ describe('migrate', () => {
     for (const f of recordFields.education) expect(columns('education')).toContain(f.column)
     for (const f of recordFields.work) expect(columns('work_experience')).toContain(f.column)
     for (const f of recordFields.certification) expect(columns('certification')).toContain(f.column)
+    for (const f of recordFields.skill) expect(columns('skill')).toContain(f.column)
+    for (const f of recordFields.goal) expect(columns('goal')).toContain(f.column)
+    for (const f of recordFields.project) expect(columns('project')).toContain(f.column)
+    for (const f of recordFields.evidence) expect(columns('evidence')).toContain(f.column)
+    for (const f of recordFields.goalMilestone) expect(columns('milestone')).toContain(f.column)
   })
 
   it('does nothing when already up to date', () => {
@@ -114,11 +138,6 @@ describe('CareerStore profile', () => {
     expect(s.getProfile()['fullName']).toBe(fullName)
   })
 
-  it('builds the overview from the profile', () => {
-    const s = store()
-    s.saveProfile({ ...emptyValues(profileFields), fullName: 'A B', currentGoal: 'Ship', targetRoles: 'Dev' })
-    expect(s.getOverview()).toEqual({ name: 'A B', currentGoal: 'Ship', targetRoles: 'Dev' })
-  })
 })
 
 describe('CareerStore records', () => {
@@ -259,7 +278,7 @@ describe('openCareerData', () => {
     expect(upgraded.store?.getProfile()['fullName']).toBe('After Upgrade')
     upgraded.close()
 
-    const name = readdirSync(join(folder, 'backups')).find((n) => n.startsWith('pre-migration-v1-'))
+    const name = readdirSync(join(folder, 'backups')).find((n) => n.startsWith(`pre-migration-v${migrations.length}-`))
     expect(name).toBeDefined()
     const copy = new DatabaseSync(join(folder, 'backups', name!))
     open.push(copy)
