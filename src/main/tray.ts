@@ -12,7 +12,7 @@ export interface TrayActions {
 }
 
 /** The way back if the widget is hidden, and the way to exit completely. */
-export function createTray(actions: TrayActions): Tray {
+export function createTray(actions: TrayActions): { tray: Tray; refresh: () => void } {
   const icon = nativeImage
     .createFromPath(join(app.getAppPath(), 'resources/icon.png'))
     .resize({ width: 16, height: 16 })
@@ -51,5 +51,5 @@ export function createTray(actions: TrayActions): Tray {
 
   refresh()
   tray.on('click', actions.openApp)
-  return tray
+  return { tray, refresh }
 }

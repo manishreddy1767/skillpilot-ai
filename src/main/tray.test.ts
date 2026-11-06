@@ -91,6 +91,23 @@ describe('tray', () => {
     expect(actions.resetWidgetPosition).toHaveBeenCalledOnce()
   })
 
+  it('can rebuild the menu when settings change elsewhere', () => {
+    let onTop = true
+    const actions: TrayActions = {
+      openApp: vi.fn(),
+      isAlwaysOnTop: () => onTop,
+      setAlwaysOnTop: vi.fn(),
+      isClickThrough: () => false,
+      setClickThrough: vi.fn(),
+      resetWidgetPosition: vi.fn(),
+      quit: vi.fn()
+    }
+    const { refresh } = createTray(actions)
+    onTop = false
+    refresh()
+    expect(item('Always on top').checked).toBe(false)
+  })
+
   it('quits from the menu', () => {
     const actions = setup()
     item('Quit SkillPilot AI').click?.({ checked: false })
