@@ -42,6 +42,7 @@ function setup(overrides: Partial<TrayActions> = {}) {
     setAlwaysOnTop: vi.fn(),
     isClickThrough: vi.fn(() => false),
     setClickThrough: vi.fn(),
+    resetWidgetPosition: vi.fn(),
     quit: vi.fn(),
     ...overrides
   }
@@ -66,13 +67,14 @@ describe('tray', () => {
     expect(mock.tray.setToolTip).toHaveBeenCalledWith('SkillPilot AI')
   })
 
-  it('offers open, both modes, and quit', () => {
+  it('offers open, both modes, reset, and quit', () => {
     setup()
     const labels = latestMenu().flatMap((entry) => (entry.label ? [entry.label] : []))
     expect(labels).toEqual([
       'Open SkillPilot AI',
       'Always on top',
       'Click-through mode',
+      'Reset widget position',
       'Quit SkillPilot AI'
     ])
   })
@@ -81,6 +83,12 @@ describe('tray', () => {
     setup({ isAlwaysOnTop: () => false, isClickThrough: () => true })
     expect(item('Always on top').checked).toBe(false)
     expect(item('Click-through mode').checked).toBe(true)
+  })
+
+  it('resets the widget position from the menu', () => {
+    const actions = setup()
+    item('Reset widget position').click?.({ checked: false })
+    expect(actions.resetWidgetPosition).toHaveBeenCalledOnce()
   })
 
   it('quits from the menu', () => {

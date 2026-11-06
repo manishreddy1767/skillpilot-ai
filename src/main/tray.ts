@@ -7,6 +7,7 @@ export interface TrayActions {
   setAlwaysOnTop(enabled: boolean): void
   isClickThrough(): boolean
   setClickThrough(enabled: boolean): void
+  resetWidgetPosition(): void
   quit(): void
 }
 
@@ -41,6 +42,7 @@ export function createTray(actions: TrayActions): Tray {
             refresh()
           }
         },
+        { label: 'Reset widget position', click: actions.resetWidgetPosition },
         { type: 'separator' },
         { label: 'Quit SkillPilot AI', click: actions.quit }
       ])
