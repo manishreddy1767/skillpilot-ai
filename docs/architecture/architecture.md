@@ -13,7 +13,7 @@ and AI guidance. There is no server, no accounts, and no public deployment.
 | Desktop shell | Electron 45 | Transparent, frameless, always-on-top windows, with click-through and hover forwarding as documented APIs. See [ADR 0001](../decisions/0001-electron-desktop-shell.md). |
 | Language | TypeScript throughout | One language for the main process and the UI. |
 | UI | React + Vite (electron-vite) | Runs from local files inside Electron. No web server, no browser. |
-| Charts | Recharts | Enough for progress, radar, and timeline views. |
+| Charts | Plain CSS and HTML | The charts are simple bars and meters, so no chart library is needed. |
 | Storage | SQLite through built-in `node:sqlite` | Local file, no native module to rebuild. See [ADR 0002](../decisions/0002-built-in-sqlite.md). |
 | AI | Claude API through `@anthropic-ai/sdk`, behind a provider interface | See [AI and privacy](ai-and-privacy.md). |
 | Secrets | Electron `safeStorage` (Windows DPAPI) | The API key is encrypted on disk and never enters source control. |

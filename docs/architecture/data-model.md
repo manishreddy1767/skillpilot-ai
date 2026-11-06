@@ -22,8 +22,8 @@ A skill has two separate measures, because knowing about something and having sh
 - **Demonstrated level:** derived only from evidence, such as a project, certification, or work
   experience. Each evidence item has a kind and a strength.
 
-So if a project uses React, Python, and PostgreSQL, linking those skills creates evidence for all
-three. A skill claimed at 4 with no evidence shows as unproven. Demonstrated level is computed by code
+So if a project uses React, Python, and PostgreSQL, linking those skills counts as evidence for all
+three once the project is under way. A skill claimed at 4 with no evidence shows as unproven. Demonstrated level is computed by code
 and can always be traced back to the evidence behind it.
 
 ## Tables
@@ -32,7 +32,7 @@ and can always be traced back to the evidence behind it.
 |---|---|
 | Profile | `profile` (one row), `education`, `work_experience`, `certification` |
 | Skills | `skill`, `skill_level_history`, `evidence` |
-| Goals | `goal`, `goal_skill`, `milestone` |
+| Goals | `goal`, `goal_skill`, `goal_project`, `milestone` |
 | Projects | `project`, `project_skill` |
 | Target roles | `target_role`, `role_requirement` |
 | Roadmap | `roadmap`, `roadmap_item`, `resource` |
@@ -45,14 +45,15 @@ project feeds straight into skill and goal progress.
 
 ## Computed measures
 
-These come from code, not from the AI.
+These come from code in `src/shared/progress.ts`, not from the AI. The dashboard shows the rules, so
+every number can be explained.
 
 | Measure | Basis |
 |---|---|
-| Role readiness | Each requirement weighted by importance, scored from demonstrated level against required level, with partial credit for claimed-only skills |
-| Goal progress | Milestones completed and required skills reached |
-| Overall progress | Average of active goals, weighted by priority |
-| Learning streak | Consecutive days with a completed learning task |
-| Pace | Tasks and topics completed in the last 14 days against the prior 14 days |
-
-The exact weights are set in milestone 3 and shown in the app, so every percentage can be explained.
+| Demonstrated level | Points from evidence: minor 1, solid 2, strong 3. A linked project earns 1 while active, 3 when complete, and 0 while planned. Levels 1 to 5 start at 1, 2, 4, 6, and 9 points. |
+| Skill proof | Unproven with no demonstrated level, partly proven below the claim, proven at or above it |
+| Goal progress | The average of milestones done and required skills reached. A skill counts fully for its demonstrated level and half for any claimed level beyond that. A done goal is 100%. |
+| Overall progress | Average of active goals, weighted by priority: low 1, medium 2, high 3 |
+| Role readiness | Planned for milestone 4: each requirement weighted by importance, with partial credit for claimed-only skills |
+| Learning streak | Planned for milestone 5: consecutive days with a completed learning task |
+| Pace | Planned for milestone 5: tasks and topics completed in the last 14 days against the prior 14 days |
