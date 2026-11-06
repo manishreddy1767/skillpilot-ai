@@ -1,4 +1,3 @@
-import { createRoot } from 'react-dom/client'
 import './overview.css'
 
 const sections = [
@@ -8,7 +7,7 @@ const sections = [
   { title: 'Next deadline', empty: 'No upcoming deadlines' }
 ]
 
-function Overview() {
+export function Overview() {
   return (
     <main className="panel">
       <header>
@@ -27,5 +26,3 @@ function Overview() {
     </main>
   )
 }
-
-createRoot(document.getElementById('root')!).render(<Overview />)

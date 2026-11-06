@@ -1,8 +1,7 @@
 import { useRef, type PointerEvent } from 'react'
-import { createRoot } from 'react-dom/client'
 import './widget.css'
 
-function Widget() {
+export function Widget() {
   const pressed = useRef(false)
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -49,5 +48,3 @@ function Widget() {
     </div>
   )
 }
-
-createRoot(document.getElementById('root')!).render(<Widget />)

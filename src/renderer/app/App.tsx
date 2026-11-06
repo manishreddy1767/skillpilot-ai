@@ -1,7 +1,6 @@
-import { createRoot } from 'react-dom/client'
 import './app.css'
 
-function App() {
+export function App() {
   return (
     <div className="shell">
       <div className="titlebar">
@@ -17,5 +16,3 @@ function App() {
     </div>
   )
 }
-
-createRoot(document.getElementById('root')!).render(<App />)
