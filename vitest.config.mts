@@ -7,7 +7,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
       // Startup files only mount or wire things. The integration tests cover them.
-      exclude: ['src/**/*.test.*', 'src/main/index.ts', 'src/renderer/*/main.tsx', 'src/shared/**']
+      exclude: ['src/**/*.test.*', 'src/main/index.ts', 'src/renderer/*/main.tsx', 'src/renderer/test-setup.ts', 'src/shared/ipc.ts']
     },
     projects: [
       {
