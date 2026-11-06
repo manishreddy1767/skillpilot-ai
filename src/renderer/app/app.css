@@ -1,0 +1,58 @@
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: #0f172a;
+  color: #e2e8f0;
+  font: 14px/1.5 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  /* Leaves room for the native window buttons on the right. */
+  height: 40px;
+  padding: 0 150px 0 16px;
+  -webkit-app-region: drag;
+  font-weight: 600;
+}
+
+.titlebar button {
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #e2e8f0;
+  font: inherit;
+  font-weight: 400;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar button:hover {
+  background: #334155;
+}
+
+main {
+  padding: 32px;
+}
+
+main h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+main p {
+  margin: 0;
+  color: #94a3b8;
+}
