@@ -9,6 +9,7 @@ import { RoadmapsView } from './RoadmapsView'
 import { RolesView } from './RolesView'
 import { SettingsView } from './SettingsView'
 import { SkillsView } from './SkillsView'
+import { TasksView } from './TasksView'
 import './app.css'
 
 type Section =
@@ -17,6 +18,7 @@ type Section =
   | 'roles'
   | 'roadmaps'
   | 'settings'
+  | 'tasks'
   | 'skills'
   | 'goals'
   | 'projects'
@@ -27,6 +29,7 @@ type Section =
 
 const sections: { id: Section; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
+  { id: 'tasks', label: 'Tasks' },
   { id: 'assistant', label: 'Assistant' },
   { id: 'skills', label: 'Skills' },
   { id: 'goals', label: 'Goals' },
@@ -44,6 +47,8 @@ function Screen({ section }: { section: Section }) {
   switch (section) {
     case 'dashboard':
       return <DashboardView />
+    case 'tasks':
+      return <TasksView />
     case 'assistant':
       return <AssistantView />
     case 'roles':

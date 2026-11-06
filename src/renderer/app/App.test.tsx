@@ -19,7 +19,8 @@ describe('App', () => {
     ['Assistant', 'Assistant'],
     ['Target roles', 'Target roles'],
     ['Roadmaps', 'Roadmaps'],
-    ['Settings', 'Settings']
+    ['Settings', 'Settings'],
+    ['Tasks', 'Tasks']
   ])('switches to %s', async (label) => {
     render(<App />)
     await screen.findByRole('heading', { name: 'Dashboard' })
