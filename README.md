@@ -3,7 +3,22 @@
 A private, single-user career assistant for Windows that lives on the desktop as a small floating
 widget. It tracks skills, goals, projects, and learning, and uses AI to recommend what to do next.
 
-Status: design proposal, awaiting approval. There is no application code yet.
+Status: early development. The floating widget works: free dragging, hover overview, and click to
+open. Career features come next. See the [roadmap](docs/roadmap.md).
+
+## Running it
+
+Needs Node 24 on Windows 11.
+
+```
+npm install
+npm run dev            # run with live reload
+npm start              # build and run
+npm test               # logic tests
+npm run test:desktop   # real mouse test; takes over the mouse for about 30 seconds
+```
+
+To exit, right-click the tray icon and choose Quit SkillPilot AI.
 
 ## Documents
 
