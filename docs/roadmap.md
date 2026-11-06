@@ -55,7 +55,7 @@ the Electron decision is revisited here.
 - Roadmap generation and editing
 - Assistant chat with `propose_change` confirmation
 
-### M5: Learning management (Phase 4)
+### M5: Learning management (Phase 4), complete
 
 - Daily tasks, weekly targets, deadlines, reminders, and streaks
 - AI-suggested daily tasks based on available time

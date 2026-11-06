@@ -55,5 +55,7 @@ every number can be explained.
 | Goal progress | The average of milestones done and required skills reached. A skill counts fully for its demonstrated level and half for any claimed level beyond that. A done goal is 100%. |
 | Overall progress | Average of active goals, weighted by priority: low 1, medium 2, high 3 |
 | Role readiness | Each requirement weighted by importance, scored like goal skills, so claimed-only levels earn half credit. See `src/shared/gap.ts`. |
-| Learning streak | Planned for milestone 5: consecutive days with a completed learning task |
-| Pace | Planned for milestone 5: tasks and topics completed in the last 14 days against the prior 14 days |
+| Learning streak | Consecutive days with a finished task of any type except Other. Today not being done yet does not break it. See `src/shared/learning.ts`. |
+| Weekly minutes | Minutes of finished tasks since Monday, against the target in Settings |
+| Pace | Minutes finished in the last 14 days against the 14 before: up above 120%, down below 70% |
+| Roadmap | Topics done, hours left, the current week from the start date, and how many weeks behind the next topic is |
