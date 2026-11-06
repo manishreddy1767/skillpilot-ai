@@ -6,9 +6,12 @@ import {
   ipcMain,
   powerMonitor,
   screen,
-  type IpcMainEvent
+  type IpcMainEvent,
+  type IpcMainInvokeEvent
 } from 'electron'
 import { Channel } from '../shared/ipc'
+import { createDataHandlers } from './data-handlers'
+import { openCareerData } from './db/open-career-data'
 import { installErrorLog, writeErrorLog } from './error-log'
 import { DragTracker } from './logic/drag-tracker'
 import { centreIn, overlaps, placePanel, type Point } from './logic/geometry'
@@ -44,6 +47,18 @@ function start(): void {
       } catch (error) {
         writeErrorLog(errorLogPath, error)
       }
+    }
+  })
+
+  const data = openCareerData({
+    folder: dataPath,
+    logError: (error) => writeErrorLog(errorLogPath, error),
+    alertError: (error) => {
+      const reason = error instanceof Error ? error.message : String(error)
+      dialog.showErrorBox(
+        'SkillPilot AI could not open your data',
+        `The widget will still run, but your profile is unavailable. Your data file was not changed.\n\n${reason}`
+      )
     }
   })
 
@@ -133,6 +148,33 @@ function start(): void {
     })
   )
 
+  const handlers = createDataHandlers({
+    getStore: () => data.store,
+    notifyOverview: () => {
+      if (!overview.isDestroyed()) overview.webContents.send(Channel.OverviewChanged)
+    },
+    logError: (error) => writeErrorLog(errorLogPath, error)
+  })
+
+  const denied = { ok: false, message: 'Not allowed.' } as const
+
+  /** Career data is only for the full app window. */
+  const fromApp = <A extends unknown[], R>(handler: (...args: A) => R) => {
+    return (event: IpcMainInvokeEvent, ...args: A) => {
+      const allowed = appWindow && !appWindow.isDestroyed() && event.sender === appWindow.webContents
+      return allowed ? handler(...args) : denied
+    }
+  }
+
+  ipcMain.handle(Channel.GetProfile, fromApp(handlers.getProfile))
+  ipcMain.handle(Channel.SaveProfile, fromApp(handlers.saveProfile))
+  ipcMain.handle(Channel.ListRecords, fromApp(handlers.listRecords))
+  ipcMain.handle(Channel.SaveRecord, fromApp(handlers.saveRecord))
+  ipcMain.handle(Channel.DeleteRecord, fromApp(handlers.deleteRecord))
+  ipcMain.handle(Channel.GetOverview, (event) =>
+    !overview.isDestroyed() && event.sender === overview.webContents ? handlers.getOverview() : denied
+  )
+
   ipcMain.on(Channel.HoverEnter, from(widget, () => hover.pointerEntered()))
   ipcMain.on(Channel.HoverLeave, from(widget, () => hover.pointerLeft()))
   ipcMain.on(Channel.OpenApp, from(overview, openApp))
@@ -184,6 +226,8 @@ function start(): void {
     if (settleTimer) clearTimeout(settleTimer)
     tray.destroy()
   })
+
+  app.once('will-quit', () => data.close())
 }
 
 if (!app.requestSingleInstanceLock()) {
