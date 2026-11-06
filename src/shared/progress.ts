@@ -84,6 +84,8 @@ export interface CareerRows {
     status: string
     completedOn: string
   }[]
+  /** Open tasks with a due date, which count as deadlines. */
+  dueTasks: { title: string; dueDate: string }[]
 }
 
 export const PROJECT_POINTS: Record<string, number> = { planned: 0, active: 1, complete: 3 }
@@ -209,7 +211,8 @@ export function buildDashboard(rows: CareerRows, today: string): Dashboard {
       .map((goal) => ({ title: goal.title, date: goal.targetDate })),
     ...rows.milestones
       .filter((milestone) => milestone.status !== 'done' && milestone.dueDate)
-      .map((milestone) => ({ title: milestone.title, date: milestone.dueDate }))
+      .map((milestone) => ({ title: milestone.title, date: milestone.dueDate })),
+    ...rows.dueTasks.map((task) => ({ title: task.title, date: task.dueDate }))
   ]
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5)

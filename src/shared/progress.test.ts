@@ -17,7 +17,8 @@ const empty: CareerRows = {
   projectSkills: [],
   goals: [],
   goalSkills: [],
-  milestones: []
+  milestones: [],
+  dueTasks: []
 }
 
 const skill = (id: number, name: string, claimed = 0) => ({
@@ -300,6 +301,11 @@ describe('buildDashboard', () => {
       { title: 'Today', date: today, overdue: false },
       { title: 'Later', date: '2027-01-01', overdue: false }
     ])
+  })
+
+  it('counts open tasks as deadlines', () => {
+    const { deadlines } = buildDashboard({ ...empty, dueTasks: [{ title: 'Task', dueDate: '2026-12-01' }] }, today)
+    expect(deadlines).toEqual([{ title: 'Task', date: '2026-12-01', overdue: false }])
   })
 
   it('shows at most five deadlines and achievements', () => {
