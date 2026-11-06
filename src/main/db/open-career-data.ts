@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { dailyBackup, preMigrationBackup } from './backup'
 import { CareerStore } from './career-store'
-import { migrate } from './migrations'
+import { migrate, migrations } from './migrations'
 
 const BACKUP_CHECK_INTERVAL = 60 * 60 * 1000
 
@@ -18,9 +18,15 @@ export interface OpenOptions {
   logError(error: unknown): void
   /** For failures the user must know about. */
   alertError(error: unknown): void
+  steps?: string[]
 }
 
-export function openCareerData({ folder, logError, alertError }: OpenOptions): CareerData {
+export function openCareerData({
+  folder,
+  logError,
+  alertError,
+  steps = migrations
+}: OpenOptions): CareerData {
   const backups = join(folder, 'backups')
   let db: DatabaseSync | null = null
 
@@ -29,7 +35,7 @@ export function openCareerData({ folder, logError, alertError }: OpenOptions): C
     db = new DatabaseSync(join(folder, 'skillpilot.db'))
     db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;')
     const opened = db
-    migrate(opened, (fromVersion) => preMigrationBackup(opened, backups, fromVersion))
+    migrate(opened, (fromVersion) => preMigrationBackup(opened, backups, fromVersion), steps)
 
     const backUp = (): void => {
       try {

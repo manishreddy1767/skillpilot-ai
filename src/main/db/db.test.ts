@@ -247,6 +247,40 @@ describe('openCareerData', () => {
     second.close()
   })
 
+  it('backs up the old data before upgrading a database', () => {
+    const first = openCareerData(options())
+    first.store?.saveProfile({ ...emptyValues(profileFields), fullName: 'Before Upgrade' })
+    first.close()
+
+    const upgraded = openCareerData({
+      ...options(),
+      steps: [...migrations, "UPDATE profile SET full_name = 'After Upgrade'"]
+    })
+    expect(upgraded.store?.getProfile()['fullName']).toBe('After Upgrade')
+    upgraded.close()
+
+    const name = readdirSync(join(folder, 'backups')).find((n) => n.startsWith('pre-migration-v1-'))
+    expect(name).toBeDefined()
+    const copy = new DatabaseSync(join(folder, 'backups', name!))
+    open.push(copy)
+    expect(new CareerStore(copy).getProfile()['fullName']).toBe('Before Upgrade')
+  })
+
+  it('a failed upgrade reports the error and keeps the data', () => {
+    const first = openCareerData(options())
+    first.store?.saveProfile({ ...emptyValues(profileFields), fullName: 'Safe' })
+    first.close()
+
+    const o = options()
+    const failed = openCareerData({ ...o, steps: [...migrations, 'INSERT INTO missing VALUES (1)'] })
+    expect(failed.store).toBeNull()
+    expect(o.alertError).toHaveBeenCalledOnce()
+
+    const reopened = openCareerData(options())
+    expect(reopened.store?.getProfile()['fullName']).toBe('Safe')
+    reopened.close()
+  })
+
   it('reports a damaged file, gives no store, and leaves the file untouched', () => {
     const path = join(folder, 'skillpilot.db')
     writeFileSync(path, 'this is not a database, and it is long enough to be read as one')
