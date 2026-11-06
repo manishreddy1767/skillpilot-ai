@@ -14,11 +14,17 @@ Needs Node 24 on Windows 11.
 npm install
 npm run dev            # run with live reload
 npm start              # build and run
-npm test               # logic tests
+npm test               # unit tests
+npm run test:integration   # real app, leaves the mouse alone
 npm run test:desktop   # real mouse test; takes over the mouse for about 30 seconds
+npm run test:all       # everything
 ```
 
-To exit, right-click the tray icon and choose Quit SkillPilot AI.
+Use `npm run dev` or `npm start`. They build the app first, whereas `npx electron .` fails with
+"Error launching app" if there is no build yet.
+
+To exit, right-click the tray icon and choose Quit SkillPilot AI. Unexpected errors are saved to
+`%APPDATA%skillpilot-ailogserrors.log`.
 
 ## Documents
 
