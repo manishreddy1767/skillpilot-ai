@@ -1,4 +1,5 @@
 import { analyseGap } from '../../shared/gap'
+import { buildLearning } from '../../shared/learning'
 import { buildDashboard } from '../../shared/progress'
 import type { CareerStore } from '../db/career-store'
 
@@ -45,6 +46,8 @@ export function buildCareerContext(store: CareerStore, today: string): string {
     ])
   })
 
+  const learning = buildLearning(store.readLearningRows(), today, 0)
+
   return [
     `Today is ${today}.`,
     section('About me', about),
@@ -76,7 +79,13 @@ export function buildCareerContext(store: CareerStore, today: string): string {
       'Projects',
       dashboard.projects.map((p) => compact([p.name, p.status, p.skills.join(', ')]))
     ),
-    section('Target roles', roles)
+    section('Target roles', roles),
+    section(
+      'Roadmaps',
+      learning.roadmaps.map((r) => compact([r.title, `${r.done} of ${r.total} done`, r.next ? `next: ${r.next}` : undefined]))
+    ),
+    section('Tasks due', learning.todayTasks.map((t) => `${t.title} | ${t.minutes} minutes`)),
+    section('Learning', [`Streak: ${learning.streak} days`, `Minutes this week: ${learning.minutesThisWeek}`, `Pace: ${learning.pace}`])
   ]
     .filter(Boolean)
     .join('\n\n')

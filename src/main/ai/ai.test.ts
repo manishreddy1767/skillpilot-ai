@@ -163,6 +163,19 @@ describe('buildCareerContext', () => {
   })
 })
 
+describe('buildCareerContext learning', () => {
+  it('includes roadmaps, tasks and pace', () => {
+    const { store } = stores()
+    const roadmap = store.saveRecord('roadmap', null, { title: 'Path', startDate: '' })!
+    store.saveRecord('roadmapItem', null, { title: 'CSS', week: '1', effortHours: '1', status: 'open', details: '', exercise: '', resources: '' }, roadmap.id)
+    store.saveRecord('task', null, { title: 'Read', kind: 'learning', dueDate: today(), minutes: '20', status: 'open' })
+    const context = buildCareerContext(store, today())
+    expect(context).toContain('Path | 0 of 1 done | next: CSS')
+    expect(context).toContain('Read | 20 minutes')
+    expect(context).toContain('Streak: 0 days')
+  })
+})
+
 describe('Claude provider, over the real SDK', () => {
   it('sends a structured request with the key and returns the parsed reply', async () => {
     let seen: { headers: IncomingMessage['headers']; body: Record<string, unknown>; url?: string | undefined } | null = null
