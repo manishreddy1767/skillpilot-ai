@@ -22,7 +22,12 @@ const tables: Record<RecordKind, { table: string; orderBy: string; parent?: stri
   project: { table: 'project', orderBy: "status = 'complete', id DESC" },
   evidence: { table: 'evidence', orderBy: 'observed_on DESC, id DESC', parent: 'skill_id' },
   goalMilestone: { table: 'milestone', orderBy: "due_date = '', due_date, id", parent: 'goal_id' },
-  projectMilestone: { table: 'milestone', orderBy: "due_date = '', due_date, id", parent: 'project_id' }
+  projectMilestone: { table: 'milestone', orderBy: "due_date = '', due_date, id", parent: 'project_id' },
+  targetRole: { table: 'target_role', orderBy: 'id' },
+  roleRequirement: { table: 'role_requirement', orderBy: 'importance DESC, id', parent: 'role_id' },
+  roadmap: { table: 'roadmap', orderBy: 'id DESC' },
+  roadmapItem: { table: 'roadmap_item', orderBy: 'week, id', parent: 'roadmap_id' },
+  task: { table: 'task', orderBy: "status = 'done', due_date = '', due_date, id" }
 }
 
 const links: Record<LinkKind, { table: string; parent: string; child: string; level?: string }> = {

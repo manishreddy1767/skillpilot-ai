@@ -161,6 +161,111 @@ export const migrations: string[] = [
   CREATE TRIGGER milestone_added_done AFTER INSERT ON milestone WHEN new.status = 'done' BEGIN
     UPDATE milestone SET completed_on = date('now', 'localtime') WHERE id = new.id;
   END;
+  `,
+  `
+  CREATE TABLE setting (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
+  CREATE TABLE target_role (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    notes TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TABLE role_requirement (
+    id INTEGER PRIMARY KEY,
+    role_id INTEGER NOT NULL REFERENCES target_role (id) ON DELETE CASCADE,
+    skill_name TEXT NOT NULL,
+    required_level INTEGER NOT NULL DEFAULT 3 CHECK (required_level BETWEEN 1 AND 5),
+    importance INTEGER NOT NULL DEFAULT 2 CHECK (importance BETWEEN 1 AND 3)
+  );
+
+  CREATE TABLE gap_report (
+    id INTEGER PRIMARY KEY,
+    role_id INTEGER NOT NULL REFERENCES target_role (id) ON DELETE CASCADE,
+    summary TEXT NOT NULL,
+    priorities TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  );
+
+  CREATE TABLE roadmap (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    start_date TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TABLE roadmap_item (
+    id INTEGER PRIMARY KEY,
+    roadmap_id INTEGER NOT NULL REFERENCES roadmap (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    week INTEGER NOT NULL DEFAULT 1,
+    effort_hours INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+    details TEXT NOT NULL DEFAULT '',
+    exercise TEXT NOT NULL DEFAULT '',
+    resources TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TABLE chat_message (
+    id INTEGER PRIMARY KEY,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  );
+
+  CREATE TABLE proposed_change (
+    id INTEGER PRIMARY KEY,
+    kind TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    details TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  );
+
+  CREATE TABLE ai_request (
+    id INTEGER PRIMARY KEY,
+    feature TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    sent TEXT NOT NULL,
+    ok INTEGER NOT NULL,
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  );
+
+  CREATE TABLE task (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'learning',
+    due_date TEXT NOT NULL DEFAULT '',
+    minutes INTEGER NOT NULL DEFAULT 30,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+    completed_on TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TRIGGER task_done AFTER UPDATE OF status ON task
+  WHEN new.status = 'done' AND old.status <> 'done' BEGIN
+    UPDATE task SET completed_on = date('now', 'localtime') WHERE id = new.id;
+  END;
+
+  CREATE TRIGGER task_reopened AFTER UPDATE OF status ON task
+  WHEN new.status = 'open' AND old.status = 'done' BEGIN
+    UPDATE task SET completed_on = '' WHERE id = new.id;
+  END;
+
+  CREATE TRIGGER task_added_done AFTER INSERT ON task WHEN new.status = 'done' BEGIN
+    UPDATE task SET completed_on = date('now', 'localtime') WHERE id = new.id;
+  END;
+
+  CREATE TABLE notification_log (
+    id INTEGER PRIMARY KEY,
+    dedupe_key TEXT NOT NULL UNIQUE,
+    sent_on TEXT NOT NULL
+  );
   `
 ]
 
