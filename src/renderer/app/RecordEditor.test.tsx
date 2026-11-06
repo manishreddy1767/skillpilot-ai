@@ -141,7 +141,7 @@ describe('RecordEditor', () => {
     click('Save')
     expect(await screen.findByText('Institution is required')).toBeTruthy()
     expect(screen.getByRole('alert')).toBeTruthy()
-    expect(document.activeElement).toBe(screen.getByLabelText(/Institution/))
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(/Institution/)))
   })
 
   it('cancel discards the form', async () => {

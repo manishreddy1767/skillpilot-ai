@@ -56,7 +56,7 @@ describe('ProfileForm', () => {
     await ready()
     save()
     await screen.findByText('Enter a valid email address')
-    expect(document.activeElement).toBe(screen.getByLabelText(/Email/))
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(/Email/)))
   })
 
   it('clears the saved message on the next edit', async () => {
