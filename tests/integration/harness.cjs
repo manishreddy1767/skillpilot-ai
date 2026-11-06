@@ -2,7 +2,7 @@
 // can click real menu items. The app itself has no test hooks.
 const { tmpdir } = require('node:os')
 const { join, resolve } = require('node:path')
-const { Menu, app, dialog } = require('electron')
+const { Menu, Notification, app, dialog } = require('electron')
 
 const root = resolve(__dirname, '../..')
 app.setAppPath(root)
@@ -14,6 +14,14 @@ app.setPath('userData', join(tmpdir(), 'skillpilot-ai-test'))
 if (process.env.SKILLPILOT_QUIET_ERRORS) {
   globalThis.__errorBoxes = []
   dialog.showErrorBox = (_title, message) => globalThis.__errorBoxes.push(message)
+}
+
+// Records notifications instead of showing them on the desktop.
+globalThis.__notices = []
+globalThis.__noticeObjects = []
+Notification.prototype.show = function () {
+  globalThis.__notices.push({ title: this.title, body: this.body })
+  globalThis.__noticeObjects.push(this)
 }
 
 const buildFromTemplate = Menu.buildFromTemplate.bind(Menu)
