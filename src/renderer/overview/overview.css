@@ -1,0 +1,71 @@
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+}
+
+.panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font: 14px/1.4 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+}
+
+.panel h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.panel header p {
+  margin: 2px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.panel section {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1e293b;
+}
+
+.panel h2 {
+  margin: 0;
+  color: #5eead4;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.panel section p {
+  margin: 2px 0 0;
+  color: #cbd5e1;
+}
+
+.panel button {
+  margin-top: auto;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: #2dd4bf;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.panel button:hover {
+  background: #5eead4;
+}
