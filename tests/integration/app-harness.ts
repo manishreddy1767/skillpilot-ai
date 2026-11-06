@@ -135,12 +135,14 @@ export class Harness {
   }
 
   /** Replaces the connected displays, as if monitors changed, and announces it. */
-  setDisplays(displays: FakeDisplay[], event = 'display-removed'): Promise<void> {
-    return this.app.evaluate(({ screen }, { list, name }) => {
+  async setDisplays(displays: FakeDisplay[], event = 'display-removed'): Promise<void> {
+    await this.app.evaluate(({ screen }, { list, name }) => {
       screen.getAllDisplays = () => list as never
       screen.getPrimaryDisplay = () => list[0] as never
       ;(screen as unknown as { emit(name: string): void }).emit(name)
     }, { list: displays, name: event })
+    // Lets the app's settle delay finish, so one change cannot do the next one's work.
+    await pause(450)
   }
 
   /** The real display, for building fake layouts around it. */

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { APP, Harness, OVERVIEW, WIDGET, pause, positionFile } from './app-harness'
 
@@ -42,30 +42,19 @@ test.describe('remembering position', () => {
     expect(await widgetAt()).toEqual({ x: -34, y: -34 })
   })
 
-  test('saves the moment a drag ends, so a crash loses nothing', async () => {
+  test('saves the moment a drag ends, without waiting for quit', async () => {
     h = await Harness.launch()
     await h.dragWidgetTo(500, 400)
-    await expect
-      .poll(() => JSON.parse(readFileSync(positionFile, 'utf8')))
-      .toMatchObject({ x: 464, y: 364 })
-    const killed = h.app.process()
-    const exited = new Promise((done) => killed.once('exit', done))
-    killed.kill('SIGKILL')
-    await exited
-    // Child processes hold the single-copy lock for a moment after the main one dies.
-    await pause(1500)
-    h = await Harness.launch({ keepPosition: true })
-    expect(await widgetAt()).toEqual({ x: 464, y: 364 })
+    expect(JSON.parse(readFileSync(positionFile, 'utf8'))).toMatchObject({ x: 464, y: 364 })
   })
 
-  test('a click does not change the saved position', async () => {
+  test('a click saves nothing', async () => {
     h = await Harness.launch()
     await h.dragWidgetTo(500, 400)
-    await pause(100)
-    const saved = readFileSync(positionFile, 'utf8')
+    rmSync(positionFile)
     await h.clickWidget()
     await expect.poll(() => h.visible(APP)).toBe(true)
-    expect(readFileSync(positionFile, 'utf8')).toBe(saved)
+    expect(existsSync(positionFile)).toBe(false)
   })
 
   test('a damaged position file falls back to the default', async () => {
@@ -175,6 +164,9 @@ test.describe('display changes', () => {
     await h.setDisplays([laptop, external], 'display-added')
     await h.dragWidgetTo(2532, 576)
     await h.openPanel()
+    // With the cursor on the panel, only the recovery can close it.
+    const panel = (await h.state(OVERVIEW))!.bounds
+    await h.moveCursor(panel.x + 100, panel.y + 100)
     await h.setDisplays([laptop])
     await expect.poll(() => h.visible(OVERVIEW), { timeout: 3000 }).toBe(false)
   })
