@@ -5,7 +5,7 @@ import type { DatabaseSync } from 'node:sqlite'
 export const BACKUPS_KEPT = 7
 const DAILY_BACKUP = /^skillpilot-\d{4}-\d{2}-\d{2}\.db$/
 
-function localDate(when: Date): string {
+export function localDate(when: Date): string {
   const month = String(when.getMonth() + 1).padStart(2, '0')
   const day = String(when.getDate()).padStart(2, '0')
   return `${when.getFullYear()}-${month}-${day}`

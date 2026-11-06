@@ -1,24 +1,31 @@
 import {
+  isLinkKind,
   isRecordKind,
   profileFields,
   recordFields,
   validateFields,
   type FieldValues,
+  type Link,
   type OverviewData,
+  type RecordKind,
   type Result,
   type StoredRecord
 } from '../shared/career'
-import type { CareerStore } from './db/career-store'
+import { MAX_LEVEL, buildDashboard, type Dashboard } from '../shared/progress'
+import { needsParent, type CareerStore } from './db/career-store'
 
 export interface HandlerDeps {
   getStore(): CareerStore | null
   /** Called after any change that the hover overview shows. */
   notifyOverview(): void
   logError(error: unknown): void
+  /** Today as YYYY-MM-DD, in local time. */
+  today(): string
 }
 
 const UNAVAILABLE = 'Your data could not be opened. Restart the app, and see the error log if it continues.'
 const FAILED = 'That could not be saved. Your earlier data is unchanged.'
+const FIX_FIELDS = 'Please fix the highlighted fields.'
 
 function failure(message: string): { ok: false; message: string } {
   return { ok: false, message }
@@ -28,8 +35,19 @@ function isId(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) > 0
 }
 
+function isDuplicate(error: unknown): boolean {
+  return error instanceof Error && /UNIQUE constraint failed: skill\.name/.test(error.message)
+}
+
+/** Checks the kind and its parent id together. Null means they are fine. */
+function kindProblem(kind: unknown, parentId: unknown): string | null {
+  if (!isRecordKind(kind)) return 'Unknown record type.'
+  if (needsParent(kind) ? !isId(parentId) : parentId != null) return 'Unknown record.'
+  return null
+}
+
 /** Everything renderers can do with career data. All input is untrusted here. */
-export function createDataHandlers({ getStore, notifyOverview, logError }: HandlerDeps) {
+export function createDataHandlers({ getStore, notifyOverview, logError, today }: HandlerDeps) {
   const withStore = <T>(work: (store: CareerStore) => Result<T>): Result<T> => {
     const store = getStore()
     if (!store) return failure(UNAVAILABLE)
@@ -41,6 +59,9 @@ export function createDataHandlers({ getStore, notifyOverview, logError }: Handl
     }
   }
 
+  const parentOf = (kind: RecordKind, parentId: unknown): number | null =>
+    needsParent(kind) ? (parentId as number) : null
+
   return {
     getProfile: (): Result<FieldValues> =>
       withStore((store) => ({ ok: true, value: store.getProfile() })),
@@ -48,37 +69,92 @@ export function createDataHandlers({ getStore, notifyOverview, logError }: Handl
     saveProfile: (input: unknown): Result<FieldValues> =>
       withStore((store) => {
         const { values, errors } = validateFields(profileFields, input)
-        if (Object.keys(errors).length) return { ok: false, message: 'Please fix the highlighted fields.', errors }
+        if (Object.keys(errors).length) return { ok: false, message: FIX_FIELDS, errors }
         const value = store.saveProfile(values)
         notifyOverview()
         return { ok: true, value }
       }),
 
-    listRecords: (kind: unknown): Result<StoredRecord[]> =>
+    listRecords: (kind: unknown, parentId?: unknown): Result<StoredRecord[]> =>
       withStore((store) => {
-        if (!isRecordKind(kind)) return failure('Unknown record type.')
-        return { ok: true, value: store.listRecords(kind) }
+        const problem = kindProblem(kind, parentId)
+        if (problem) return failure(problem)
+        const known = kind as RecordKind
+        return { ok: true, value: store.listRecords(known, parentOf(known, parentId)) }
       }),
 
-    saveRecord: (kind: unknown, id: unknown, input: unknown): Result<StoredRecord> =>
+    saveRecord: (kind: unknown, id: unknown, input: unknown, parentId?: unknown): Result<StoredRecord> =>
       withStore((store) => {
-        if (!isRecordKind(kind)) return failure('Unknown record type.')
+        const problem = kindProblem(kind, parentId)
+        if (problem) return failure(problem)
         if (id !== null && !isId(id)) return failure('Unknown record.')
-        const { values, errors } = validateFields(recordFields[kind], input)
-        if (Object.keys(errors).length) return { ok: false, message: 'Please fix the highlighted fields.', errors }
-        const value = store.saveRecord(kind, id, values)
-        return value ? { ok: true, value } : failure('That record no longer exists.')
+        const known = kind as RecordKind
+        const { values, errors } = validateFields(recordFields[known], input)
+        if (Object.keys(errors).length) return { ok: false, message: FIX_FIELDS, errors }
+        try {
+          const value = store.saveRecord(known, id, values, parentOf(known, parentId))
+          if (!value) return failure('That record no longer exists.')
+          notifyOverview()
+          return { ok: true, value }
+        } catch (error) {
+          if (!isDuplicate(error)) throw error
+          const taken = 'You already have a skill with this name'
+          return { ok: false, message: FIX_FIELDS, errors: { name: taken } }
+        }
       }),
 
-    deleteRecord: (kind: unknown, id: unknown): Result<boolean> =>
+    deleteRecord: (kind: unknown, id: unknown, parentId?: unknown): Result<boolean> =>
       withStore((store) => {
-        if (!isRecordKind(kind)) return failure('Unknown record type.')
+        const problem = kindProblem(kind, parentId)
+        if (problem) return failure(problem)
         if (!isId(id)) return failure('Unknown record.')
-        return { ok: true, value: store.deleteRecord(kind, id) }
+        const known = kind as RecordKind
+        const value = store.deleteRecord(known, id, parentOf(known, parentId))
+        notifyOverview()
+        return { ok: true, value }
       }),
+
+    listLinks: (kind: unknown, parentId: unknown): Result<Link[]> =>
+      withStore((store) => {
+        if (!isLinkKind(kind) || !isId(parentId)) return failure('Unknown link.')
+        return { ok: true, value: store.listLinks(kind, parentId) }
+      }),
+
+    setLink: (kind: unknown, parentId: unknown, childId: unknown, linked: unknown, level?: unknown): Result<boolean> =>
+      withStore((store) => {
+        if (!isLinkKind(kind) || !isId(parentId) || !isId(childId) || typeof linked !== 'boolean') {
+          return failure('Unknown link.')
+        }
+        const required = level ?? 3
+        if (!Number.isInteger(required) || (required as number) < 1 || (required as number) > MAX_LEVEL) {
+          return failure('Choose a level from 1 to 5.')
+        }
+        store.setLink(kind, parentId, childId, linked, required as number)
+        notifyOverview()
+        return { ok: true, value: true }
+      }),
+
+    getDashboard: (): Result<Dashboard> =>
+      withStore((store) => ({ ok: true, value: buildDashboard(store.readCareerRows(), today()) })),
 
     getOverview: (): Result<OverviewData> =>
-      withStore((store) => ({ ok: true, value: store.getOverview() }))
+      withStore((store) => {
+        const { fullName, currentGoal, targetRoles } = store.getProfile()
+        const dashboard = buildDashboard(store.readCareerRows(), today())
+        const topGoal = dashboard.goals.find((goal) => goal.status === 'active')
+        return {
+          ok: true,
+          value: {
+            name: fullName ?? '',
+            currentGoal: currentGoal || topGoal?.title || '',
+            targetRoles: targetRoles ?? '',
+            progress: dashboard.overall,
+            learning: dashboard.skills.filter((skill) => skill.status === 'learning').map((skill) => skill.name),
+            nextDeadline: dashboard.deadlines[0] ?? null,
+            latestAchievement: dashboard.achievements[0]?.title ?? null
+          }
+        }
+      })
   }
 }
 
