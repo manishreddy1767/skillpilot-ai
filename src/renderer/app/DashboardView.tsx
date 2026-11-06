@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react'
 import { recordFields } from '../../shared/career'
+import type { RoleReadiness } from '../../shared/ipc'
+import type { Learning } from '../../shared/learning'
 import { scoringRules } from '../../shared/progress'
 import { Meter, SkillChart } from './charts'
 import { useDashboard } from './useDashboard'
@@ -8,6 +11,21 @@ const projectStatus = (value: string): string =>
 
 export function DashboardView() {
   const { dashboard, message } = useDashboard()
+  const [learning, setLearning] = useState<Learning | null>(null)
+  const [recommendation, setRecommendation] = useState<string | null>(null)
+  const [roles, setRoles] = useState<RoleReadiness[]>([])
+
+  useEffect(() => {
+    void window.skillpilot.getLearning().then((result) => {
+      if (result.ok) setLearning(result.value)
+    })
+    void window.skillpilot.getRecommendation().then((result) => {
+      if (result.ok) setRecommendation(result.value)
+    })
+    void window.skillpilot.getRoleReadiness().then((result) => {
+      if (result.ok) setRoles(result.value)
+    })
+  }, [])
 
   if (message) {
     return (
@@ -55,6 +73,84 @@ export function DashboardView() {
           </span>
         </div>
       </div>
+
+      {learning ? (
+        <div className="tiles compact">
+          <div className="tile">
+            <span className="tile-label">Learning streak</span>
+            <strong>
+              {learning.streak} {learning.streak === 1 ? 'day' : 'days'}
+            </strong>
+          </div>
+          <div className="tile">
+            <span className="tile-label">This week</span>
+            <strong>
+              {learning.minutesThisWeek} of {learning.weeklyTarget} min
+            </strong>
+          </div>
+        </div>
+      ) : null}
+      {learning?.pace === 'down' ? (
+        <p className="goal-note">Your pace has slowed compared with the previous two weeks.</p>
+      ) : null}
+
+      {recommendation ? (
+        <section>
+          <h2>Recommended next</h2>
+          <p>{recommendation}</p>
+        </section>
+      ) : null}
+
+      {learning?.todayTasks.length ? (
+        <section>
+          <h2>Today's tasks</h2>
+          <ul className="plain wide-list">
+            {learning.todayTasks.map((task) => (
+              <li key={task.id}>
+                <span>{task.title}</span>
+                <span className="muted">
+                  {task.overdue ? 'Overdue · ' : ''}
+                  {task.minutes} min
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {roles.some((role) => role.readiness !== null) ? (
+        <section>
+          <h2>Target roles</h2>
+          {roles.map((role) =>
+            role.readiness === null ? null : (
+              <div className="goal-line" key={role.id}>
+                <div className="goal-head">
+                  <span>{role.title}</span>
+                  <span>{role.readiness}%</span>
+                </div>
+                <Meter label={`${role.title} readiness`} value={role.readiness} />
+                {role.gaps.length > 0 ? <p className="goal-note">Gaps: {role.gaps.join(', ')}</p> : null}
+              </div>
+            )
+          )}
+        </section>
+      ) : null}
+
+      {learning?.roadmaps.length ? (
+        <section>
+          <h2>Roadmaps</h2>
+          {learning.roadmaps.map((roadmap) => (
+            <div className="goal-line" key={roadmap.id}>
+              <div className="goal-head">
+                <span>{roadmap.title}</span>
+                <span>{roadmap.percent}%</span>
+              </div>
+              <Meter label={`${roadmap.title} progress`} value={roadmap.percent} />
+              {roadmap.next ? <p className="goal-note">Next: {roadmap.next}</p> : null}
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {activeGoals.length > 0 ? (
         <section>

@@ -347,6 +347,26 @@ main h2 {
   font-size: 13px;
 }
 
+.tiles.compact {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 560px;
+}
+
+.tiles.compact .tile strong {
+  font-size: 22px;
+}
+
+.tiles.compact .meter {
+  margin-top: 6px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
 .goal-line {
   max-width: 760px;
   margin-bottom: 14px;
