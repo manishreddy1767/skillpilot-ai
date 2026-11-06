@@ -5,20 +5,38 @@ interface FieldInputProps {
   field: FieldDef
   value: string
   error?: string | undefined
+  /** Keeps ids unique when one form sits inside another record's details. */
+  idPrefix?: string | undefined
   onChange(value: string): void
 }
 
-const inputType = { text: 'text', email: 'email', url: 'url', month: 'month' } as const
+const inputType = { text: 'text', email: 'email', url: 'url', month: 'month', date: 'date' } as const
 
-export function FieldInput({ field, value, error, onChange }: FieldInputProps) {
-  const id = `field-${field.key}`
+export function FieldInput({ field, value, error, idPrefix = 'field', onChange }: FieldInputProps) {
+  const id = `${idPrefix}-${field.key}`
   const shared = {
     id,
     value,
     'aria-invalid': error ? true : undefined,
     'aria-describedby': error ? `${id}-error` : undefined,
-    onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       onChange(event.target.value)
+  }
+
+  const control = () => {
+    if (field.type === 'long') return <textarea rows={3} {...shared} />
+    if (field.type === 'select') {
+      return (
+        <select {...shared}>
+          {field.options?.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      )
+    }
+    return <input type={inputType[field.type]} {...shared} />
   }
 
   return (
@@ -27,11 +45,7 @@ export function FieldInput({ field, value, error, onChange }: FieldInputProps) {
         {field.label}
         {field.required ? <span aria-hidden="true"> *</span> : null}
       </label>
-      {field.type === 'long' ? (
-        <textarea rows={3} {...shared} />
-      ) : (
-        <input type={inputType[field.type]} {...shared} />
-      )}
+      {control()}
       {error ? (
         <p className="field-error" id={`${id}-error`}>
           {error}
