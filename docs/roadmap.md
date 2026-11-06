@@ -28,11 +28,12 @@ Prove the risky behaviour with real windows before anything is built on it.
 Done when dragging, hover, and click work together over ordinary apps. If a core behaviour cannot work,
 the Electron decision is revisited here.
 
-### M1: Desktop foundation (Phase 1)
+### M1: Desktop foundation (Phase 1), complete
 
 - Project setup, three-window structure, typed IPC, tray, single instance, Quit
 - Position saved and restored, including monitor removal
 - Main window with minimize-to-widget
+- Reset widget position in the tray
 
 ### M2: Profile and storage (Phase 2 start, completes the MVP)
 

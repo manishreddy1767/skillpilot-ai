@@ -3,8 +3,8 @@
 A private, single-user career assistant for Windows that lives on the desktop as a small floating
 widget. It tracks skills, goals, projects, and learning, and uses AI to recommend what to do next.
 
-Status: early development. The floating widget works: free dragging, hover overview, and click to
-open. Career features come next. See the [roadmap](docs/roadmap.md).
+Status: early development. The floating widget works: free dragging, remembered position, hover
+overview, and click to open. Career features come next. See the [roadmap](docs/roadmap.md).
 
 ## Running it
 
