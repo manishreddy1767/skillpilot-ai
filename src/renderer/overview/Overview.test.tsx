@@ -2,10 +2,19 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { Overview } from './Overview'
 
-const withData = (name: string, currentGoal: string, targetRoles: string) =>
+const withData = (name: string, currentGoal: string, targetRoles: string, over = {}) =>
   vi.mocked(window.skillpilot.getOverview).mockResolvedValue({
     ok: true,
-    value: { name, currentGoal, targetRoles }
+    value: {
+      name,
+      currentGoal,
+      targetRoles,
+      progress: null,
+      learning: [],
+      nextDeadline: null,
+      latestAchievement: null,
+      ...over
+    }
   })
 
 describe('Overview', () => {
@@ -15,7 +24,8 @@ describe('Overview', () => {
       ['Current goal', 'No goal set yet'],
       ["Today's tasks", 'Nothing planned for today'],
       ['Learning now', 'No skills in progress'],
-      ['Next deadline', 'No upcoming deadlines']
+      ['Next deadline', 'No upcoming deadlines'],
+      ['Latest achievement', 'Nothing yet']
     ]) {
       expect(await screen.findByRole('heading', { name: title! })).toBeTruthy()
       expect(screen.getByText(empty!)).toBeTruthy()
@@ -30,6 +40,34 @@ describe('Overview', () => {
     expect(screen.getByText('Target: Frontend Developer')).toBeTruthy()
     expect(screen.getByText("Hi Sam, here's your career at a glance")).toBeTruthy()
     expect(screen.queryByText('No goal set yet')).toBeNull()
+  })
+
+  it('shows progress, learning, deadline and achievement', async () => {
+    withData('Sam', 'Goal', '', {
+      progress: 45,
+      learning: ['React', 'SQL'],
+      nextDeadline: { title: 'Apply', date: '2026-01-01', overdue: true },
+      latestAchievement: 'Reached Step'
+    })
+    render(<Overview />)
+    expect(await screen.findByText('React, SQL')).toBeTruthy()
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('45')
+    expect(screen.getByText('Overall 45%')).toBeTruthy()
+    expect(screen.getByText('Apply')).toBeTruthy()
+    expect(screen.getByText('Overdue · 2026-01-01')).toBeTruthy()
+    expect(screen.getByText('Reached Step')).toBeTruthy()
+  })
+
+  it('shows a deadline that is not overdue without a warning', async () => {
+    withData('Sam', 'Goal', '', { nextDeadline: { title: 'Apply', date: '2099-01-01', overdue: false } })
+    render(<Overview />)
+    expect(await screen.findByText('2099-01-01')).toBeTruthy()
+  })
+
+  it('shows no progress bar until there is a measure', async () => {
+    render(<Overview />)
+    await screen.findByText('No goal set yet')
+    expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
   it('updates when the data changes', async () => {

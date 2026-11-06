@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { loadPage, secureWebPreferences } from './common'
 
-export const OVERVIEW_SIZE = { width: 340, height: 420 }
+export const OVERVIEW_SIZE = { width: 340, height: 520 }
 
 /** Created at startup and kept hidden, so hovering opens it instantly. */
 export function createOverviewWindow(): BrowserWindow {
