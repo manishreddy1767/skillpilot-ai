@@ -13,6 +13,9 @@ const withData = (name: string, currentGoal: string, targetRoles: string, over =
       learning: [],
       nextDeadline: null,
       latestAchievement: null,
+      tasks: [],
+      streak: 0,
+      recommendation: null,
       ...over
     }
   })
@@ -28,7 +31,7 @@ describe('Overview', () => {
       ['Latest achievement', 'Nothing yet']
     ]) {
       expect(await screen.findByRole('heading', { name: title! })).toBeTruthy()
-      expect(screen.getByText(empty!)).toBeTruthy()
+      expect(screen.getAllByText(empty!).length).toBeGreaterThan(0)
     }
     expect(screen.getByText('Your career at a glance')).toBeTruthy()
   })
@@ -56,6 +59,24 @@ describe('Overview', () => {
     expect(screen.getByText('Apply')).toBeTruthy()
     expect(screen.getByText('Overdue · 2026-01-01')).toBeTruthy()
     expect(screen.getByText('Reached Step')).toBeTruthy()
+  })
+
+  it('lists tasks that can be ticked off here, with the streak', async () => {
+    withData('Sam', 'Goal', '', {
+      tasks: [{ id: 4, title: 'Read chapter', minutes: 30, overdue: false }],
+      streak: 3
+    })
+    render(<Overview />)
+    fireEvent.click(await screen.findByLabelText('Read chapter'))
+    expect(window.skillpilot.completeTask).toHaveBeenCalledWith(4)
+    expect(screen.getByText('3 day streak')).toBeTruthy()
+    expect(screen.queryByText('Nothing planned for today')).toBeNull()
+  })
+
+  it('shows the recommendation', async () => {
+    withData('Sam', 'Goal', '', { recommendation: 'Learn CSS' })
+    render(<Overview />)
+    expect(await screen.findByText('Learn CSS')).toBeTruthy()
   })
 
   it('shows a deadline that is not overdue without a warning', async () => {

@@ -46,7 +46,17 @@ export function Overview() {
       </section>
       <section>
         <h2>Today's tasks</h2>
-        <p>Nothing planned for today</p>
+        {data?.tasks.length ? (
+          data.tasks.map((task) => (
+            <label className="task" key={task.id}>
+              <input type="checkbox" checked={false} onChange={() => void window.skillpilot.completeTask(task.id)} />
+              <span className="clamped">{task.title}</span>
+            </label>
+          ))
+        ) : (
+          <p>Nothing planned for today</p>
+        )}
+        {data?.streak ? <p className="detail">{data.streak} day streak</p> : null}
       </section>
       <section>
         <h2>Learning now</h2>
@@ -65,6 +75,10 @@ export function Overview() {
       <section>
         <h2>Latest achievement</h2>
         <p className="clamped">{data?.latestAchievement ?? 'Nothing yet'}</p>
+      </section>
+      <section>
+        <h2>Recommended next</h2>
+        <p className="clamped">{data?.recommendation ?? 'Nothing yet'}</p>
       </section>
       <button type="button" onClick={() => window.skillpilot.openApp()}>
         Open SkillPilot
