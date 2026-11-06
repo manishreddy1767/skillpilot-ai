@@ -35,11 +35,12 @@ draggable areas swallow pointer events, which would break both hover and click o
 Instead:
 
 1. `pointerdown` captures the pointer and records the grab offset inside the widget.
-2. On `pointermove`, the main process reads `screen.getCursorScreenPoint()`, subtracts the offset, and
-   moves the window with `setBounds`.
+2. While the button is held, the main process reads `screen.getCursorScreenPoint()` about 60 times a
+   second, subtracts the offset, and moves the window with `setBounds`. It does not rely on the page's
+   `pointermove` events, which can lag behind.
 3. Movement under 4 px counts as a click. Anything more is a drag, and hover stays suppressed until
    it ends.
-4. `pointerup` saves the position.
+4. `pointerup` places the widget one last time and saves the position.
 
 `setBounds` always passes the fixed width and height. Moving a window across monitors with different
 scaling can otherwise change its size.

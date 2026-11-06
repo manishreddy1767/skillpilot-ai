@@ -3,10 +3,16 @@
 A private, single-user career assistant for Windows that lives on the desktop as a small floating
 widget. It tracks skills, goals, projects, and learning, and uses AI to recommend what to do next.
 
-Status: MVP complete. The floating widget works, with free dragging, remembered position, a hover
-overview, and click to open. The full window stores your profile, education, experience, and
-certifications locally, along with skills, evidence, goals, and projects, and a dashboard shows your
-progress. AI features come next. See the [roadmap](docs/roadmap.md).
+Status: version 1.0.0, with the whole roadmap built. See the [quality report](docs/quality-report.md) for
+test results and what has not been tested yet. See the [roadmap](docs/roadmap.md).
+
+## Install
+
+Run `npm run dist`, then run `releaseSkillPilot AI Setup 1.0.0.exe`. It is unsigned, so Windows shows a
+SmartScreen warning: choose **More info**, then **Run anyway**.
+
+AI is optional and off by default. To use it, go to Settings, choose a provider, and add your Anthropic API
+key or run a local Ollama model.
 
 ## Running it
 
@@ -19,7 +25,8 @@ npm start              # build and run
 npm test               # unit tests
 npm run test:integration   # real app, leaves the mouse alone
 npm run test:desktop   # real mouse test; takes over the mouse for about 30 seconds
-npm run test:all       # everything
+npm run test:all       # everything except the installer
+npm run test:installer # build, install, use, and uninstall the real installer
 npm run dist           # build the Windows installer into release/
 ```
 
@@ -39,5 +46,6 @@ To exit, right-click the tray icon and choose Quit SkillPilot AI. Unexpected err
 - [AI and privacy](docs/architecture/ai-and-privacy.md): AI features, what leaves the laptop
 - [Windows limits](docs/architecture/windows-limits.md): platform restrictions and open questions
 - [Roadmap](docs/roadmap.md): MVP and milestones
+- [Quality report](docs/quality-report.md): test results, measurements, and open items
 - Decisions: [Electron](docs/decisions/0001-electron-desktop-shell.md),
   [built-in SQLite](docs/decisions/0002-built-in-sqlite.md)

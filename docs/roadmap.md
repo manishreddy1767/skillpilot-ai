@@ -68,11 +68,13 @@ the Electron decision is revisited here.
 - Multi-monitor refinement, widget size and opacity, click-through mode, transitions
 - Installer
 
-### M7: Testing and refinement (Phase 6)
+### M7: Testing and refinement (Phase 6), complete
 
 - Full test pass, data persistence checks, memory and startup measurements
 - Widget tested across positions, monitors, and scaling levels
 - Checks that it does not interfere with other apps
+
+Results are in the [quality report](quality-report.md).
 
 ## Testing
 
@@ -84,6 +86,7 @@ done. `npm run test:all` runs every layer.
 | Unit | Vitest, tests beside the code | Logic, windows, tray, bridge, screens, scripts |
 | Integration | Playwright, `tests/integration` | The real app with a faked cursor: IPC, security, windows, tray, quit, errors |
 | Desktop | `tests/desktop/widget.ps1` | Real mouse input against the built app, reading state from Windows |
+| Installer | `tests/installer` | The real installer: install, use, measure, uninstall |
 | Manual checklist | By hand | Hover feel, tray menu, sleep and wake, fullscreen apps |
 
 Mouse feel cannot be fully automated, so it stays on the manual checklist.
