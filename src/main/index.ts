@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import {
   BrowserWindow,
+  Notification,
   app,
   dialog,
   ipcMain,
@@ -11,6 +12,7 @@ import {
   type IpcMainInvokeEvent
 } from 'electron'
 import { Channel } from '../shared/ipc'
+import { defaultSettings, type Settings } from '../shared/settings'
 import { KeyStore } from './ai/key-store'
 import { createAiHandlers } from './ai-handlers'
 import { createDataHandlers } from './data-handlers'
@@ -18,19 +20,24 @@ import { localDate } from './db/backup'
 import { openCareerData } from './db/open-career-data'
 import { installErrorLog, writeErrorLog } from './error-log'
 import { DragTracker } from './logic/drag-tracker'
-import { centreIn, overlaps, placePanel, type Point } from './logic/geometry'
+import { centreIn, circleRows, overlaps, placePanel, type Point } from './logic/geometry'
 import { HoverController } from './logic/hover-controller'
 import { isPoint } from './logic/validation'
 import { WidgetPlacement } from './logic/widget-placement'
+import { checkNotifications } from './notifier'
 import { loadPosition, savePosition } from './position-store'
 import { createTray } from './tray'
 import { APP_WINDOW_SIZE, createAppWindow } from './windows/app-window'
 import { OVERVIEW_SIZE, createOverviewWindow } from './windows/overview'
-import { WIDGET_SIZE, createWidgetWindow } from './windows/widget'
+import { createWidgetWindow } from './windows/widget'
 
 const PANEL_GAP = 8
 /** Displays often report several changes in a row, so wait for them to settle. */
 const DISPLAY_SETTLE_DELAY = 300
+const NOTIFICATION_CHECK_INTERVAL = 15 * 60 * 1000
+const FIRST_NOTIFICATION_CHECK = 60 * 1000
+const FADE_STEP = 0.2
+const FADE_INTERVAL = 16
 
 const toPair = ({ x, y }: Point): [number, number] => [x, y]
 
@@ -38,21 +45,6 @@ function start(): void {
   const dataPath = app.getPath('userData')
   const errorLogPath = join(dataPath, 'logs', 'errors.log')
   const positionPath = join(dataPath, 'widget-position.json')
-
-  const placement = new WidgetPlacement({
-    size: WIDGET_SIZE,
-    getDisplays: () => screen.getAllDisplays(),
-    getPrimary: () => screen.getPrimaryDisplay(),
-    load: () => loadPosition(positionPath),
-    save: (position) => {
-      // Losing a saved position is minor, so it must not interrupt the user.
-      try {
-        savePosition(positionPath, position)
-      } catch (error) {
-        writeErrorLog(errorLogPath, error)
-      }
-    }
-  })
 
   const data = openCareerData({
     folder: dataPath,
@@ -66,11 +58,47 @@ function start(): void {
     }
   })
 
-  const widget = createWidgetWindow(placement.target())
+  const startupSettings = data.aiStore?.getSettings() ?? defaultSettings
+  let widgetSize = Number(startupSettings['widgetSize'])
+
+  const placement = new WidgetPlacement({
+    getSize: () => widgetSize,
+    getDisplays: () => screen.getAllDisplays(),
+    getPrimary: () => screen.getPrimaryDisplay(),
+    load: () => loadPosition(positionPath),
+    save: (position) => {
+      // Losing a saved position is minor, so it must not interrupt the user.
+      try {
+        savePosition(positionPath, position)
+      } catch (error) {
+        writeErrorLog(errorLogPath, error)
+      }
+    }
+  })
+
+  const widget = createWidgetWindow(placement.target(), widgetSize)
   const overview = createOverviewWindow()
   let appWindow: BrowserWindow | null = null
   let quitting = false
-  let clickThrough = process.argv.includes('--click-through')
+  let clickThrough = process.argv.includes('--click-through') || startupSettings['clickThrough'] === 'on'
+  let fadeTimer: NodeJS.Timeout | null = null
+
+  const stopFade = (): void => {
+    if (fadeTimer) clearInterval(fadeTimer)
+    fadeTimer = null
+  }
+
+  const fadeInOverview = (): void => {
+    stopFade()
+    let opacity = 0
+    overview.setOpacity(opacity)
+    overview.showInactive()
+    fadeTimer = setInterval(() => {
+      opacity = Math.min(1, opacity + FADE_STEP)
+      if (!overview.isDestroyed()) overview.setOpacity(opacity)
+      if (opacity >= 1) stopFade()
+    }, FADE_INTERVAL)
+  }
 
   const hover = new HoverController({
     getCursor: () => screen.getCursorScreenPoint(),
@@ -80,16 +108,19 @@ function start(): void {
       const bounds = widget.getBounds()
       const { workArea } = screen.getDisplayMatching(bounds)
       overview.setBounds(placePanel(bounds, OVERVIEW_SIZE, workArea, PANEL_GAP))
-      overview.showInactive()
+      fadeInOverview()
     },
-    hidePanel: () => overview.hide()
+    hidePanel: () => {
+      stopFade()
+      overview.hide()
+    }
   })
 
   const drag = new DragTracker()
 
   // Fixed width and height: crossing monitors with different scaling can resize a window.
   const moveWidget = (position: Point): void => {
-    widget.setBounds({ ...position, width: WIDGET_SIZE, height: WIDGET_SIZE })
+    widget.setBounds({ ...position, width: widgetSize, height: widgetSize })
   }
 
   const openApp = (): void => {
@@ -196,7 +227,7 @@ function start(): void {
     },
     logError: (error) => writeErrorLog(errorLogPath, error),
     today: () => localDate(new Date()),
-    applySettings: () => undefined
+    applySettings: (settings) => applySettings(settings)
   })
 
   ipcMain.handle(Channel.GetSettings, fromApp(aiHandlers.getSettings))
@@ -258,15 +289,23 @@ function start(): void {
   powerMonitor.on('resume', refitWidget)
   app.on('second-instance', openApp)
 
-  const tray = createTray({
+  const setAlwaysOnTop = (enabled: boolean): void => {
+    widget.setAlwaysOnTop(enabled)
+    overview.setAlwaysOnTop(enabled)
+  }
+
+  const { tray, refresh: refreshTray } = createTray({
     openApp,
     isAlwaysOnTop: () => widget.isAlwaysOnTop(),
     setAlwaysOnTop: (enabled) => {
-      widget.setAlwaysOnTop(enabled)
-      overview.setAlwaysOnTop(enabled)
+      setAlwaysOnTop(enabled)
+      data.aiStore?.saveSettings({ alwaysOnTop: enabled ? 'on' : 'off' })
     },
     isClickThrough: () => clickThrough,
-    setClickThrough,
+    setClickThrough: (enabled) => {
+      setClickThrough(enabled)
+      data.aiStore?.saveSettings({ clickThrough: enabled ? 'on' : 'off' })
+    },
     resetWidgetPosition: () => {
       hover.close()
       moveWidget(placement.reset())
@@ -274,8 +313,57 @@ function start(): void {
     quit: () => app.quit()
   })
 
+  /** Puts settings into effect. Used at startup and whenever they are saved. */
+  function applySettings(settings: Settings): void {
+    const size = Number(settings['widgetSize'])
+    if (size !== widgetSize) {
+      widgetSize = size
+      moveWidget(widget.getBounds())
+      widget.setShape(circleRows(size))
+    }
+    widget.setOpacity(Number(settings['widgetOpacity']) / 100)
+    setAlwaysOnTop(settings['alwaysOnTop'] === 'on')
+    setClickThrough(settings['clickThrough'] === 'on')
+    // A development build would register the bare Electron program, so only the installed app does this.
+    if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: settings['startAtLogin'] === 'on' })
+    refreshTray()
+  }
+
+  applySettings({ ...startupSettings, clickThrough: clickThrough ? 'on' : 'off' })
+
+  const notify = (): void => {
+    const { store, aiStore } = data
+    if (!store || !aiStore || quitting) return
+    const now = new Date()
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const recommendation = handlers.getRecommendation()
+    try {
+      checkNotifications({
+        store,
+        aiStore,
+        today: localDate(now),
+        time,
+        recommendation: recommendation.ok ? recommendation.value : null,
+        send: ({ title, body }) => {
+          const notification = new Notification({ title, body })
+          notification.on('click', openApp)
+          notification.show()
+        }
+      })
+    } catch (error) {
+      writeErrorLog(errorLogPath, error)
+    }
+  }
+
+  const firstCheck = setTimeout(notify, FIRST_NOTIFICATION_CHECK)
+  const regularCheck = setInterval(notify, NOTIFICATION_CHECK_INTERVAL)
+  powerMonitor.on('resume', notify)
+
   app.once('before-quit', () => {
     quitting = true
+    clearTimeout(firstCheck)
+    clearInterval(regularCheck)
+    stopFade()
     // Suspended, not just closed: a late hover must not reach a destroyed window.
     hover.suspend()
     if (settleTimer) clearTimeout(settleTimer)
@@ -291,6 +379,8 @@ if (!app.requestSingleInstanceLock()) {
   installErrorLog(join(app.getPath('userData'), 'logs', 'errors.log'), (title, message) =>
     dialog.showErrorBox(title, message)
   )
+  // Windows ties notifications to this id, which matches the installer.
+  app.setAppUserModelId('com.skillpilot.ai')
   // Windows are hidden rather than closed, so the app runs until Quit is chosen.
   app.on('window-all-closed', () => undefined)
   void app.whenReady().then(start)
