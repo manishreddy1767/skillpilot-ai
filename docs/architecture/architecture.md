@@ -18,7 +18,7 @@ and AI guidance. There is no server, no accounts, and no public deployment.
 | AI | Claude API through `@anthropic-ai/sdk`, behind a provider interface | See [AI and privacy](ai-and-privacy.md). |
 | Secrets | Electron `safeStorage` (Windows DPAPI) | The API key is encrypted on disk and never enters source control. |
 | Packaging | electron-builder, NSIS installer | One installer with a Start Menu shortcut, which toasts need. |
-| Tests | Vitest, Playwright for Electron | Logic and database tests, plus real window tests. |
+| Tests | Vitest, real-input PowerShell test | Logic and database tests, plus real mouse tests against the built app. |
 
 ## Process model
 

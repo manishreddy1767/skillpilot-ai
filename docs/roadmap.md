@@ -13,7 +13,11 @@ Not in the MVP: AI, roadmaps, tasks, notifications, and the installer.
 
 ## Milestones
 
-### M0: Widget spike (Phase 1)
+Development and testing use one monitor. Positioning stays aware of multiple monitors, and the widget
+must stay reachable if the resolution or monitor setup changes. M0 to M3 need no API key. At M4 the
+key is added through Settings.
+
+### M0: Widget spike (Phase 1), complete
 
 Prove the risky behaviour with real windows before anything is built on it.
 
@@ -74,10 +78,10 @@ the Electron decision is revisited here.
 | Layer | Tool | Covers |
 |---|---|---|
 | Logic and data | Vitest | Progress calculations, repositories, migrations |
-| Windows | Playwright for Electron | Launch, IPC, window states, restored position |
-| Manual checklist | By hand | Hover feel, focus, multiple monitors, sleep and wake, fullscreen apps |
+| Windows | `tests/desktop/widget.ps1` | Real mouse input against the built app, reading state from Windows |
+| Manual checklist | By hand | Hover feel, tray menu, sleep and wake, fullscreen apps |
 
-Mouse feel and multi-monitor behaviour cannot be fully automated, so they stay on the manual checklist.
+Mouse feel cannot be fully automated, so it stays on the manual checklist.
 
 ## Commit approach
 
