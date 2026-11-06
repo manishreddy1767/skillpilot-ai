@@ -1,8 +1,16 @@
 import type { AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from './ai'
 import type { FieldValues, Link, LinkKind, OverviewData, RecordKind, Result, StoredRecord } from './career'
 import type { GapAnalysis } from './gap'
+import type { Learning } from './learning'
 import type { Dashboard } from './progress'
 import type { Settings } from './settings'
+
+export interface RoleReadiness {
+  id: number
+  title: string
+  readiness: number | null
+  gaps: string[]
+}
 
 export const Channel = {
   DragPress: 'widget:drag-press',
@@ -38,7 +46,12 @@ export const Channel = {
   ListProposals: 'proposals:list',
   AcceptProposal: 'proposals:accept',
   RejectProposal: 'proposals:reject',
-  GetAiLog: 'ai:log'
+  GetAiLog: 'ai:log',
+  GetLearning: 'learning:get',
+  GetRecommendation: 'learning:recommendation',
+  GetRoleReadiness: 'learning:roles',
+  CompleteTask: 'tasks:complete',
+  RescheduleRoadmap: 'roadmaps:reschedule'
 } as const
 
 /** The whole surface renderers can reach. They get nothing else from the main process. */
@@ -89,6 +102,11 @@ export interface SkillPilotApi {
   acceptProposal(id: number): Promise<Result<boolean>>
   rejectProposal(id: number): Promise<Result<boolean>>
   getAiLog(): Promise<Result<AiLogEntry[]>>
+  getLearning(): Promise<Result<Learning>>
+  getRecommendation(): Promise<Result<string | null>>
+  getRoleReadiness(): Promise<Result<RoleReadiness[]>>
+  completeTask(id: number): Promise<Result<boolean>>
+  rescheduleRoadmap(id: number): Promise<Result<boolean>>
 }
 
 declare global {

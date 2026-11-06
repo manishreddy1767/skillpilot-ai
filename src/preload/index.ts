@@ -42,7 +42,12 @@ const api: SkillPilotApi = {
   listProposals: () => ipcRenderer.invoke(Channel.ListProposals),
   acceptProposal: (id) => ipcRenderer.invoke(Channel.AcceptProposal, id),
   rejectProposal: (id) => ipcRenderer.invoke(Channel.RejectProposal, id),
-  getAiLog: () => ipcRenderer.invoke(Channel.GetAiLog)
+  getAiLog: () => ipcRenderer.invoke(Channel.GetAiLog),
+  getLearning: () => ipcRenderer.invoke(Channel.GetLearning),
+  getRecommendation: () => ipcRenderer.invoke(Channel.GetRecommendation),
+  getRoleReadiness: () => ipcRenderer.invoke(Channel.GetRoleReadiness),
+  completeTask: (id) => ipcRenderer.invoke(Channel.CompleteTask, id),
+  rescheduleRoadmap: (id) => ipcRenderer.invoke(Channel.RescheduleRoadmap, id)
 }
 
 contextBridge.exposeInMainWorld('skillpilot', api)

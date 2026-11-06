@@ -65,7 +65,12 @@ describe('preload bridge', () => {
       'listProposals',
       'acceptProposal',
       'rejectProposal',
-      'getAiLog'
+      'getAiLog',
+      'getLearning',
+      'getRecommendation',
+      'getRoleReadiness',
+      'completeTask',
+      'rescheduleRoadmap'
     ].sort())
   })
 

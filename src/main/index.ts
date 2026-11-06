@@ -158,7 +158,9 @@ function start(): void {
       if (!overview.isDestroyed()) overview.webContents.send(Channel.OverviewChanged)
     },
     logError: (error) => writeErrorLog(errorLogPath, error),
-    today: () => localDate(new Date())
+    today: () => localDate(new Date()),
+    latestPriority: () => data.aiStore?.latestPriority() ?? null,
+    weeklyTarget: () => Number(data.aiStore?.getSettings()['weeklyMinutes'] ?? 0)
   })
 
   const denied = { ok: false, message: 'Not allowed.' } as const
@@ -214,6 +216,16 @@ function start(): void {
   ipcMain.handle(Channel.AcceptProposal, fromApp(aiHandlers.acceptProposal))
   ipcMain.handle(Channel.RejectProposal, fromApp(aiHandlers.rejectProposal))
   ipcMain.handle(Channel.GetAiLog, fromApp(aiHandlers.getAiLog))
+  ipcMain.handle(Channel.GetLearning, fromApp(handlers.getLearning))
+  ipcMain.handle(Channel.GetRecommendation, fromApp(handlers.getRecommendation))
+  ipcMain.handle(Channel.GetRoleReadiness, fromApp(handlers.getRoleReadiness))
+  ipcMain.handle(Channel.RescheduleRoadmap, fromApp(handlers.rescheduleRoadmap))
+  // The one change the hover panel may make: ticking off a task.
+  ipcMain.handle(Channel.CompleteTask, (event, id: unknown) => {
+    const fromPanel = !overview.isDestroyed() && event.sender === overview.webContents
+    const fromAppWindow = appWindow && !appWindow.isDestroyed() && event.sender === appWindow.webContents
+    return fromPanel || fromAppWindow ? handlers.completeTask(id) : denied
+  })
   ipcMain.handle(Channel.GetOverview, (event) =>
     !overview.isDestroyed() && event.sender === overview.webContents ? handlers.getOverview() : denied
   )
