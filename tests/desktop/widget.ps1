@@ -84,7 +84,8 @@ function Start-App([string[]]$extra = @()) {
   for ($i = 0; $i -lt 100; $i++) {
     Wait 100
     $w = [W]::Find('SkillPilot Widget', $pid32)
-    if ($w -ne [IntPtr]::Zero -and [W]::IsWindowVisible($w)) { Wait 400; return $w }
+    # A cold launch responds slowly at first, so give it time to warm up before acting.
+    if ($w -ne [IntPtr]::Zero -and [W]::IsWindowVisible($w)) { Wait 3000; return $w }
   }
   throw 'Widget window did not appear'
 }
@@ -109,7 +110,14 @@ $form.StartPosition = 'Manual'
 $form.Bounds = New-Object System.Drawing.Rectangle(250, 120, 700, 520)
 $script:clicks = 0
 $form.Add_MouseDown({ $script:clicks++ })
+$box = New-Object System.Windows.Forms.TextBox
+$box.Bounds = New-Object System.Drawing.Rectangle(20, 20, 300, 24)
+$form.Controls.Add($box)
 $form.Show()
+# Windows can stop a background script raising a window. Briefly going topmost always works,
+# and it must work: otherwise this test's clicks and typing would land in another app.
+$form.TopMost = $true
+$form.TopMost = $false
 
 try {
   $widget = Start-App
@@ -123,9 +131,11 @@ try {
   Check 'drag moves the widget with the cursor' ($r.X -eq 564 -and $r.Y -eq 344) "at $($r.X),$($r.Y)"
   Check 'a drag does not open the app' (-not (AppOpen))
 
+  $form.TopMost = $true; $form.TopMost = $false; Wait 100
   Click 300 600; Wait 150
   $other = [W]::GetForegroundWindow()
   Check 'other app has focus' ($other -eq $form.Handle)
+  if ($other -ne $form.Handle) { throw 'The test window is not in front, so stopping before clicking or typing elsewhere' }
 
   # Round shape: the corner of the square should belong to the app behind.
   $before = $script:clicks
@@ -166,6 +176,46 @@ try {
   $r = Rect $widget
   Check 'widget can be dragged back' ($r.X -gt 500 -and $r.Y -gt 300) "at $($r.X),$($r.Y)"
   Check 'dragging never changes the widget size' ($r.W -eq 72 -and $r.H -eq 72) "$($r.W)x$($r.H)"
+
+  # Typing in another app is not disturbed by hovering or dragging the widget.
+  function TypeSafely($text) {
+    if ([W]::GetForegroundWindow() -ne $form.Handle) { throw 'Focus left the test window, so stopping before typing elsewhere' }
+    [System.Windows.Forms.SendKeys]::SendWait($text); Wait 150
+  }
+  $box.Focus() | Out-Null; Wait 100
+  TypeSafely 'abc'
+  Glide ($r.X + 36) ($r.Y + 36); Wait 500
+  TypeSafely 'def'
+  Glide 300 600; Wait 600
+  Glide ($r.X + 36) ($r.Y + 36); Wait 40; Press; Glide 700 420 12; Wait 60; Release
+  TypeSafely 'ghi'
+  Check 'typing elsewhere survives hovering and dragging' ($box.Text -eq 'abcdefghi') "typed '$($box.Text)'"
+  Glide 300 600; Wait 500
+  $r = Rect $widget
+
+  # Free placement at every corner and edge, with the panel staying on screen.
+  $work = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+  $spots = @(
+    @(40, 40), @(($work.Right - 40), 40), @(40, ($work.Bottom - 40)), @(($work.Right - 40), ($work.Bottom - 40)),
+    @([int]($work.Right / 2), 40), @([int]($work.Right / 2), ($work.Bottom - 40)), @(40, [int]($work.Bottom / 2)), @(($work.Right - 40), [int]($work.Bottom / 2))
+  )
+  foreach ($spot in $spots) {
+    $from = Rect $widget
+    Glide ($from.X + 36) ($from.Y + 36); Wait 40; Press; Glide $spot[0] $spot[1] 14; Wait 60; Release
+    Glide 300 300 6; Wait 450
+    $now = Rect $widget
+    $placed = ($now.X -eq ($spot[0] - 36)) -and ($now.Y -eq ($spot[1] - 36))
+    Glide ($now.X + 36) ($now.Y + 36); Wait 500
+    $open = PanelOpen
+    $p = Rect ([W]::Find('SkillPilot Overview', [uint32]$script:app.Id))
+    $onScreen = ($p.X -ge $work.X) -and ($p.Y -ge $work.Y) -and (($p.X + $p.W) -le $work.Right) -and (($p.Y + $p.H) -le $work.Bottom)
+    Check "placement at $($spot[0]),$($spot[1])" ($placed -and $open -and $onScreen) "widget $($now.X),$($now.Y) panel $($p.X),$($p.Y) $($p.W)x$($p.H)"
+    Glide 300 300 6; Wait 600
+  }
+  $from = Rect $widget
+  Glide ($from.X + 36) ($from.Y + 36); Wait 40; Press; Glide 600 380 14; Wait 60; Release
+  Glide 300 600; Wait 500
+  $r = Rect $widget
 
   # Click expands to the full app, which takes focus as a normal window should.
   Click ($r.X + 36) ($r.Y + 36); Wait 1500
