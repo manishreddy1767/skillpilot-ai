@@ -68,6 +68,9 @@ export interface OverviewData {
   learning: string[]
   nextDeadline: { title: string; date: string; overdue: boolean } | null
   latestAchievement: string | null
+  tasks: { id: number; title: string; minutes: number; overdue: boolean }[]
+  streak: number
+  recommendation: string | null
 }
 
 export type Result<T> =

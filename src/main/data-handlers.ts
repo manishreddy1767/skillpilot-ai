@@ -11,6 +11,9 @@ import {
   type Result,
   type StoredRecord
 } from '../shared/career'
+import { analyseGap } from '../shared/gap'
+import type { RoleReadiness } from '../shared/ipc'
+import { buildLearning, catchUpStart, summariseRoadmap, type Learning } from '../shared/learning'
 import { MAX_LEVEL, buildDashboard, type Dashboard } from '../shared/progress'
 import { needsParent, type CareerStore } from './db/career-store'
 
@@ -21,7 +24,13 @@ export interface HandlerDeps {
   logError(error: unknown): void
   /** Today as YYYY-MM-DD, in local time. */
   today(): string
+  /** The first priority from the newest gap report. */
+  latestPriority?(): string | null
+  /** The weekly learning target, in minutes. */
+  weeklyTarget?(): number
 }
+
+export type { RoleReadiness }
 
 const UNAVAILABLE = 'Your data could not be opened. Restart the app, and see the error log if it continues.'
 const FAILED = 'That could not be saved. Your earlier data is unchanged.'
@@ -47,7 +56,14 @@ function kindProblem(kind: unknown, parentId: unknown): string | null {
 }
 
 /** Everything renderers can do with career data. All input is untrusted here. */
-export function createDataHandlers({ getStore, notifyOverview, logError, today }: HandlerDeps) {
+export function createDataHandlers({
+  getStore,
+  notifyOverview,
+  logError,
+  today,
+  latestPriority = () => null,
+  weeklyTarget = () => 0
+}: HandlerDeps) {
   const withStore = <T>(work: (store: CareerStore) => Result<T>): Result<T> => {
     const store = getStore()
     if (!store) return failure(UNAVAILABLE)
@@ -61,6 +77,12 @@ export function createDataHandlers({ getStore, notifyOverview, logError, today }
 
   const parentOf = (kind: RecordKind, parentId: unknown): number | null =>
     needsParent(kind) ? (parentId as number) : null
+
+  /** What to do next: the newest report's priority, then the next roadmap topic. */
+  const recommendation = (store: CareerStore): string | null => {
+    const next = buildLearning(store.readLearningRows(), today(), 0).roadmaps.find((roadmap) => roadmap.next)?.next
+    return latestPriority() ?? next ?? null
+  }
 
   return {
     getProfile: (): Result<FieldValues> =>
@@ -137,10 +159,56 @@ export function createDataHandlers({ getStore, notifyOverview, logError, today }
     getDashboard: (): Result<Dashboard> =>
       withStore((store) => ({ ok: true, value: buildDashboard(store.readCareerRows(), today()) })),
 
+    getLearning: (): Result<Learning> =>
+      withStore((store) => ({ ok: true, value: buildLearning(store.readLearningRows(), today(), weeklyTarget()) })),
+
+    getRecommendation: (): Result<string | null> =>
+      withStore((store) => ({ ok: true, value: recommendation(store) })),
+
+    getRoleReadiness: (): Result<RoleReadiness[]> =>
+      withStore((store) => {
+        const { skills } = buildDashboard(store.readCareerRows(), today())
+        const value = store.listRecords('targetRole').map((role) => {
+          const requirements = store.listRecords('roleRequirement', role.id).map(({ values }) => ({
+            skillName: values['skillName'] ?? '',
+            requiredLevel: Number(values['requiredLevel']),
+            importance: Number(values['importance'])
+          }))
+          const { readiness, items } = analyseGap(requirements, skills)
+          return {
+            id: role.id,
+            title: role.values['title'] ?? '',
+            readiness,
+            gaps: items.filter((item) => item.status !== 'met').map((item) => item.skillName)
+          }
+        })
+        return { ok: true, value }
+      }),
+
+    completeTask: (id: unknown): Result<boolean> =>
+      withStore((store) => {
+        if (!isId(id)) return failure('Unknown task.')
+        const value = store.completeTask(id)
+        notifyOverview()
+        return { ok: true, value }
+      }),
+
+    rescheduleRoadmap: (id: unknown): Result<boolean> =>
+      withStore((store) => {
+        if (!isId(id)) return failure('Unknown roadmap.')
+        const rows = store.readLearningRows()
+        const roadmap = rows.roadmaps.find((item) => item.id === id)
+        if (!roadmap) return failure('That roadmap no longer exists.')
+        const { nextWeek } = summariseRoadmap(roadmap, rows.items, today())
+        if (nextWeek === null) return failure('This roadmap has no topics left.')
+        return { ok: true, value: store.setRoadmapStart(id, catchUpStart(nextWeek, today())) }
+      }),
+
     getOverview: (): Result<OverviewData> =>
       withStore((store) => {
         const { fullName, currentGoal, targetRoles } = store.getProfile()
         const dashboard = buildDashboard(store.readCareerRows(), today())
+        const learning = buildLearning(store.readLearningRows(), today(), 0)
         const topGoal = dashboard.goals.find((goal) => goal.status === 'active')
         return {
           ok: true,
@@ -151,7 +219,10 @@ export function createDataHandlers({ getStore, notifyOverview, logError, today }
             progress: dashboard.overall,
             learning: dashboard.skills.filter((skill) => skill.status === 'learning').map((skill) => skill.name),
             nextDeadline: dashboard.deadlines[0] ?? null,
-            latestAchievement: dashboard.achievements[0]?.title ?? null
+            latestAchievement: dashboard.achievements[0]?.title ?? null,
+            tasks: learning.todayTasks.slice(0, 3),
+            streak: learning.streak,
+            recommendation: recommendation(store)
           }
         }
       })

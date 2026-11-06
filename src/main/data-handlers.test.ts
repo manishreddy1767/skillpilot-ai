@@ -53,7 +53,10 @@ describe('profile handlers', () => {
         progress: null,
         learning: [],
         nextDeadline: null,
-        latestAchievement: null
+        latestAchievement: null,
+        tasks: [],
+        streak: 0,
+        recommendation: null
       }
     })
   })
@@ -292,6 +295,82 @@ describe('skills, goals and projects', () => {
     addGoal(h, 'From goals')
     h.saveProfile({ fullName: 'Sam', currentGoal: 'From profile' })
     expect(h.getOverview()).toMatchObject({ value: { currentGoal: 'From profile' } })
+  })
+})
+
+describe('learning', () => {
+  it('reports the weekly target and tasks due', () => {
+    const { store, notifyOverview, logError } = setup()
+    const h = createDataHandlers({
+      getStore: () => store,
+      notifyOverview,
+      logError,
+      today: () => '2026-11-06',
+      weeklyTarget: () => 300
+    })
+    h.saveRecord('task', null, { title: 'Read', dueDate: '2026-11-06' })
+    expect(h.getLearning()).toMatchObject({ ok: true, value: { weeklyTarget: 300, todayTasks: [{ title: 'Read' }] } })
+  })
+
+  it('completes a task and tells the overview', () => {
+    const { h, notifyOverview } = setup()
+    const saved = h.saveRecord('task', null, { title: 'Read', dueDate: '2026-11-06' })
+    if (!saved.ok) throw new Error('not saved')
+    notifyOverview.mockClear()
+    expect(h.completeTask(saved.value.id)).toEqual({ ok: true, value: true })
+    expect(notifyOverview).toHaveBeenCalledOnce()
+    expect(h.getOverview()).toMatchObject({ value: { tasks: [] } })
+  })
+
+  it.each(['1', 0, null])('refuses the task %s', (id) => {
+    expect(setup().h.completeTask(id).ok).toBe(false)
+  })
+
+  it('catches a roadmap up so the next topic is this week', () => {
+    const { h } = setup()
+    const roadmap = h.saveRecord('roadmap', null, { title: 'Path', startDate: '2020-01-06' })
+    if (!roadmap.ok) throw new Error('not saved')
+    h.saveRecord('roadmapItem', null, { title: 'Topic', week: '3' }, roadmap.value.id)
+    expect(h.getLearning()).toMatchObject({ value: { roadmaps: [{ weeksBehind: expect.any(Number) }] } })
+    expect(h.rescheduleRoadmap(roadmap.value.id).ok).toBe(true)
+    expect(h.getLearning()).toMatchObject({ value: { roadmaps: [{ currentWeek: 3, weeksBehind: 0 }] } })
+  })
+
+  it('refuses to reschedule a missing or finished roadmap', () => {
+    const { h } = setup()
+    expect(h.rescheduleRoadmap('x').ok).toBe(false)
+    expect(h.rescheduleRoadmap(99)).toMatchObject({ message: expect.stringContaining('no longer exists') })
+    const roadmap = h.saveRecord('roadmap', null, { title: 'Empty' })
+    if (!roadmap.ok) throw new Error('not saved')
+    expect(h.rescheduleRoadmap(roadmap.value.id)).toMatchObject({ message: expect.stringContaining('no topics') })
+  })
+
+  it('recommends the newest report priority first, then the next topic', () => {
+    const { store, notifyOverview, logError } = setup()
+    let priority: string | null = null
+    const h = createDataHandlers({
+      getStore: () => store,
+      notifyOverview,
+      logError,
+      today: () => '2026-11-06',
+      latestPriority: () => priority
+    })
+    expect(h.getRecommendation()).toEqual({ ok: true, value: null })
+    const roadmap = h.saveRecord('roadmap', null, { title: 'Path' })
+    if (!roadmap.ok) throw new Error('not saved')
+    h.saveRecord('roadmapItem', null, { title: 'CSS' }, roadmap.value.id)
+    expect(h.getRecommendation()).toEqual({ ok: true, value: 'CSS' })
+    priority = 'Learn testing'
+    expect(h.getRecommendation()).toEqual({ ok: true, value: 'Learn testing' })
+  })
+
+  it('scores role readiness', () => {
+    const { h } = setup()
+    const role = h.saveRecord('targetRole', null, { title: 'Dev' })
+    if (!role.ok) throw new Error('not saved')
+    expect(h.getRoleReadiness()).toEqual({ ok: true, value: [{ id: role.value.id, title: 'Dev', readiness: null, gaps: [] }] })
+    h.saveRecord('roleRequirement', null, { skillName: 'CSS' }, role.value.id)
+    expect(h.getRoleReadiness()).toMatchObject({ value: [{ readiness: 0, gaps: ['CSS'] }] })
   })
 })
 
