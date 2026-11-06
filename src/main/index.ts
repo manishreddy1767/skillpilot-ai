@@ -110,7 +110,7 @@ function start(): void {
     quit: () => app.quit()
   })
 
-  app.on('before-quit', () => {
+  app.once('before-quit', () => {
     quitting = true
     // Suspended, not just closed: a late hover must not reach a destroyed window.
     hover.suspend()
