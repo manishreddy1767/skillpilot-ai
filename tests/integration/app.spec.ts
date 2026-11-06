@@ -375,37 +375,34 @@ test.describe('tray', () => {
 
 test.describe('error handling', () => {
   test('an unexpected error is logged, reported, and does not stop the app', async () => {
-    const seen = await h.app.evaluate(async ({ app, dialog }) => {
+    // Unique per run, because the test data folder and its log persist between runs.
+    const marker = `integration boom ${Date.now()}`
+    const seen = await h.app.evaluate(async ({ app, dialog }, text) => {
       const shown: string[] = []
       dialog.showErrorBox = (_title, message) => void shown.push(message)
       setTimeout(() => {
-        throw new Error('integration boom')
+        throw new Error(text)
       })
       await new Promise((done) => setTimeout(done, 200))
       return { shown, logPath: app.getPath('userData') + '/logs/errors.log' }
-    })
+    }, marker)
     expect(seen.shown).toHaveLength(1)
-    expect(seen.shown[0]).toContain('integration boom')
-    expect(readFileSync(seen.logPath, 'utf8')).toContain('integration boom')
+    expect(seen.shown[0]).toContain(marker)
+    expect(seen.shown[0]).toContain('Details were saved to')
+    expect(readFileSync(seen.logPath, 'utf8')).toContain(marker)
     expect(await h.visible(WIDGET)).toBe(true)
   })
 
-  test('a hover arriving during quit causes no error', async () => {
-    const process = h.app.process()
-    const exited = new Promise<number | null>((done) => process.once('exit', done))
+  test('hover stops once quitting has started', async () => {
     await h.cursorToWidget()
-    await h.app.evaluate(({ app, dialog, ipcMain, BrowserWindow }) => {
-      dialog.showErrorBox = (_t, message) => {
-        throw new Error(message)
-      }
-      const widget = BrowserWindow.getAllWindows().find((w) => w.getTitle() === 'SkillPilot Widget')!
-      const sender = widget.webContents
-      app.once('before-quit', () => {
-        ipcMain.emit('widget:hover-enter', { sender })
-      })
+    // Holds the quit open, so a late hover would have time to fire.
+    await h.app.evaluate(({ app }) => {
+      app.once('before-quit', (event) => event.preventDefault())
       app.quit()
     })
-    expect(await exited).toBe(0)
+    await h.call(WIDGET, 'hoverEnter')
+    await pause(400)
+    expect(await h.visible(OVERVIEW)).toBe(false)
   })
 })
 
