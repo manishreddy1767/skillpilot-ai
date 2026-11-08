@@ -2,6 +2,11 @@ import { rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { _electron, expect, type ElectronApplication, type Page } from '@playwright/test'
+import { DEFAULT_WIDGET_SIZE } from '../../src/shared/settings'
+
+/** The widget's default size, and the centre point tests grab it by. */
+export const SIZE = DEFAULT_WIDGET_SIZE
+export const HALF = SIZE / 2
 
 export const root = resolve(__dirname, '../..')
 export const harness = resolve(__dirname, 'harness.cjs')
@@ -116,7 +121,7 @@ export class Harness {
 
   async cursorToWidget(): Promise<{ x: number; y: number }> {
     const { bounds } = (await this.state(WIDGET))!
-    const centre = { x: bounds.x + 36, y: bounds.y + 36 }
+    const centre = { x: bounds.x + HALF, y: bounds.y + HALF }
     await this.moveCursor(centre.x, centre.y)
     return centre
   }
@@ -141,13 +146,13 @@ export class Harness {
 
   async clickWidget(): Promise<void> {
     await this.cursorToWidget()
-    await this.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await this.call(WIDGET, 'dragPress', { x: HALF, y: HALF })
     await this.call(WIDGET, 'dragRelease')
   }
 
   async dragWidgetTo(x: number, y: number): Promise<void> {
     await this.cursorToWidget()
-    await this.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await this.call(WIDGET, 'dragPress', { x: HALF, y: HALF })
     await this.moveCursor(x, y)
     await this.call(WIDGET, 'dragMove')
     await this.call(WIDGET, 'dragRelease')

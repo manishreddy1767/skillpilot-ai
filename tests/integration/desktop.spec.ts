@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { APP, Harness, OVERVIEW, WIDGET } from './app-harness'
+import { APP, HALF, Harness, OVERVIEW, WIDGET } from './app-harness'
 
 let h: Harness
 
@@ -66,7 +66,7 @@ test.describe('widget settings', () => {
     await setOption(page, 'Widget size', '96')
     await expect.poll(async () => (await h.state(WIDGET))?.bounds.width).toBe(96)
     await h.dragWidgetTo(500, 400)
-    expect((await h.state(WIDGET))?.bounds).toMatchObject({ x: 464, y: 364, width: 96, height: 96 })
+    expect((await h.state(WIDGET))?.bounds).toMatchObject({ x: 500 - HALF, y: 400 - HALF, width: 96, height: 96 })
   })
 
   test('opacity applies at once, and is remembered', async () => {
@@ -147,7 +147,7 @@ test.describe('shortcuts', () => {
     await expect.poll(() => h.visible(WIDGET)).toBe(false)
     await h.clickTrayItem('Show widget')
     await expect.poll(() => h.visible(WIDGET)).toBe(true)
-    expect((await h.state(WIDGET))?.bounds).toMatchObject({ x: 464, y: 364 })
+    expect((await h.state(WIDGET))?.bounds).toMatchObject({ x: 500 - HALF, y: 400 - HALF })
   })
 })
 

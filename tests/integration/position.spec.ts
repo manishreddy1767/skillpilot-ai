@@ -1,6 +1,9 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { APP, Harness, OVERVIEW, WIDGET, pause, positionFile } from './app-harness'
+import { APP, HALF, Harness, OVERVIEW, SIZE, WIDGET, pause, positionFile } from './app-harness'
+
+/** The default spot keeps a 48 pixel margin from the bottom right. */
+const MARGIN = SIZE + 48
 
 let h: Harness
 
@@ -21,8 +24,8 @@ test.describe('remembering position', () => {
     h = await Harness.launch()
     const display = await h.realDisplay()
     expect(await widgetAt()).toEqual({
-      x: display.workArea.x + display.workArea.width - 120,
-      y: display.workArea.y + display.workArea.height - 120
+      x: display.workArea.x + display.workArea.width - MARGIN,
+      y: display.workArea.y + display.workArea.height - MARGIN
     })
   })
 
@@ -31,7 +34,7 @@ test.describe('remembering position', () => {
     await h.dragWidgetTo(500, 400)
     await h.close()
     h = await Harness.launch({ keepPosition: true })
-    expect(await widgetAt()).toEqual({ x: 464, y: 364 })
+    expect(await widgetAt()).toEqual({ x: 500 - HALF, y: 400 - HALF })
   })
 
   test('remembers a spot partly off the screen edge', async () => {
@@ -39,13 +42,13 @@ test.describe('remembering position', () => {
     await h.dragWidgetTo(2, 2)
     await h.close()
     h = await Harness.launch({ keepPosition: true })
-    expect(await widgetAt()).toEqual({ x: -34, y: -34 })
+    expect(await widgetAt()).toEqual({ x: 2 - HALF, y: 2 - HALF })
   })
 
   test('saves the moment a drag ends, without waiting for quit', async () => {
     h = await Harness.launch()
     await h.dragWidgetTo(500, 400)
-    expect(JSON.parse(readFileSync(positionFile, 'utf8'))).toMatchObject({ x: 464, y: 364 })
+    expect(JSON.parse(readFileSync(positionFile, 'utf8'))).toMatchObject({ x: 500 - HALF, y: 400 - HALF })
   })
 
   test('a click saves nothing', async () => {
@@ -64,7 +67,7 @@ test.describe('remembering position', () => {
     await h.close()
     writeFileSync(positionFile, '{ not json')
     h = await Harness.launch({ keepPosition: true })
-    expect((await widgetAt()).x).toBe(display.workArea.x + display.workArea.width - 120)
+    expect((await widgetAt()).x).toBe(display.workArea.x + display.workArea.width - MARGIN)
   })
 
   test('a position saved on a missing monitor recovers at launch', async () => {
@@ -83,8 +86,8 @@ test.describe('remembering position', () => {
     h = await Harness.launch({ keepPosition: true })
     const { x, y } = await widgetAt()
     expect(x).toBeGreaterThanOrEqual(display.workArea.x)
-    expect(x + 72).toBeLessThanOrEqual(display.workArea.x + display.workArea.width)
-    expect(y + 72).toBeLessThanOrEqual(display.workArea.y + display.workArea.height)
+    expect(x + SIZE).toBeLessThanOrEqual(display.workArea.x + display.workArea.width)
+    expect(y + SIZE).toBeLessThanOrEqual(display.workArea.y + display.workArea.height)
   })
 })
 
@@ -100,13 +103,13 @@ test.describe('display changes', () => {
     const laptop = await h.realDisplay()
     await h.setDisplays([laptop, external], 'display-added')
     await h.dragWidgetTo(2532, 576)
-    expect(await widgetAt()).toEqual({ x: 2496, y: 540 })
+    expect(await widgetAt()).toEqual({ x: 2532 - HALF, y: 576 - HALF })
 
     await h.setDisplays([laptop])
-    await expect.poll(async () => (await widgetAt()).x, { timeout: 3000 }).toBeLessThan(1536 - 72)
+    await expect.poll(async () => (await widgetAt()).x, { timeout: 3000 }).toBeLessThan(1536 - SIZE)
 
     await h.setDisplays([laptop, external], 'display-added')
-    await expectWidgetAt(2496, 540)
+    await expectWidgetAt(2532 - HALF, 576 - HALF)
   })
 
   test('recovers when the resolution shrinks', async () => {
@@ -119,8 +122,8 @@ test.describe('display changes', () => {
       workArea: { x: 0, y: 0, width: 1024, height: 552 }
     }
     await h.setDisplays([smaller], 'display-metrics-changed')
-    await expect.poll(async () => (await widgetAt()).x, { timeout: 3000 }).toBeLessThanOrEqual(1024 - 72)
-    expect((await widgetAt()).y).toBeLessThanOrEqual(552 - 72)
+    await expect.poll(async () => (await widgetAt()).x, { timeout: 3000 }).toBeLessThanOrEqual(1024 - SIZE)
+    expect((await widgetAt()).y).toBeLessThanOrEqual(552 - SIZE)
   })
 
   test('does not move the widget when it is still reachable', async () => {
@@ -129,7 +132,7 @@ test.describe('display changes', () => {
     await h.dragWidgetTo(500, 400)
     await h.setDisplays([laptop], 'display-metrics-changed')
     await pause(500)
-    expect(await widgetAt()).toEqual({ x: 464, y: 364 })
+    expect(await widgetAt()).toEqual({ x: 500 - HALF, y: 400 - HALF })
   })
 
   test('a recovery does not overwrite the saved spot', async () => {
@@ -148,7 +151,7 @@ test.describe('display changes', () => {
     h = await Harness.launch()
     const laptop = await h.realDisplay()
     const { x, y } = await h.cursorToWidget()
-    await h.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await h.call(WIDGET, 'dragPress', { x: HALF, y: HALF })
     await h.moveCursor(x - 300, y - 300)
     await h.call(WIDGET, 'dragMove')
     const mid = await widgetAt()
@@ -189,8 +192,8 @@ test.describe('reset and app placement', () => {
     h = await Harness.launch()
     const display = await h.realDisplay()
     const home = {
-      x: display.workArea.x + display.workArea.width - 120,
-      y: display.workArea.y + display.workArea.height - 120
+      x: display.workArea.x + display.workArea.width - MARGIN,
+      y: display.workArea.y + display.workArea.height - MARGIN
     }
     await h.dragWidgetTo(500, 400)
     await h.clickTrayItem('Reset widget position')

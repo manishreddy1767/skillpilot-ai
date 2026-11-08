@@ -4,7 +4,9 @@ import { resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import {
   APP,
+  HALF,
   Harness,
+  SIZE,
   OVERVIEW,
   WIDGET,
   cleanEnv,
@@ -36,7 +38,7 @@ test.describe('startup', () => {
       onTop: true,
       resizable: false,
       focusable: false,
-      bounds: { width: 72, height: 72 }
+      bounds: { width: SIZE, height: SIZE }
     })
   })
 
@@ -167,7 +169,7 @@ test.describe('security', () => {
     const centre = await h.cursorToWidget()
 
     // Only the widget may drag.
-    await h.call(OVERVIEW, 'dragPress', { x: 36, y: 36 })
+    await h.call(OVERVIEW, 'dragPress', { x: HALF, y: HALF })
     await h.moveCursor(centre.x + 300, centre.y - 200)
     await h.call(OVERVIEW, 'dragMove')
     await h.call(OVERVIEW, 'dragRelease')
@@ -212,7 +214,7 @@ test.describe('security', () => {
 test.describe('dragging', () => {
   test('moves the widget with the cursor and keeps its size', async () => {
     await h.dragWidgetTo(500, 400)
-    expect((await h.state(WIDGET))!.bounds).toEqual({ x: 464, y: 364, width: 72, height: 72 })
+    expect((await h.state(WIDGET))!.bounds).toEqual({ x: 500 - HALF, y: 400 - HALF, width: SIZE, height: SIZE })
   })
 
   test('fractional grab offsets land on whole pixels and never grow the widget', async () => {
@@ -228,33 +230,33 @@ test.describe('dragging', () => {
     // At 125% scaling the reported size can round up at some positions, so size is
     // compared at a position that maps exactly to physical pixels.
     await h.dragWidgetTo(500, 400)
-    expect((await h.state(WIDGET))!.bounds).toMatchObject({ width: 72, height: 72 })
+    expect((await h.state(WIDGET))!.bounds).toMatchObject({ width: SIZE, height: SIZE })
   })
 
   test('follows the cursor even if the page sends no move events', async () => {
     const { x, y } = await h.cursorToWidget()
-    await h.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await h.call(WIDGET, 'dragPress', { x: HALF, y: HALF })
     await h.moveCursor(x - 400, y - 300)
-    await expect.poll(async () => (await h.state(WIDGET))!.bounds.x).toBe(x - 400 - 36)
+    await expect.poll(async () => (await h.state(WIDGET))!.bounds.x).toBe(x - 400 - HALF)
     await h.call(WIDGET, 'dragRelease')
   })
 
   test('ends exactly under the cursor when released', async () => {
     const { x, y } = await h.cursorToWidget()
-    await h.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await h.call(WIDGET, 'dragPress', { x: HALF, y: HALF })
     await h.moveCursor(x - 400, y - 300)
     await h.call(WIDGET, 'dragRelease')
-    expect((await h.state(WIDGET))!.bounds).toMatchObject({ x: x - 436, y: y - 336 })
+    expect((await h.state(WIDGET))!.bounds).toMatchObject({ x: x - 400 - HALF, y: y - 300 - HALF })
   })
 
   test('stops following once released', async () => {
     const { x, y } = await h.cursorToWidget()
-    await h.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await h.call(WIDGET, 'dragPress', { x: HALF, y: HALF })
     await h.moveCursor(x - 400, y - 300)
     await h.call(WIDGET, 'dragRelease')
     await h.moveCursor(5, 5)
     await pause(100)
-    expect((await h.state(WIDGET))!.bounds).toMatchObject({ x: x - 436, y: y - 336 })
+    expect((await h.state(WIDGET))!.bounds).toMatchObject({ x: x - 400 - HALF, y: y - 300 - HALF })
   })
 
   test('has no position limits', async () => {
@@ -265,7 +267,7 @@ test.describe('dragging', () => {
       [9000, 5000]
     ] as const) {
       await h.dragWidgetTo(x, y)
-      expect((await h.state(WIDGET))!.bounds).toMatchObject({ x: x - 36, y: y - 36 })
+      expect((await h.state(WIDGET))!.bounds).toMatchObject({ x: x - HALF, y: y - HALF })
     }
   })
 
@@ -278,7 +280,7 @@ test.describe('dragging', () => {
   test('a tiny wobble is still a click', async () => {
     const { x, y } = await h.cursorToWidget()
     const start = (await h.state(WIDGET))!.bounds
-    await h.call(WIDGET, 'dragPress', { x: 36, y: 36 })
+    await h.call(WIDGET, 'dragPress', { x: HALF, y: HALF })
     await h.moveCursor(x + 2, y + 1)
     await h.call(WIDGET, 'dragMove')
     await h.call(WIDGET, 'dragRelease')
@@ -368,7 +370,7 @@ test.describe('full app window', () => {
     await expect.poll(() => h.visible(APP)).toBe(true)
     await h.call(APP, 'minimizeToWidget')
     await expect.poll(() => h.visible(APP)).toBe(false)
-    expect(await h.state(WIDGET)).toMatchObject({ visible: true, bounds: { x: 464, y: 364 } })
+    expect(await h.state(WIDGET)).toMatchObject({ visible: true, bounds: { x: 500 - HALF, y: 400 - HALF } })
   })
 
   test('closing it hides it and leaves the app running', async () => {

@@ -37,6 +37,9 @@ public static class W {
 '@
 
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
+# Matches DEFAULT_WIDGET_SIZE in src/shared/settings.ts.
+$size = 64
+$half = $size / 2
 $electron = Join-Path $root 'node_modules/electron/dist/electron.exe'
 $harness = Join-Path $root 'tests/integration/harness.cjs'
 $positionFile = Join-Path $env:TEMP 'skillpilot-ai-test/widget-position.json'
@@ -122,13 +125,13 @@ $form.TopMost = $false
 try {
   $widget = Start-App
   $start = Rect $widget
-  Check 'widget appears at its fixed size' ($start.W -eq 72 -and $start.H -eq 72) "$($start.W)x$($start.H)"
+  Check 'widget appears at its fixed size' ($start.W -eq $size -and $start.H -eq $size) "$($start.W)x$($start.H)"
 
   # Put the widget over the other app, then give that app the focus.
-  $cx = $start.X + 36; $cy = $start.Y + 36
+  $cx = $start.X + $half; $cy = $start.Y + $half
   Glide $cx $cy; Wait 60; Press; Glide 600 380 20; Wait 80; Release; Glide 300 600; Wait 700
   $r = Rect $widget
-  Check 'drag moves the widget with the cursor' ($r.X -eq 564 -and $r.Y -eq 344) "at $($r.X),$($r.Y)"
+  Check 'drag moves the widget with the cursor' ($r.X -eq (600 - $half) -and $r.Y -eq (380 - $half)) "at $($r.X),$($r.Y)"
   Check 'a drag does not open the app' (-not (AppOpen))
 
   $form.TopMost = $true; $form.TopMost = $false; Wait 100
@@ -144,38 +147,38 @@ try {
   Glide 300 600; Wait 500
 
   # Passing over quickly should not open the panel.
-  Glide ($r.X + 36) ($r.Y + 36) 3; Glide 300 600 3; Wait 400
+  Glide ($r.X + $half) ($r.Y + $half) 3; Glide 300 600 3; Wait 400
   Check 'passing over does not open the panel' (-not (PanelOpen))
 
   # Resting opens it, without taking focus.
-  Glide ($r.X + 36) ($r.Y + 36); Wait 450
+  Glide ($r.X + $half) ($r.Y + $half); Wait 450
   Check 'resting on the widget opens the panel' (PanelOpen)
   Check 'hover leaves focus on the other app' ([W]::GetForegroundWindow() -eq $other)
 
   $o = Rect ([W]::Find('SkillPilot Overview', [uint32]$script:app.Id))
-  Check 'panel opens beside the widget' ($o.X -eq $r.X + 72 + 8) "panel at $($o.X),$($o.Y)"
+  Check 'panel opens beside the widget' ($o.X -eq $r.X + $size + 8) "panel at $($o.X),$($o.Y)"
 
   # Crossing into the panel keeps it open, and leaving closes it.
-  Glide ($o.X + 150) ($r.Y + 36) 10; Wait 800
+  Glide ($o.X + 150) ($r.Y + $half) 10; Wait 800
   Check 'moving into the panel keeps it open' (PanelOpen)
   Glide 300 600; Wait 700
   Check 'leaving closes the panel' (-not (PanelOpen))
   Check 'widget stays put through hover' ((Rect $widget).X -eq $r.X)
 
   # Unrestricted placement: middle of the screen, then partly off the edge.
-  Glide ($r.X + 36) ($r.Y + 36); Wait 40; Press; Glide 768 432 20; Wait 80; Release; Glide 300 600; Wait 500
+  Glide ($r.X + $half) ($r.Y + $half); Wait 40; Press; Glide 768 432 20; Wait 80; Release; Glide 300 600; Wait 500
   $m = Rect $widget
-  Check 'widget can sit in the middle of the screen' ($m.X -eq 732 -and $m.Y -eq 396) "at $($m.X),$($m.Y)"
+  Check 'widget can sit in the middle of the screen' ($m.X -eq (768 - $half) -and $m.Y -eq (432 - $half)) "at $($m.X),$($m.Y)"
   Check 'panel stayed closed during the drag' (-not (PanelOpen))
 
-  Glide ($m.X + 36) ($m.Y + 36); Wait 40; Press; Glide 2 2 24; Wait 80; Release; Glide 300 600; Wait 500
+  Glide ($m.X + $half) ($m.Y + $half); Wait 40; Press; Glide 2 2 24; Wait 80; Release; Glide 300 600; Wait 500
   $e = Rect $widget
-  Check 'widget is not clamped at the screen edge' ($e.X -eq -34 -and $e.Y -eq -34) "at $($e.X),$($e.Y)"
+  Check 'widget is not clamped at the screen edge' ($e.X -eq (2 - $half) -and $e.Y -eq (2 - $half)) "at $($e.X),$($e.Y)"
 
   Glide 20 20; Wait 40; Press; Glide 600 380 20; Wait 80; Release; Glide 300 600; Wait 500
   $r = Rect $widget
   Check 'widget can be dragged back' ($r.X -gt 500 -and $r.Y -gt 300) "at $($r.X),$($r.Y)"
-  Check 'dragging never changes the widget size' ($r.W -eq 72 -and $r.H -eq 72) "$($r.W)x$($r.H)"
+  Check 'dragging never changes the widget size' ($r.W -eq $size -and $r.H -eq $size) "$($r.W)x$($r.H)"
 
   # Typing in another app is not disturbed by hovering or dragging the widget.
   function TypeSafely($text) {
@@ -184,10 +187,10 @@ try {
   }
   $box.Focus() | Out-Null; Wait 100
   TypeSafely 'abc'
-  Glide ($r.X + 36) ($r.Y + 36); Wait 500
+  Glide ($r.X + $half) ($r.Y + $half); Wait 500
   TypeSafely 'def'
   Glide 300 600; Wait 600
-  Glide ($r.X + 36) ($r.Y + 36); Wait 40; Press; Glide 700 420 12; Wait 60; Release
+  Glide ($r.X + $half) ($r.Y + $half); Wait 40; Press; Glide 700 420 12; Wait 60; Release
   TypeSafely 'ghi'
   Check 'typing elsewhere survives hovering and dragging' ($box.Text -eq 'abcdefghi') "typed '$($box.Text)'"
 
@@ -208,11 +211,11 @@ try {
   )
   foreach ($spot in $spots) {
     $from = Rect $widget
-    Glide ($from.X + 36) ($from.Y + 36); Wait 40; Press; Glide $spot[0] $spot[1] 14; Wait 60; Release
+    Glide ($from.X + $half) ($from.Y + $half); Wait 40; Press; Glide $spot[0] $spot[1] 14; Wait 60; Release
     Glide 300 300 6; Wait 450
     $now = Rect $widget
-    $placed = ($now.X -eq ($spot[0] - 36)) -and ($now.Y -eq ($spot[1] - 36))
-    Glide ($now.X + 36) ($now.Y + 36); Wait 500
+    $placed = ($now.X -eq ($spot[0] - $half)) -and ($now.Y -eq ($spot[1] - $half))
+    Glide ($now.X + $half) ($now.Y + $half); Wait 500
     $open = PanelOpen
     $p = Rect ([W]::Find('SkillPilot Overview', [uint32]$script:app.Id))
     $onScreen = ($p.X -ge $work.X) -and ($p.Y -ge $work.Y) -and (($p.X + $p.W) -le $work.Right) -and (($p.Y + $p.H) -le $work.Bottom)
@@ -220,12 +223,12 @@ try {
     Glide 300 300 6; Wait 600
   }
   $from = Rect $widget
-  Glide ($from.X + 36) ($from.Y + 36); Wait 40; Press; Glide 600 380 14; Wait 60; Release
+  Glide ($from.X + $half) ($from.Y + $half); Wait 40; Press; Glide 600 380 14; Wait 60; Release
   Glide 300 600; Wait 500
   $r = Rect $widget
 
   # Click expands to the full app, which takes focus as a normal window should.
-  Click ($r.X + 36) ($r.Y + 36); Wait 1500
+  Click ($r.X + $half) ($r.Y + $half); Wait 1500
   Check 'click opens the full app' (AppOpen)
   $appHwnd = [W]::Find('SkillPilot AI', [uint32]$script:app.Id)
   Check 'full app takes focus' ([W]::GetForegroundWindow() -eq $appHwnd)
@@ -238,7 +241,7 @@ try {
 
   # Clicking again re-opens the same window.
   $r = Rect $widget
-  Click ($r.X + 36) ($r.Y + 36); Wait 700
+  Click ($r.X + $half) ($r.Y + $half); Wait 700
   Check 'widget re-opens the app' (AppOpen)
   $a = Rect $appHwnd
   Click ($a.X + $a.W - 210) ($a.Y + 20); Wait 400
@@ -257,7 +260,7 @@ try {
   Wait 300
   Click ($s.X - 100) ($s.Y - 100); Wait 150
   $before = $script:clicks
-  Click ($s.X + 36) ($s.Y + 36); Wait 500
+  Click ($s.X + $half) ($s.Y + $half); Wait 500
   Check 'click-through passes clicks to the app behind' ($script:clicks -eq $before + 1)
   Check 'click-through does not open the panel' (-not (PanelOpen))
   Check 'click-through does not open the app' (-not (AppOpen))
