@@ -121,7 +121,8 @@ export const widgetSettingFields: FieldDef[] = [
   },
   toggle('alwaysOnTop', 'Always on top'),
   toggle('clickThrough', 'Click-through mode', 'off'),
-  toggle('startAtLogin', 'Start when I log in', 'off')
+  toggle('startAtLogin', 'Start when I log in', 'off'),
+  toggle('shortcuts', 'Keyboard shortcuts (Ctrl+Alt+Shift+S, Ctrl+Alt+Shift+O)')
 ]
 
 export const settingFields: FieldDef[] = [

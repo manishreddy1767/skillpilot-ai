@@ -152,6 +152,9 @@ export function SettingsView() {
         {groups.map((group) => (
           <section key={group.title}>
             <h2>{group.title}</h2>
+            {group.title === 'Widget and startup' ? (
+              <p className="lead">Ctrl+Alt+Shift+S shows or hides the widget. Ctrl+Alt+Shift+O opens SkillPilot from anywhere.</p>
+            ) : null}
             <div className="fields">
               {group.fields.map((field) => (
                 <FieldInput
