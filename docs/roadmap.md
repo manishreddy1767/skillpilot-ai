@@ -76,6 +76,42 @@ the Electron decision is revisited here.
 
 Results are in the [quality report](quality-report.md).
 
+## After 1.0
+
+These milestones cover parts of the original brief that 1.0 left thin, and gaps found while testing.
+
+### M8: Data ownership, complete
+
+- Export everything to a JSON file, and import it back
+- Restore any backup from the app
+- Erase everything, with a typed confirmation
+- A backup before any import, restore, or erase
+
+### M9: Progress over time
+
+- A daily snapshot of progress, kept locally
+- A progress trend chart and a list of skills that improved
+- A monthly review, and a weekly summary notification
+- Progress history in the AI context, for questions like "how did I do this month"
+
+### M10: Richer evidence
+
+- Certifications and work experience can count as evidence for skills
+- AI project ideas that target missing skills, linked to those skills when accepted
+
+### M11: Planning
+
+- Task reminders at a set time
+- Repeating tasks
+- A monthly learning target
+- Assistant suggestions that change existing items, shown with before and after
+
+### M12: Polish and release
+
+- Global keyboard shortcuts for the widget and the app
+- A keyboard and accessibility pass
+- A final quality pass, and version 1.1.0
+
 ## Testing
 
 Every feature ships with unit tests and integration tests, and they must pass before it counts as
