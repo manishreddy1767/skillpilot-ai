@@ -112,6 +112,12 @@ These milestones cover parts of the original brief that 1.0 left thin, and gaps 
 - A keyboard and accessibility pass
 - A final quality pass, and version 1.1.0
 
+### Voice, complete
+
+- A microphone in the assistant's input bar, using Windows' offline speech engine
+- Spoken commands carried out at once, and spoken questions sent to the assistant
+- Settings for the speech language and for acting at once, and version 1.2.0
+
 ## Testing
 
 Every feature ships with unit tests and integration tests, and they must pass before it counts as

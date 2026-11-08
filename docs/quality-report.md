@@ -1,20 +1,20 @@
 # Quality report
 
-Version 1.1.0, tested 2026-11-08 on the development laptop: Windows 11 Home, one monitor, 125% display
+Version 1.2.0, tested 2026-11-08 on the development laptop: Windows 11 Home, one monitor, 125% display
 scaling.
 
 ## Test results
 
 | Layer | Command | Result |
 |---|---|---|
-| Unit | `npm test` | 686 of 686, and 5 clean runs in a row |
-| Integration, the real app with a faked cursor | `npm run test:integration` | 145 of 145, including a WCAG AA scan of every screen |
+| Unit | `npm test` | 776 of 776 |
+| Integration, the real app with a faked cursor | `npm run test:integration` | 152 of 152, including a WCAG AA scan of every screen and voice through the real Windows speech engine |
 | Installer, the real installed app | `npm run test:installer` | 7 of 7 |
 | Real mouse | `npm run test:desktop` | 39 of 39 in most runs, including the global shortcuts. See open items. |
 
 Line coverage from unit tests alone is about 96%. Startup wiring is covered by the integration tests.
 
-Each milestone was also checked by breaking the app on purpose, to confirm a test notices. All 98 such
+Each milestone was also checked by breaking the app on purpose, to confirm a test notices. All 103 such
 breaks are caught, including sending private details to the AI, storing the key unencrypted, and letting
 other windows read career data.
 
@@ -43,6 +43,9 @@ Memory is the known cost of Electron. See [ADR 0001](decisions/0001-electron-des
   been done.
 - **Data tools:** export, import, restore, and erase are checked end to end, including that the API key is
   never exported and a bad file changes nothing.
+- **Voice:** Windows reads commands aloud into sound files, and the real app hears them through the same
+  speech engine and code the microphone uses, then carries them out. Common mishearings, such as "task"
+  heard as "test" and "mark" as "lark", are understood.
 - **Installer:** installs and uninstalls cleanly, with the database, encryption, AI client, real Windows
   notifications, and start at login all working in the installed app.
 
@@ -55,6 +58,7 @@ Memory is the known cost of Electron. See [ADR 0001](decisions/0001-electron-des
 | Two monitors, and other scaling levels | Only one monitor at 125% was available. Display changes are tested with simulated layouts. |
 | Real sleep and wake, and real resolution changes | The same code paths are tested by simulating the events. |
 | Clicking the actual tray icon by hand | Tests click the real menu items, but not through the Windows tray. |
+| Voice with a real person and microphone | Tests use Windows' synthetic voice played into the engine. Accents, background noise, and the laptop microphone need a person to try. |
 | How it feels | Timing and smoothness need a person to judge. |
 
 ## Open items
