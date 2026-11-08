@@ -173,6 +173,8 @@ describe('buildCareerContext learning', () => {
     expect(context).toContain('Path | 0 of 1 done | next: CSS')
     expect(context).toContain('Read | 20 minutes')
     expect(context).toContain('Streak: 0 days')
+    expect(context).toContain('This month (2026-11)')
+    expect(context).toContain('Learning minutes: 0, against 0 last month')
   })
 })
 

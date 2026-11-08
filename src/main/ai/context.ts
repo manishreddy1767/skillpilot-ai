@@ -1,4 +1,5 @@
 import { analyseGap } from '../../shared/gap'
+import { monthReview } from '../../shared/history'
 import { buildLearning } from '../../shared/learning'
 import { buildDashboard } from '../../shared/progress'
 import type { CareerStore } from '../db/career-store'
@@ -46,7 +47,9 @@ export function buildCareerContext(store: CareerStore, today: string): string {
     ])
   })
 
-  const learning = buildLearning(store.readLearningRows(), today, 0)
+  const learningRows = store.readLearningRows()
+  const learning = buildLearning(learningRows, today, 0)
+  const month = monthReview(store.readSnapshots(), store.readCareerRows(), learningRows.tasks, dashboard.skills, dashboard.overall, today)
 
   return [
     `Today is ${today}.`,
@@ -85,7 +88,14 @@ export function buildCareerContext(store: CareerStore, today: string): string {
       learning.roadmaps.map((r) => compact([r.title, `${r.done} of ${r.total} done`, r.next ? `next: ${r.next}` : undefined]))
     ),
     section('Tasks due', learning.todayTasks.map((t) => `${t.title} | ${t.minutes} minutes`)),
-    section('Learning', [`Streak: ${learning.streak} days`, `Minutes this week: ${learning.minutesThisWeek}`, `Pace: ${learning.pace}`])
+    section('Learning', [`Streak: ${learning.streak} days`, `Minutes this week: ${learning.minutesThisWeek}`, `Pace: ${learning.pace}`]),
+    section(`This month (${month.month})`, [
+      `Learning minutes: ${month.minutes}, against ${month.previousMinutes} last month`,
+      `Tasks finished: ${month.tasksDone}`,
+      `Milestones, goals and projects completed: ${month.achievements}`,
+      ...(month.overallChange === null ? [] : [`Overall progress change: ${month.overallChange} points`]),
+      ...month.improved.map((change) => `Improved: ${change.name}, demonstrated ${change.from} to ${change.to}`)
+    ])
   ]
     .filter(Boolean)
     .join('\n\n')
