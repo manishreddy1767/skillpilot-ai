@@ -62,6 +62,16 @@ describe('checkNotifications', () => {
     })
   })
 
+  it('sends a task reminder at its time', () => {
+    const s = setup()
+    s.store.saveRecord('task', null, { title: 'Practise', kind: 'practice', dueDate: '2026-11-06', minutes: '20', status: 'open', remindAt: '11:30', repeat: 'none' })
+    const reminders = () => s.send.mock.calls.filter(([notice]) => notice.title === 'Reminder')
+    checkNotifications({ ...s, ...at, time: '11:00' })
+    expect(reminders()).toEqual([])
+    checkNotifications({ ...s, ...at, time: '11:30' })
+    expect(reminders()).toEqual([[{ key: expect.stringMatching(/^reminder:/), title: 'Reminder', body: 'Practise' }]])
+  })
+
   it('respects saved settings', () => {
     const s = setup()
     s.aiStore.saveSettings({ notifyNextStep: 'off' })

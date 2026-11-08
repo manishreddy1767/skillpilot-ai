@@ -35,7 +35,8 @@ import { createWidgetWindow } from './windows/widget'
 const PANEL_GAP = 8
 /** Displays often report several changes in a row, so wait for them to settle. */
 const DISPLAY_SETTLE_DELAY = 300
-const NOTIFICATION_CHECK_INTERVAL = 15 * 60 * 1000
+// Every minute, so reminders set for a time arrive on time. A check takes a few milliseconds.
+const NOTIFICATION_CHECK_INTERVAL = 60 * 1000
 const FIRST_NOTIFICATION_CHECK = 60 * 1000
 const FADE_STEP = 0.2
 const FADE_INTERVAL = 16
@@ -210,7 +211,8 @@ function start(): void {
     logError: (error) => writeErrorLog(errorLogPath, error),
     today: () => localDate(new Date()),
     latestPriority: () => data.aiStore?.latestPriority() ?? null,
-    weeklyTarget: () => Number(data.aiStore?.getSettings()['weeklyMinutes'] ?? 0)
+    weeklyTarget: () => Number(data.aiStore?.getSettings()['weeklyMinutes'] ?? 0),
+    monthlyTarget: () => Number(data.aiStore?.getSettings()['monthlyMinutes'] ?? 0)
   })
 
   const denied = { ok: false, message: 'Not allowed.' } as const

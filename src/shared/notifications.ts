@@ -22,6 +22,8 @@ export interface NoticeInput {
   alreadySent: Set<string>
   sentToday: number
   lastWeek: WeekSummary
+  /** Tasks whose reminder time has come today. */
+  reminders: { id: number; title: string }[]
 }
 
 const EVENING = '18:00'
@@ -41,12 +43,20 @@ function mondayOf(date: string): string {
 
 /** The notifications to show now, most important first. */
 export function dueNotices(input: NoticeInput): Notice[] {
-  const { settings, today, time, dashboard, learning, roles, recommendation, alreadySent, sentToday, lastWeek } = input
+  const { settings, today, time, dashboard, learning, roles, recommendation, alreadySent, sentToday, lastWeek, reminders } = input
+  const on = (key: string): boolean => settings[key] === 'on'
+
+  // Reminders were asked for at a set time, so quiet hours and the daily limit do not hold them back.
+  const asked: Notice[] = on('notifyReminders')
+    ? reminders
+        .map((task) => ({ key: `reminder:${task.id}:${today}`, title: 'Reminder', body: task.title }))
+        .filter((notice) => !alreadySent.has(notice.key))
+    : []
+
   const quiet = isQuietTime(time, settings['quietStart'] ?? '', settings['quietEnd'] ?? '')
   const room = Number(settings['notifyDailyLimit'] ?? 0) - sentToday
-  if (quiet || room <= 0) return []
+  if (quiet || room <= 0) return asked
 
-  const on = (key: string): boolean => settings[key] === 'on'
   const notices: Notice[] = []
 
   if (on('notifyDeadlines')) {
@@ -106,5 +116,5 @@ export function dueNotices(input: NoticeInput): Notice[] {
     notices.push({ key: `next:${recommendation}`, title: 'A next step is ready', body: recommendation })
   }
 
-  return notices.filter((notice) => !alreadySent.has(notice.key)).slice(0, room)
+  return [...asked, ...notices.filter((notice) => !alreadySent.has(notice.key)).slice(0, room)]
 }

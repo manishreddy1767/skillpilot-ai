@@ -20,6 +20,8 @@ const learning = (over: Partial<Learning> = {}): Learning => ({
   streak: 0,
   minutesThisWeek: 0,
   weeklyTarget: 300,
+  minutesThisMonth: 0,
+  monthlyTarget: 1200,
   pace: 'none',
   todayTasks: [],
   plannedMinutesToday: 0,
@@ -38,6 +40,7 @@ const input = (over: Partial<NoticeInput> = {}): NoticeInput => ({
   alreadySent: new Set(),
   sentToday: 0,
   lastWeek: { minutes: 0, tasks: 0 },
+  reminders: [],
   ...over
 })
 
@@ -139,6 +142,17 @@ describe('dueNotices', () => {
     expect(titles({ lastWeek: { minutes: 0, tasks: 0 }, today: '2026-11-09', time: '09:30' })).toEqual([])
     const off = { ...defaultSettings, notifyDailyLimit: '10', notifySummary: 'off' }
     expect(titles({ lastWeek, today: '2026-11-09', time: '09:30', settings: off })).toEqual([])
+  })
+
+  it('sends reminders even in quiet hours and past the limit, once each', () => {
+    const reminders = [{ id: 4, title: 'Practise piano' }]
+    const settings = { ...defaultSettings, notifyDailyLimit: '1' }
+    expect(dueNotices(input({ reminders, time: '23:30', settings, sentToday: 5 }))).toEqual([
+      { key: 'reminder:4:2026-11-06', title: 'Reminder', body: 'Practise piano' }
+    ])
+    expect(dueNotices(input({ reminders, alreadySent: new Set(['reminder:4:2026-11-06']) }))).toEqual([])
+    const off = { ...defaultSettings, notifyDailyLimit: '10', notifyReminders: 'off' }
+    expect(dueNotices(input({ reminders, settings: off }))).toEqual([])
   })
 
   it('stays quiet during quiet hours', () => {

@@ -8,6 +8,7 @@ export interface TaskRow {
   minutes: number
   status: string
   completedOn: string
+  remindAt?: string
 }
 
 export interface RoadmapRow {
@@ -58,6 +59,8 @@ export interface Learning {
   streak: number
   minutesThisWeek: number
   weeklyTarget: number
+  minutesThisMonth: number
+  monthlyTarget: number
   pace: Pace
   todayTasks: TodayTask[]
   plannedMinutesToday: number
@@ -140,7 +143,14 @@ export function catchUpStart(nextWeek: number, today: string): string {
   return addDays(today, -(nextWeek - 1) * 7)
 }
 
-export function buildLearning(rows: LearningRows, today: string, weeklyTarget: number): Learning {
+/** Open tasks due today with a reminder time that has been reached. */
+export function dueReminders(tasks: TaskRow[], today: string, time: string): { id: number; title: string }[] {
+  return tasks
+    .filter((task) => task.status !== 'done' && task.dueDate === today && task.remindAt && task.remindAt <= time)
+    .map((task) => ({ id: task.id, title: task.title }))
+}
+
+export function buildLearning(rows: LearningRows, today: string, weeklyTarget: number, monthlyTarget = 0): Learning {
   const open = rows.tasks.filter((task) => task.status !== 'done')
   const todayTasks = open
     .filter((task) => task.dueDate && task.dueDate <= today)
@@ -151,6 +161,8 @@ export function buildLearning(rows: LearningRows, today: string, weeklyTarget: n
     streak: learningStreak(rows.tasks, today),
     minutesThisWeek: minutesBetween(rows.tasks, startOfWeek(today), today),
     weeklyTarget,
+    minutesThisMonth: minutesBetween(rows.tasks, `${today.slice(0, 7)}-01`, today),
+    monthlyTarget,
     pace: learningPace(rows.tasks, today),
     todayTasks,
     plannedMinutesToday: todayTasks.reduce((sum, task) => sum + task.minutes, 0),

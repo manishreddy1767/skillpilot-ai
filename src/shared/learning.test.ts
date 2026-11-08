@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addDays,
   buildLearning,
+  dueReminders,
   catchUpStart,
   daysBetween,
   learningPace,
@@ -155,6 +156,19 @@ describe('catchUpStart', () => {
   })
 })
 
+describe('dueReminders', () => {
+  it('returns open tasks due today whose time has come', () => {
+    const tasks = [
+      task({ title: 'Now', dueDate: today, remindAt: '09:00' }),
+      task({ title: 'Later', dueDate: today, remindAt: '18:00' }),
+      task({ title: 'Tomorrow', dueDate: '2026-11-07', remindAt: '09:00' }),
+      task({ title: 'No time', dueDate: today }),
+      done(today, { title: 'Finished', dueDate: today, remindAt: '08:00' })
+    ]
+    expect(dueReminders(tasks, today, '12:00').map((t) => t.title)).toEqual(['Now'])
+  })
+})
+
 describe('buildLearning', () => {
   it('lists open tasks due today or earlier, oldest first', () => {
     const { todayTasks, plannedMinutesToday } = buildLearning(
@@ -196,6 +210,16 @@ describe('buildLearning', () => {
     )
     expect(minutesThisWeek).toBe(60)
     expect(weeklyTarget).toBe(300)
+  })
+
+  it('counts minutes this month against the monthly target', () => {
+    const { minutesThisMonth, monthlyTarget } = buildLearning(
+      { tasks: [done('2026-11-01', { minutes: 40 }), done('2026-10-31', { minutes: 99 })], roadmaps: [], items: [] },
+      today,
+      300,
+      1200
+    )
+    expect([minutesThisMonth, monthlyTarget]).toEqual([40, 1200])
   })
 
   it('treats a Sunday as the end of the same week', () => {
