@@ -128,8 +128,27 @@ export const widgetSettingFields: FieldDef[] = [
   toggle('shortcuts', 'Keyboard shortcuts (Ctrl+Alt+Shift+S, Ctrl+Alt+Shift+O)')
 ]
 
+/** Windows' offline speech engines. The app passes the value straight to it, so only these are allowed. */
+export const voiceLanguages = [
+  { value: 'en-US', label: 'English (United States)' },
+  { value: 'en-GB', label: 'English (United Kingdom)' }
+]
+
+export const voiceSettingFields: FieldDef[] = [
+  {
+    key: 'voiceLanguage',
+    column: 'voiceLanguage',
+    label: 'Speech language',
+    type: 'select',
+    initial: 'en-US',
+    options: voiceLanguages
+  },
+  toggle('voiceActNow', 'Carry out spoken requests straight away, including AI suggestions')
+]
+
 export const settingFields: FieldDef[] = [
   ...aiSettingFields,
+  ...voiceSettingFields,
   ...learningSettingFields,
   ...notificationSettingFields,
   ...widgetSettingFields

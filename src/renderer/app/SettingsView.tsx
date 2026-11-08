@@ -5,6 +5,7 @@ import {
   aiSettingFields,
   learningSettingFields,
   notificationSettingFields,
+  voiceSettingFields,
   widgetSettingFields,
   type Settings
 } from '../../shared/settings'
@@ -16,6 +17,7 @@ const groups: { title: string; fields: FieldDef[] }[] = [
   { title: 'AI', fields: aiSettingFields },
   { title: 'Learning', fields: learningSettingFields },
   { title: 'Notifications', fields: notificationSettingFields },
+  { title: 'Voice', fields: voiceSettingFields },
   { title: 'Widget and startup', fields: widgetSettingFields }
 ]
 
