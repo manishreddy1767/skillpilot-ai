@@ -8,6 +8,7 @@ import {
   widgetSettingFields,
   type Settings
 } from '../../shared/settings'
+import { DataSection } from './DataSection'
 import { FieldInput } from './FieldInput'
 import { useFocusFirstError } from './useFocusFirstError'
 
@@ -178,6 +179,7 @@ export function SettingsView() {
       </form>
       <ApiKeySection onChange={() => undefined} />
       <SentLog />
+      <DataSection />
     </div>
   )
 }
