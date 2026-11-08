@@ -74,6 +74,8 @@ beforeEach(() => {
           streak: 0,
           minutesThisWeek: 0,
           weeklyTarget: 300,
+          minutesThisMonth: 0,
+          monthlyTarget: 1200,
           pace: 'none' as const,
           todayTasks: [],
           plannedMinutesToday: 0,

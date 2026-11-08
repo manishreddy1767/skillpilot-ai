@@ -40,9 +40,9 @@ export function TasksView() {
     changed()
   }
 
-  const weekly = learning?.weeklyTarget
-    ? Math.min(100, Math.round((learning.minutesThisWeek / learning.weeklyTarget) * 100))
-    : 0
+  const share = (done: number, target: number): number => (target ? Math.min(100, Math.round((done / target) * 100)) : 0)
+  const weekly = learning ? share(learning.minutesThisWeek, learning.weeklyTarget) : 0
+  const monthly = learning ? share(learning.minutesThisMonth, learning.monthlyTarget) : 0
 
   return (
     <div>
@@ -61,6 +61,13 @@ export function TasksView() {
               {learning.minutesThisWeek} of {learning.weeklyTarget} min
             </strong>
             <Meter label="Weekly target" value={weekly} />
+          </div>
+          <div className="tile">
+            <span className="tile-label">This month</span>
+            <strong>
+              {learning.minutesThisMonth} of {learning.monthlyTarget} min
+            </strong>
+            <Meter label="Monthly target" value={monthly} />
           </div>
         </div>
       ) : null}

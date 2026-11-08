@@ -70,10 +70,19 @@ export const learningSettingFields: FieldDef[] = [
     type: 'select',
     initial: '300',
     options: choices([60, 120, 180, 300, 420, 600, 900], ' minutes')
+  },
+  {
+    key: 'monthlyMinutes',
+    column: 'monthlyMinutes',
+    label: 'Monthly learning target',
+    type: 'select',
+    initial: '1200',
+    options: choices([300, 600, 900, 1200, 1800, 2400, 3600], ' minutes')
   }
 ]
 
 export const notificationSettingFields: FieldDef[] = [
+  toggle('notifyReminders', 'Reminders I set on tasks'),
   toggle('notifyTasks', "Today's tasks unfinished"),
   toggle('notifyDeadlines', 'Upcoming deadlines'),
   toggle('notifyMilestones', 'Milestones reached'),

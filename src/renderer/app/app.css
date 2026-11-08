@@ -348,8 +348,8 @@ main h2 {
 }
 
 .tiles.compact {
-  grid-template-columns: repeat(2, 1fr);
-  max-width: 560px;
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 840px;
 }
 
 .tiles.compact .tile strong {

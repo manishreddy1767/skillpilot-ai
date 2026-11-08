@@ -25,6 +25,8 @@ const learning = (over: Partial<Learning> = {}): Learning => ({
   streak: 4,
   minutesThisWeek: 150,
   weeklyTarget: 300,
+  minutesThisMonth: 600,
+  monthlyTarget: 1200,
   pace: 'steady',
   todayTasks: [{ id: 7, title: 'Read chapter', minutes: 30, overdue: true }],
   plannedMinutesToday: 30,
@@ -43,6 +45,13 @@ describe('TasksView', () => {
     expect(screen.getByRole('progressbar', { name: 'Weekly target' }).getAttribute('aria-valuenow')).toBe('50')
     expect(screen.getByText('Overdue · 30 min')).toBeTruthy()
     expect(screen.getByText('30 minutes planned')).toBeTruthy()
+  })
+
+  it('shows progress against the monthly target', async () => {
+    withLearning()
+    render(<TasksView />)
+    expect(await screen.findByText('600 of 1200 min')).toBeTruthy()
+    expect(screen.getByRole('progressbar', { name: 'Monthly target' }).getAttribute('aria-valuenow')).toBe('50')
   })
 
   it('uses the singular for a one day streak', async () => {
