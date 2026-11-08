@@ -198,11 +198,15 @@ function start(): void {
     })
   )
 
+  /** After any change: refresh the panel and today's progress snapshot. */
+  function changed(): void {
+    if (!overview.isDestroyed()) overview.webContents.send(Channel.OverviewChanged)
+    handlers.recordSnapshot()
+  }
+
   const handlers = createDataHandlers({
     getStore: () => data.store,
-    notifyOverview: () => {
-      if (!overview.isDestroyed()) overview.webContents.send(Channel.OverviewChanged)
-    },
+    notifyOverview: changed,
     logError: (error) => writeErrorLog(errorLogPath, error),
     today: () => localDate(new Date()),
     latestPriority: () => data.aiStore?.latestPriority() ?? null,
@@ -237,9 +241,7 @@ function start(): void {
   const aiHandlers = createAiHandlers({
     getStores: () => (data.store && data.aiStore ? { store: data.store, aiStore: data.aiStore } : null),
     keys,
-    notifyOverview: () => {
-      if (!overview.isDestroyed()) overview.webContents.send(Channel.OverviewChanged)
-    },
+    notifyOverview: changed,
     logError: (error) => writeErrorLog(errorLogPath, error),
     today: () => localDate(new Date()),
     applySettings: (settings) => applySettings(settings)
@@ -293,6 +295,8 @@ function start(): void {
   ipcMain.handle(Channel.RestoreBackup, fromApp(portability.restoreBackup))
   ipcMain.handle(Channel.EraseAll, fromApp(portability.eraseAll))
   ipcMain.handle(Channel.GetLearning, fromApp(handlers.getLearning))
+  ipcMain.handle(Channel.GetHistory, fromApp(handlers.getHistory))
+  handlers.recordSnapshot()
   ipcMain.handle(Channel.GetRecommendation, fromApp(handlers.getRecommendation))
   ipcMain.handle(Channel.GetRoleReadiness, fromApp(handlers.getRoleReadiness))
   ipcMain.handle(Channel.RescheduleRoadmap, fromApp(handlers.rescheduleRoadmap))

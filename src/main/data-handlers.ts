@@ -13,6 +13,7 @@ import {
 } from '../shared/career'
 import { analyseGap } from '../shared/gap'
 import type { RoleReadiness } from '../shared/ipc'
+import { monthReview, progressTrend, type History } from '../shared/history'
 import { buildLearning, catchUpStart, summariseRoadmap, type Learning } from '../shared/learning'
 import { MAX_LEVEL, buildDashboard, type Dashboard } from '../shared/progress'
 import { needsParent, type CareerStore } from './db/career-store'
@@ -158,6 +159,31 @@ export function createDataHandlers({
 
     getDashboard: (): Result<Dashboard> =>
       withStore((store) => ({ ok: true, value: buildDashboard(store.readCareerRows(), today()) })),
+
+    getHistory: (): Result<History> =>
+      withStore((store) => {
+        const rows = store.readCareerRows()
+        const dashboard = buildDashboard(rows, today())
+        const snapshots = store.readSnapshots()
+        return {
+          ok: true,
+          value: {
+            trend: progressTrend(snapshots, today()),
+            month: monthReview(snapshots, rows, store.readLearningRows().tasks, dashboard.skills, dashboard.overall, today())
+          }
+        }
+      }),
+
+    /** Saves today's snapshot. Called at startup and after changes. */
+    recordSnapshot: (): Result<boolean> =>
+      withStore((store) => {
+        const dashboard = buildDashboard(store.readCareerRows(), today())
+        const skills = Object.fromEntries(
+          dashboard.skills.map((skill) => [skill.name, [skill.claimed, skill.demonstrated] as [number, number]])
+        )
+        store.recordSnapshot({ day: today(), overall: dashboard.overall, skills })
+        return { ok: true, value: true }
+      }),
 
     getLearning: (): Result<Learning> =>
       withStore((store) => ({ ok: true, value: buildLearning(store.readLearningRows(), today(), weeklyTarget()) })),

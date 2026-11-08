@@ -374,6 +374,36 @@ describe('learning', () => {
   })
 })
 
+describe('history', () => {
+  it('records one snapshot a day, and builds the trend and month from them', () => {
+    const { h, store } = setup()
+    h.saveRecord('skill', null, { name: 'React', claimedLevel: '2' })
+    const goal = h.saveRecord('goal', null, { title: 'Goal' })
+    if (!goal.ok) throw new Error('not saved')
+    h.saveRecord('goalMilestone', null, { title: 'Step', status: 'done' }, goal.value.id)
+    h.recordSnapshot()
+    h.recordSnapshot()
+    expect(store.readSnapshots()).toEqual([{ day: '2026-11-06', overall: 100, skills: { React: [2, 0] } }])
+    store.recordSnapshot({ day: '2026-11-01', overall: 40, skills: {} })
+    expect(h.getHistory()).toMatchObject({
+      ok: true,
+      value: {
+        trend: [
+          { day: '2026-11-01', overall: 40 },
+          { day: '2026-11-06', overall: 100 }
+        ],
+        month: { month: '2026-11', achievements: 1 }
+      }
+    })
+  })
+
+  it('tolerates a damaged snapshot', () => {
+    const { store, db } = setup()
+    db.exec("INSERT INTO progress_snapshot (day, overall, skills) VALUES ('2026-11-01', 5, 'not json')")
+    expect(store.readSnapshots()).toEqual([{ day: '2026-11-01', overall: 5, skills: {} }])
+  })
+})
+
 describe('failures', () => {
   it('explains when the database is unavailable', () => {
     const h = createDataHandlers({
