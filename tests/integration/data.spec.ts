@@ -114,6 +114,8 @@ test('a backup can be restored from the app', async () => {
   await safety.getByRole('button', { name: /Restore backup/ }).click()
   await reloaded.getByRole('button', { name: 'Replace current data' }).click()
   await expect((await h.page(OVERVIEW)).getByText('Keep me')).toBeAttached()
+  // The app window reloads after a restore. Closing mid-reload can stall the test's shutdown.
+  await expect((await h.page(APP)).getByRole('heading', { name: 'Dashboard' })).toBeVisible()
 })
 
 test('other windows cannot export, import, restore, or erase', async () => {
