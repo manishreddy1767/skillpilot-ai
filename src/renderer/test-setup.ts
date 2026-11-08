@@ -93,6 +93,9 @@ beforeEach(() => {
     restoreBackup: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
     eraseAll: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
     suggestProjects: vi.fn(() => Promise.resolve({ ok: true as const, value: 0 })),
+    listen: vi.fn(() => Promise.resolve({ ok: true as const, value: { text: '', confidence: 0 } })),
+    stopListening: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    onVoiceReady: vi.fn(() => () => undefined),
     getHistory: vi.fn(() =>
       Promise.resolve({
         ok: true as const,

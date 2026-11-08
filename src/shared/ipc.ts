@@ -6,6 +6,11 @@ import type { Learning } from './learning'
 import type { Dashboard } from './progress'
 import type { Settings } from './settings'
 
+export interface Heard {
+  text: string
+  confidence: number
+}
+
 export interface BackupInfo {
   name: string
   kind: 'daily' | 'before upgrade' | 'before change'
@@ -66,7 +71,10 @@ export const Channel = {
   RestoreBackup: 'data:restore',
   EraseAll: 'data:erase',
   GetHistory: 'history:get',
-  SuggestProjects: 'ai:suggest-projects'
+  SuggestProjects: 'ai:suggest-projects',
+  Listen: 'voice:listen',
+  StopListening: 'voice:stop',
+  VoiceReady: 'voice:ready'
 } as const
 
 /** The whole surface renderers can reach. They get nothing else from the main process. */
@@ -129,6 +137,11 @@ export interface SkillPilotApi {
   eraseAll(confirmation: string): Promise<Result<boolean>>
   getHistory(): Promise<Result<History>>
   suggestProjects(): Promise<Result<number>>
+  /** Listens for one spoken phrase with Windows' offline speech engine. Empty text if nothing was heard. */
+  listen(): Promise<Result<Heard>>
+  stopListening(): Promise<Result<boolean>>
+  /** Calls back once the microphone is open. Returns a function that stops listening for it. */
+  onVoiceReady(listener: () => void): () => void
 }
 
 declare global {

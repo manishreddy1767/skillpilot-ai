@@ -1,13 +1,11 @@
 import type { ChildProcess, SpawnOptions } from 'node:child_process'
+import type { Heard } from '../../shared/ipc'
 
 /** The English recognizers Windows ships, and that this laptop has. */
 export const VOICE_LANGUAGES = ['en-US', 'en-GB'] as const
 export type VoiceLanguage = (typeof VOICE_LANGUAGES)[number]
 
-export interface Heard {
-  text: string
-  confidence: number
-}
+export type { Heard }
 
 type Spawn = (command: string, args: string[], options: SpawnOptions) => ChildProcess
 

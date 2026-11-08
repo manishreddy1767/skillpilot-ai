@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import {
   BrowserWindow,
@@ -34,6 +35,8 @@ import { createTray } from './tray'
 import { APP_WINDOW_SIZE, createAppWindow } from './windows/app-window'
 import { OVERVIEW_SIZE, createOverviewWindow } from './windows/overview'
 import { createWidgetWindow } from './windows/widget'
+import { SpeechRecognizer } from './voice/recognizer'
+import { createVoiceHandlers } from './voice/voice-handlers'
 
 const PANEL_GAP = 8
 /** Displays often report several changes in a row, so wait for them to settle. */
@@ -312,6 +315,25 @@ function start(): void {
   ipcMain.handle(Channel.GetRecommendation, fromApp(handlers.getRecommendation))
   ipcMain.handle(Channel.GetRoleReadiness, fromApp(handlers.getRoleReadiness))
   ipcMain.handle(Channel.RescheduleRoadmap, fromApp(handlers.rescheduleRoadmap))
+
+  // Voice: Windows' own offline speech engine, run in a hidden PowerShell. Only the app window may listen.
+  const recognizer = new SpeechRecognizer(
+    spawn,
+    join(process.env['SystemRoot'] ?? 'C:\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  )
+  const voice = createVoiceHandlers({
+    recognizer,
+    language: () => data.aiStore?.getSettings()['voiceLanguage'] ?? 'en-US',
+    onReady: () => {
+      if (appWindow && !appWindow.isDestroyed()) appWindow.webContents.send(Channel.VoiceReady)
+    },
+    // Tests set this from outside to play a recorded command instead of using the microphone.
+    audioFile: () => (globalThis as { __skillpilotVoiceFile?: string }).__skillpilotVoiceFile,
+    logError: (error) => writeErrorLog(errorLogPath, error)
+  })
+  ipcMain.handle(Channel.Listen, fromApp(voice.listen))
+  ipcMain.handle(Channel.StopListening, fromApp(voice.stopListening))
+  app.once('before-quit', () => recognizer.cancel())
   // The one change the hover panel may make: ticking off a task.
   ipcMain.handle(Channel.CompleteTask, (event, id: unknown) => {
     const fromPanel = !overview.isDestroyed() && event.sender === overview.webContents
@@ -326,7 +348,10 @@ function start(): void {
   ipcMain.on(Channel.HoverLeave, from(widget, () => hover.pointerLeft()))
   ipcMain.on(Channel.OpenApp, from(overview, openApp))
   ipcMain.on(Channel.MinimizeToWidget, (event) => {
-    if (appWindow && event.sender === appWindow.webContents) appWindow.hide()
+    if (appWindow && event.sender === appWindow.webContents) {
+      recognizer.cancel()
+      appWindow.hide()
+    }
   })
 
   let settleTimer: NodeJS.Timeout | null = null

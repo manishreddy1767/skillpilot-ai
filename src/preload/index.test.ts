@@ -77,7 +77,10 @@ describe('preload bridge', () => {
       'restoreBackup',
       'eraseAll',
       'getHistory',
-      'suggestProjects'
+      'suggestProjects',
+      'listen',
+      'stopListening',
+      'onVoiceReady'
     ].sort())
   })
 
@@ -125,6 +128,22 @@ describe('preload bridge', () => {
     expect(invoke).toHaveBeenLastCalledWith(Channel.SendChat, 'hi')
     await api.acceptProposal(2)
     expect(invoke).toHaveBeenLastCalledWith(Channel.AcceptProposal, 2)
+    await api.listen()
+    expect(invoke).toHaveBeenLastCalledWith(Channel.Listen)
+    await api.stopListening()
+    expect(invoke).toHaveBeenLastCalledWith(Channel.StopListening)
+  })
+
+  it('tells the page when the microphone opens, without the event, and can stop', () => {
+    const { on, removeListener } = electron.ipcRenderer
+    const listener = vi.fn()
+    const stop = api.onVoiceReady(listener)
+    const [channel, forward] = on.mock.lastCall as unknown as [string, (...args: unknown[]) => void]
+    expect(channel).toBe(Channel.VoiceReady)
+    forward({ sender: 'secret' })
+    expect(listener).toHaveBeenCalledExactlyOnceWith()
+    stop()
+    expect(removeListener).toHaveBeenCalledWith(Channel.VoiceReady, forward)
   })
 
   it('forwards overview changes without the event, and can stop', () => {
