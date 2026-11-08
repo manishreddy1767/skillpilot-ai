@@ -101,7 +101,7 @@ Its minimize-to-widget button hides the window. The widget stays where it was th
 | Setting | Default |
 |---|---|
 | Always on top | On |
-| Widget size | 72 px, adjustable from 48 to 128 |
+| Widget size | 64 px, adjustable from 48 to 128 |
 | Opacity | 100%, adjustable down to 30% |
 | Always on top | On |
 | Click-through mode | Off. When on, clicks pass through the widget. Turned off from the tray. |

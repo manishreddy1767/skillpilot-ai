@@ -8,6 +8,9 @@ const onOff = [
 const choices = (values: number[], unit = '') =>
   values.map((value) => ({ value: String(value), label: `${value}${unit}` }))
 
+/** The widget's default size in pixels. Tests read it from here too. */
+export const DEFAULT_WIDGET_SIZE = 64
+
 export const claudeModels = [
   { value: 'claude-opus-5-5', label: 'Claude Opus 5.5 (most capable)' },
   { value: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 (balanced)' },
@@ -108,7 +111,7 @@ export const widgetSettingFields: FieldDef[] = [
     column: 'widgetSize',
     label: 'Widget size',
     type: 'select',
-    initial: '72',
+    initial: String(DEFAULT_WIDGET_SIZE),
     options: choices([48, 56, 64, 72, 96, 128], ' px')
   },
   {
