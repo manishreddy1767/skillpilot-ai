@@ -75,7 +75,8 @@ describe('preload bridge', () => {
       'importData',
       'listBackups',
       'restoreBackup',
-      'eraseAll'
+      'eraseAll',
+      'getHistory'
     ].sort())
   })
 

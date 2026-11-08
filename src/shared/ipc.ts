@@ -1,6 +1,7 @@
 import type { AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from './ai'
 import type { FieldValues, Link, LinkKind, OverviewData, RecordKind, Result, StoredRecord } from './career'
 import type { GapAnalysis } from './gap'
+import type { History } from './history'
 import type { Learning } from './learning'
 import type { Dashboard } from './progress'
 import type { Settings } from './settings'
@@ -63,7 +64,8 @@ export const Channel = {
   ImportData: 'data:import',
   ListBackups: 'data:backups',
   RestoreBackup: 'data:restore',
-  EraseAll: 'data:erase'
+  EraseAll: 'data:erase',
+  GetHistory: 'history:get'
 } as const
 
 /** The whole surface renderers can reach. They get nothing else from the main process. */
@@ -124,6 +126,7 @@ export interface SkillPilotApi {
   listBackups(): Promise<Result<BackupInfo[]>>
   restoreBackup(name: string): Promise<Result<boolean>>
   eraseAll(confirmation: string): Promise<Result<boolean>>
+  getHistory(): Promise<Result<History>>
 }
 
 declare global {

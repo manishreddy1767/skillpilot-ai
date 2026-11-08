@@ -52,7 +52,8 @@ const api: SkillPilotApi = {
   importData: () => ipcRenderer.invoke(Channel.ImportData),
   listBackups: () => ipcRenderer.invoke(Channel.ListBackups),
   restoreBackup: (name) => ipcRenderer.invoke(Channel.RestoreBackup, name),
-  eraseAll: (confirmation) => ipcRenderer.invoke(Channel.EraseAll, confirmation)
+  eraseAll: (confirmation) => ipcRenderer.invoke(Channel.EraseAll, confirmation),
+  getHistory: () => ipcRenderer.invoke(Channel.GetHistory)
 }
 
 contextBridge.exposeInMainWorld('skillpilot', api)
