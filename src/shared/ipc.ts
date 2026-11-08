@@ -65,7 +65,8 @@ export const Channel = {
   ListBackups: 'data:backups',
   RestoreBackup: 'data:restore',
   EraseAll: 'data:erase',
-  GetHistory: 'history:get'
+  GetHistory: 'history:get',
+  SuggestProjects: 'ai:suggest-projects'
 } as const
 
 /** The whole surface renderers can reach. They get nothing else from the main process. */
@@ -127,6 +128,7 @@ export interface SkillPilotApi {
   restoreBackup(name: string): Promise<Result<boolean>>
   eraseAll(confirmation: string): Promise<Result<boolean>>
   getHistory(): Promise<Result<History>>
+  suggestProjects(): Promise<Result<number>>
 }
 
 declare global {
