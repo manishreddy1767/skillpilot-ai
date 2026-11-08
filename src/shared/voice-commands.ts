@@ -117,9 +117,13 @@ export function parseVoiceCommand(spoken: string, today: string): VoiceIntent {
   const goal = text.match(/^(?:add|create|new|set)(?: a)?(?: new)? goal(?: to)?\s+(.+)$/)
   if (goal) return { kind: 'addGoal', title: capitalise(goal[1]!) }
 
+  // Dictation often hears "mark" as "lark", "mock" or "marc", and "as done" as "is done".
   const done =
-    text.match(/^(?:mark|tick off|tick|check off|complete|finish)\s+(?:the\s+)?(?:task\s+)?(.+?)(?:\s+as)?(?:\s+(?:done|complete|completed|finished))?$/) ??
-    text.match(/^i(?:'ve| have)? (?:finished|completed|done)\s+(?:the\s+)?(?:task\s+)?(.+)$/)
+    text.match(
+      /^(?:mark|lark|mock|marc|marked|tick off|tick|check off|complete|finish)\s+(?:the\s+)?(?:task\s+)?(.+?)(?:\s+(?:as|is))?(?:\s+(?:done|complete|completed|finished))?$/
+    ) ??
+    text.match(/^i(?:'ve| have)? (?:finished|completed|done)\s+(?:the\s+)?(?:task\s+)?(.+)$/) ??
+    text.match(/^(?:the\s+)?(?:task\s+)?(.+?)\s+(?:is|are) (?:done|finished|complete|completed)$/)
   if (done && done[1]) return { kind: 'completeTask', query: done[1] }
 
   return { kind: 'ask', text: spoken.trim() }

@@ -68,7 +68,11 @@ describe('parseVoiceCommand', () => {
     ['tick off read chapter', 'read chapter'],
     ['I finished read chapter', 'read chapter'],
     ["I've completed the task practise sql", 'practise sql'],
-    ['complete practise sql', 'practise sql']
+    ['complete practise sql', 'practise sql'],
+    ['Lark the testing guide is done', 'testing guide'],
+    ['mock read chapter as done', 'read chapter'],
+    ['the testing guide is done', 'testing guide'],
+    ['practise sql is finished', 'practise sql']
   ])('"%s" completes "%s"', (text, query) => {
     expect(parse(text)).toEqual({ kind: 'completeTask', query })
   })
