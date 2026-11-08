@@ -40,6 +40,23 @@ The AI can only create suggestions. Each one waits in a review list, showing wha
 is saved until you accept it, and accepted content is validated like anything you typed. This holds for
 every AI suggestion, which is stricter than confirming only the important ones.
 
+One exception, chosen by you: a question **spoken** to the assistant applies the suggestions it
+produces straight away, so voice can act hands-free. Only suggestions created by that question are
+accepted, they are validated as usual, and the app says how many were applied. Typed messages never
+do this. Turn off **Carry out spoken requests straight away** in Settings to review everything again.
+
+## Voice
+
+The microphone in the assistant's input bar uses Windows' own offline speech engine (`System.Speech`),
+run in a hidden PowerShell started by the main process. Recognition happens on the laptop: audio is
+never saved and never sent anywhere. Only the recognised text is used, and only the app window may
+start listening. Listening stops when you press stop, leave the assistant, minimise, or quit.
+
+Simple commands are understood without AI and carried out at once: open a section, add a task (with
+"today", "tomorrow", a weekday, or "in 3 days"), add a skill or goal, mark a task done, ask what is due,
+and minimise. A task is ticked off only when exactly one open task matches. Anything else is sent to the
+assistant as a message, which needs AI to be set up.
+
 ## What leaves the laptop
 
 Only when using Claude, only when you run an AI feature, and only to the Anthropic API.
