@@ -116,3 +116,12 @@ body,
 .panel button:hover {
   background: #5eead4;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

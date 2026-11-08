@@ -701,3 +701,12 @@ form > section {
 form .fields:first-child {
   margin-top: 16px;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
