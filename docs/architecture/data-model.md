@@ -36,6 +36,7 @@ and can always be traced back to the evidence behind it.
 | Skills | `skill`, `skill_level_history`, `evidence` |
 | Goals | `goal`, `goal_skill`, `goal_project`, `milestone` |
 | Projects | `project`, `project_skill` |
+| Evidence links | `certification_skill`, `work_skill` |
 | Target roles | `target_role`, `role_requirement`, `gap_report` |
 | Roadmap | `roadmap`, `roadmap_item` |
 | Daily work | `task` |
@@ -53,7 +54,7 @@ every number can be explained.
 
 | Measure | Basis |
 |---|---|
-| Demonstrated level | Points from evidence: minor 1, solid 2, strong 3. A linked project earns 1 while active, 3 when complete, and 0 while planned. Levels 1 to 5 start at 1, 2, 4, 6, and 9 points. |
+| Demonstrated level | Points from evidence: minor 1, solid 2, strong 3. A linked project earns 1 while active, 3 when complete, and 0 while planned. A linked certification earns 2, and linked work experience earns 3. Levels 1 to 5 start at 1, 2, 4, 6, and 9 points. |
 | Skill proof | Unproven with no demonstrated level, partly proven below the claim, proven at or above it |
 | Goal progress | The average of milestones done and required skills reached. A skill counts fully for its demonstrated level and half for any claimed level beyond that. A done goal is 100%. |
 | Overall progress | Average of active goals, weighted by priority: low 1, medium 2, high 3 |

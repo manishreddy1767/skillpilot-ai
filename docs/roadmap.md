@@ -94,7 +94,7 @@ These milestones cover parts of the original brief that 1.0 left thin, and gaps 
 - A monthly review, and a weekly summary notification
 - Progress history in the AI context, for questions like "how did I do this month"
 
-### M10: Richer evidence
+### M10: Richer evidence, complete
 
 - Certifications and work experience can count as evidence for skills
 - AI project ideas that target missing skills, linked to those skills when accepted

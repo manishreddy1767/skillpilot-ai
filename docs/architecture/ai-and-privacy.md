@@ -30,6 +30,7 @@ safety classifier can be retried on another model. Haiku has no such fallback.
 | Skill-gap report | Code calculates readiness and gaps. The AI explains them and sets priorities. It cannot change the scores. |
 | Roadmap | The AI drafts ordered topics, effort, exercises, and resources, as one suggestion. Everything can be edited. |
 | Daily tasks | The AI suggests tasks that fit the daily time set in Settings. |
+| Project ideas | The AI suggests up to three projects that would demonstrate missing skills. Accepted ideas are linked to skills you already have. |
 | Assistant | Chat that knows your career data, and can suggest skills, goals, and tasks. |
 | Resources | Named so they can be searched for. The AI is told not to give links, because invented links are a known failure. |
 
