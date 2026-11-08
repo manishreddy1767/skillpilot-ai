@@ -109,6 +109,30 @@ test.describe('projects', () => {
   })
 })
 
+test('a certification and work experience raise the demonstrated level', async () => {
+  h = await Harness.launch()
+  const page = await openApp()
+  await addSkill(page, 'SQL', '3')
+  await seed(page, async (api) => {
+    await api.saveRecord('certification', null, { name: 'Database Certificate' })
+    await api.saveRecord('work', null, { company: 'Acme', role: 'Analyst' })
+  })
+  await go(page, 'Certifications')
+  await page.getByRole('button', { name: 'Details for Database Certificate' }).click()
+  await page.getByRole('checkbox', { name: 'SQL' }).click()
+  await expect(page.getByRole('checkbox', { name: 'SQL' })).toBeChecked()
+  await go(page, 'Skills')
+  await expect(page.getByLabel('SQL: demonstrated level 2 of 5')).toHaveText('2')
+
+  await go(page, 'Experience')
+  await page.getByRole('button', { name: 'Details for Analyst at Acme' }).click()
+  await page.getByRole('checkbox', { name: 'SQL' }).click()
+  await expect(page.getByRole('checkbox', { name: 'SQL' })).toBeChecked()
+  await go(page, 'Skills')
+  await expect(page.getByLabel('SQL: demonstrated level 3 of 5')).toHaveText('3')
+  await expect(page.locator('.proof-proven')).toHaveCount(1)
+})
+
 test.describe('goals', () => {
   test('progress follows milestones and required skills through the screens', async () => {
     h = await Harness.launch()

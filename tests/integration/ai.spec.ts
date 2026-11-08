@@ -255,6 +255,22 @@ test('a target role goes from AI requirements to report to roadmap', async () =>
   await expect(page.getByText('CSS layout', { exact: true })).toBeVisible()
 })
 
+test('project ideas link to existing skills when accepted', async () => {
+  h = await Harness.launch({ aiBase: base })
+  const page = await openApp()
+  await seed(page, (api) => api.saveRecord('skill', null, { name: 'React' }))
+  await enableClaude(page)
+  replies.push({
+    projects: [{ name: 'Portfolio shop', description: 'A shop', technologies: 'React', skills: ['React', 'Docker'] }]
+  })
+  await go(page, 'Projects')
+  await page.getByRole('button', { name: 'Suggest projects for my gaps' }).click()
+  await expect(page.getByText('Not in your skills yet: Docker')).toBeVisible()
+  await page.getByRole('button', { name: 'Accept Add project: Portfolio shop' }).click()
+  await page.getByRole('button', { name: 'Details for Portfolio shop' }).click()
+  await expect(page.getByRole('checkbox', { name: 'React' })).toBeChecked()
+})
+
 test('roadmaps can be created and edited without AI', async () => {
   h = await Harness.launch({ aiBase: base })
   const page = await openApp()

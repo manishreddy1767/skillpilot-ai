@@ -128,6 +128,7 @@ test.describe('security', () => {
       'saveSettings',
       'sendChat',
       'setLink',
+      'suggestProjects',
       'suggestTasks'
     ])
   })
