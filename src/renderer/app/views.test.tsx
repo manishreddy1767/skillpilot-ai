@@ -300,6 +300,26 @@ describe('GoalsView', () => {
   })
 })
 
+describe('ProjectsView ideas', () => {
+  it('asks the AI for project ideas and shows failures', async () => {
+    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'claude', model: 'm', hasKey: true, blocked: '' } })
+    api().suggestProjects.mockResolvedValue({ ok: false, message: 'Rate limited.' })
+    render(<ProjectsView />)
+    await waitFor(() =>
+      expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Suggest projects for my gaps' }).disabled).toBe(false)
+    )
+    click('Suggest projects for my gaps')
+    expect((await screen.findByRole('alert')).textContent).toBe('Rate limited.')
+  })
+
+  it('disables ideas when AI is unavailable', async () => {
+    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'off', model: '', hasKey: false, blocked: 'AI is off.' } })
+    render(<ProjectsView />)
+    expect(await screen.findByText('AI is off.')).toBeTruthy()
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Suggest projects for my gaps' }).disabled).toBe(true)
+  })
+})
+
 describe('ProjectsView', () => {
   it('expands to show skills and milestones', async () => {
     api().listRecords.mockImplementation((kind) =>
