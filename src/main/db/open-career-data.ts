@@ -5,6 +5,7 @@ import { AiStore } from '../ai/ai-store'
 import { dailyBackup, preMigrationBackup } from './backup'
 import { CareerStore } from './career-store'
 import { migrate, migrations } from './migrations'
+import { DataTransfer } from './portability'
 
 const BACKUP_CHECK_INTERVAL = 60 * 60 * 1000
 
@@ -12,6 +13,7 @@ export interface CareerData {
   /** Null when the database could not be opened. The widget still runs. */
   store: CareerStore | null
   aiStore: AiStore | null
+  transfer: DataTransfer | null
   close(): void
 }
 
@@ -54,6 +56,7 @@ export function openCareerData({
     return {
       store: new CareerStore(opened),
       aiStore: new AiStore(opened),
+      transfer: new DataTransfer(opened, backups),
       close: () => {
         clearInterval(timer)
         opened.close()
@@ -68,6 +71,6 @@ export function openCareerData({
     }
     logError(error)
     alertError(error)
-    return { store: null, aiStore: null, close: () => undefined }
+    return { store: null, aiStore: null, transfer: null, close: () => undefined }
   }
 }
