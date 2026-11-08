@@ -10,7 +10,9 @@
 - **Backups:** one automatic copy a day in the `backups` folder, with the last 7 kept. Copies made before
   a migration are kept separately and never removed automatically.
 - **If it cannot open:** the widget keeps running, the file is left untouched, and the app says why.
-- **Portability:** full JSON export and import in Settings, planned for a later milestone.
+- **Portability:** Settings can export everything to a JSON file, import it back, restore any backup, or
+  erase everything. Imports are checked first and applied in one transaction, so a bad file changes nothing.
+  The API key is never exported. A backup is taken before any of these replace data.
 - **Widget position:** kept in a small `widget-position.json` file, so the widget can appear before the
   database opens. Other settings are stored in the database.
 
