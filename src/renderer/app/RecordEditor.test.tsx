@@ -109,6 +109,7 @@ describe('RecordEditor', () => {
     expect(screen.queryByText('Details of 7')).toBeNull()
     click('Details for State University')
     expect(screen.getByText('Details of 7')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Details for State University' }).getAttribute('aria-expanded')).toBe('true')
     click('Details for State University')
     expect(screen.queryByText('Details of 7')).toBeNull()
   })
@@ -142,6 +143,14 @@ describe('RecordEditor', () => {
     expect(await screen.findByText('Institution is required')).toBeTruthy()
     expect(screen.getByRole('alert')).toBeTruthy()
     await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(/Institution/)))
+  })
+
+  it('Escape discards the form', async () => {
+    render(<RecordEditor kind="education" {...props} />)
+    await screen.findByText('Nothing yet.')
+    click('Add education')
+    fireEvent.keyDown(screen.getByLabelText(/Institution/), { key: 'Escape' })
+    expect(screen.queryByLabelText(/Institution/)).toBeNull()
   })
 
   it('cancel discards the form', async () => {

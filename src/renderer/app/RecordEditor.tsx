@@ -130,7 +130,9 @@ export function RecordEditor({
                         aria-label={`Details for ${main}`}
                         onClick={() => setExpanded(open ? null : record.id)}
                       >
-                        {open ? 'Hide' : 'Details'}
+                        {/* The words stay the same, so the spoken name always matches what is shown. */}
+                        <span aria-hidden="true">{open ? '▾ ' : '▸ '}</span>
+                        Details
                       </button>
                     ) : null}
                     <button
@@ -153,7 +155,14 @@ export function RecordEditor({
       </ul>
 
       {draft ? (
-        <form ref={form} onSubmit={(event) => void save(event)} noValidate>
+        <form
+          ref={form}
+          onSubmit={(event) => void save(event)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') cancel()
+          }}
+          noValidate
+        >
           <div className="fields">
             {recordFields[kind].map((field) => (
               <FieldInput
