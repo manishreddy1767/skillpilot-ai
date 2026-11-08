@@ -35,7 +35,9 @@ const tables: Record<RecordKind, { table: string; orderBy: string; parent?: stri
 const links: Record<LinkKind, { table: string; parent: string; child: string; level?: string }> = {
   goalSkill: { table: 'goal_skill', parent: 'goal_id', child: 'skill_id', level: 'required_level' },
   goalProject: { table: 'goal_project', parent: 'goal_id', child: 'project_id' },
-  projectSkill: { table: 'project_skill', parent: 'project_id', child: 'skill_id' }
+  projectSkill: { table: 'project_skill', parent: 'project_id', child: 'skill_id' },
+  certificationSkill: { table: 'certification_skill', parent: 'certification_id', child: 'skill_id' },
+  workSkill: { table: 'work_skill', parent: 'work_id', child: 'skill_id' }
 }
 
 type Row = Record<string, unknown>
@@ -148,6 +150,10 @@ export class CareerStore {
         `SELECT id, name, status, completed_on AS completedOn FROM project ORDER BY ${tables.project.orderBy}`
       ),
       projectSkills: all('SELECT project_id AS projectId, skill_id AS skillId FROM project_skill'),
+      recordSkills: all(
+        `SELECT skill_id AS skillId, 'certification' AS source FROM certification_skill
+         UNION ALL SELECT skill_id AS skillId, 'work' AS source FROM work_skill`
+      ),
       goals: all(
         `SELECT id, title, status, priority, target_date AS targetDate, completed_on AS completedOn
          FROM goal ORDER BY ${tables.goal.orderBy}`

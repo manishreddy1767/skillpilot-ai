@@ -15,6 +15,8 @@ export const EXPORT_TABLES = [
   'evidence',
   'project',
   'project_skill',
+  'certification_skill',
+  'work_skill',
   'goal',
   'goal_skill',
   'goal_project',

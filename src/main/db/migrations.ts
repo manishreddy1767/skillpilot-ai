@@ -273,6 +273,19 @@ export const migrations: string[] = [
     overall INTEGER,
     skills TEXT NOT NULL DEFAULT '{}'
   );
+  `,
+  `
+  CREATE TABLE certification_skill (
+    certification_id INTEGER NOT NULL REFERENCES certification (id) ON DELETE CASCADE,
+    skill_id INTEGER NOT NULL REFERENCES skill (id) ON DELETE CASCADE,
+    PRIMARY KEY (certification_id, skill_id)
+  );
+
+  CREATE TABLE work_skill (
+    work_id INTEGER NOT NULL REFERENCES work_experience (id) ON DELETE CASCADE,
+    skill_id INTEGER NOT NULL REFERENCES skill (id) ON DELETE CASCADE,
+    PRIMARY KEY (work_id, skill_id)
+  );
   `
 ]
 

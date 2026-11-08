@@ -183,6 +183,20 @@ describe('skills, goals and projects', () => {
     expect(dashboard(h).skills.find((s) => s.name === 'React')?.demonstrated).toBe(0)
   })
 
+  it('certifications and work experience count as evidence, and go when deleted', () => {
+    const { h } = setup()
+    const skill = addSkill(h, 'SQL', '0')
+    const cert = h.saveRecord('certification', null, { name: 'DB Cert' })
+    const work = h.saveRecord('work', null, { company: 'Co', role: 'Analyst' })
+    if (!cert.ok || !work.ok) throw new Error('not saved')
+    h.setLink('certificationSkill', cert.value.id, skill, true)
+    h.setLink('workSkill', work.value.id, skill, true)
+    expect(dashboard(h).skills[0]).toMatchObject({ demonstrated: 3, evidenceCount: 2 })
+    h.deleteRecord('work', work.value.id)
+    expect(dashboard(h).skills[0]).toMatchObject({ demonstrated: 2, evidenceCount: 1 })
+    expect(h.listLinks('certificationSkill', cert.value.id)).toEqual({ ok: true, value: [{ id: skill, level: null }] })
+  })
+
   it('links are kept, updated, and removed', () => {
     const { h } = setup()
     const goal = addGoal(h, 'Ship')
