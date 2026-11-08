@@ -101,6 +101,7 @@ test.describe('security', () => {
       'getChat',
       'getDashboard',
       'getGapAnalysis',
+      'getHistory',
       'getLearning',
       'getOverview',
       'getProfile',
