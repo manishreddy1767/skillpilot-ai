@@ -117,8 +117,10 @@ test.describe('security', () => {
       'listLinks',
       'listProposals',
       'listRecords',
+      'listen',
       'minimizeToWidget',
       'onOverviewChanged',
+      'onVoiceReady',
       'openApp',
       'rejectProposal',
       'removeApiKey',
@@ -130,6 +132,7 @@ test.describe('security', () => {
       'saveSettings',
       'sendChat',
       'setLink',
+      'stopListening',
       'suggestProjects',
       'suggestTasks'
     ])
