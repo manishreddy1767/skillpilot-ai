@@ -18,10 +18,11 @@ const chatSchema = object({
   reply: text,
   proposals: list(
     object({
-      kind: oneOf('addSkill', 'addGoal', 'addTask'),
+      kind: oneOf('addSkill', 'addGoal', 'addTask', 'setSkillLevel', 'markTopicDone'),
       title: text,
       note: text,
-      minutes: integer
+      minutes: integer,
+      level: integer
     })
   )
 })
@@ -95,6 +96,35 @@ export class AiService {
     this.deps.aiStore.addProposal(kind, summary, payload, shown)
   }
 
+  /** Changes are only proposed for items that exist, with the current value shown beside the new one. */
+  private proposeLevelChange(name: string, level: number, why: string): void {
+    const skill = this.deps.store.listRecords('skill').find((s) => s.values['name']?.toLowerCase() === name.toLowerCase())
+    if (!skill || level < 0 || level > 5) return
+    const from = skill.values['claimedLevel'] ?? '0'
+    if (from === String(level)) return
+    this.propose('updateSkillLevel', `Change level: ${skill.values['name']}`, { skillId: skill.id, from, to: String(level) }, [
+      ['Skill', skill.values['name'] ?? ''],
+      ['Level', `${from} → ${level}`],
+      ['Why', why]
+    ])
+  }
+
+  private proposeTopicDone(title: string): void {
+    const { store } = this.deps
+    for (const roadmap of store.listRecords('roadmap')) {
+      const item = store
+        .listRecords('roadmapItem', roadmap.id)
+        .find((i) => i.values['title']?.toLowerCase() === title.toLowerCase() && i.values['status'] !== 'done')
+      if (!item) continue
+      this.propose('completeTopic', `Mark done: ${item.values['title']}`, { roadmapId: roadmap.id, itemId: item.id }, [
+        ['Topic', item.values['title'] ?? ''],
+        ['Roadmap', roadmap.values['title'] ?? ''],
+        ['Status', 'Not done → Done']
+      ])
+      return
+    }
+  }
+
   private proposeTask(title: string, kind: string, minutes: number): void {
     const safeMinutes = clamp(minutes, 5, 480)
     const payload = { title, kind, minutes: String(safeMinutes), dueDate: this.deps.today(), status: 'open' }
@@ -133,18 +163,26 @@ export class AiService {
     const history = aiStore.recentChat().map(({ role, content }) => ({ role, content }))
     const reply = await this.ask<{
       reply: string
-      proposals: { kind: 'addSkill' | 'addGoal' | 'addTask'; title: string; note: string; minutes: number }[]
+      proposals: {
+        kind: 'addSkill' | 'addGoal' | 'addTask' | 'setSkillLevel' | 'markTopicDone'
+        title: string
+        note: string
+        minutes: number
+        level: number
+      }[]
     }>('Assistant', chatSchema, 'medium', [
       ...history,
       {
         role: 'user',
-        content: `${message}\n\n(Only include proposals when suggesting a concrete change. They need my confirmation before anything is saved. Use minutes for tasks and 0 otherwise.)`
+        content: `${message}\n\n(Only include proposals when suggesting a concrete change. They need my confirmation before anything is saved. Use minutes for tasks and 0 otherwise. setSkillLevel changes my own level for an existing skill: title is the skill name and level is 0 to 5. markTopicDone marks an existing roadmap topic done: title is the topic. Use level 0 for other kinds.)`
       }
     ])
 
     aiStore.addChatMessage('user', message)
     aiStore.addChatMessage('assistant', reply.reply)
-    for (const { kind, title, note, minutes } of reply.proposals) {
+    for (const { kind, title, note, minutes, level } of reply.proposals) {
+      if (kind === 'setSkillLevel') this.proposeLevelChange(title, level, note)
+      if (kind === 'markTopicDone') this.proposeTopicDone(title)
       if (kind === 'addTask') this.proposeTask(title, 'learning', minutes || 30)
       if (kind === 'addSkill') {
         this.propose('addSkill', `Add skill: ${title}`, { name: title, status: 'learning' }, [
@@ -319,6 +357,28 @@ export function applyProposal(
   if (kind === 'addTask') return save('task', data) ? { ok: true } : invalid
   if (kind === 'addRoleRequirement') {
     return save('roleRequirement', data, Number(data['roleId'])) ? { ok: true } : invalid
+  }
+
+  if (kind === 'updateSkillLevel') {
+    const skill = store.listRecords('skill').find((s) => s.id === Number(data['skillId']))
+    if (!skill) return { ok: false, message: 'That skill no longer exists.' }
+    // Refused if the level changed after the suggestion was made, so nothing is overwritten unseen.
+    if (skill.values['claimedLevel'] !== String(data['from'])) {
+      return { ok: false, message: 'That skill has changed since this was suggested, so it was not applied.' }
+    }
+    const { values, errors } = validateFields(recordFields.skill, { ...skill.values, claimedLevel: String(data['to']) })
+    if (Object.keys(errors).length) return invalid
+    store.saveRecord('skill', skill.id, values)
+    return { ok: true }
+  }
+
+  if (kind === 'completeTopic') {
+    const roadmapId = Number(data['roadmapId'])
+    const item = store.listRecords('roadmapItem', roadmapId).find((i) => i.id === Number(data['itemId']))
+    if (!item) return { ok: false, message: 'That topic no longer exists.' }
+    if (item.values['status'] === 'done') return { ok: false, message: 'That topic is already done.' }
+    store.saveRecord('roadmapItem', item.id, { ...item.values, status: 'done' }, roadmapId)
+    return { ok: true }
   }
 
   if (kind === 'addProject') {

@@ -343,9 +343,9 @@ describe('AiService', () => {
     const { ai, store, aiStore } = service({
       reply: 'Try this',
       proposals: [
-        { kind: 'addSkill', title: 'Docker', note: 'Useful', minutes: 0 },
-        { kind: 'addGoal', title: 'Deploy', note: 'Soon', minutes: 0 },
-        { kind: 'addTask', title: 'Read docs', note: '', minutes: 20 }
+        { kind: 'addSkill', title: 'Docker', note: 'Useful', minutes: 0, level: 0 },
+        { kind: 'addGoal', title: 'Deploy', note: 'Soon', minutes: 0, level: 0 },
+        { kind: 'addTask', title: 'Read docs', note: '', minutes: 20, level: 0 }
       ]
     })
     await ai.chat('Help')
@@ -457,6 +457,60 @@ describe('project ideas', () => {
   it('refuses an invalid project', () => {
     const { store } = stores()
     expect(applyProposal(store, 'addProject', { name: '' }).ok).toBe(false)
+  })
+})
+
+describe('changes to existing items', () => {
+  function withData(reply: unknown) {
+    const s = service(reply)
+    const skill = s.store.saveRecord('skill', null, { name: 'React', category: 'technical', claimedLevel: '2', status: 'using', notes: '' })!
+    const roadmap = s.store.saveRecord('roadmap', null, { title: 'Path', startDate: '' })!
+    const item = s.store.saveRecord('roadmapItem', null, { title: 'CSS', week: '1', effortHours: '2', status: 'open', details: '', exercise: '', resources: '' }, roadmap.id)!
+    return { ...s, skill, roadmap, item }
+  }
+  const reply = (proposals: unknown[]) => ({ reply: 'Ok', proposals })
+  const change = (kind: string, title: string, level = 0) => ({ kind, title, note: 'Because', minutes: 0, level })
+
+  it('proposes a level change with before and after, and saves nothing yet', async () => {
+    const { ai, aiStore, store } = withData(reply([change('setSkillLevel', 'react', 4)]))
+    await ai.chat('I got better')
+    const [proposal] = aiStore.listProposals()
+    expect(proposal?.summary).toBe('Change level: React')
+    expect(proposal?.details).toContainEqual({ label: 'Level', value: '2 → 4' })
+    expect(store.listRecords('skill')[0]?.values['claimedLevel']).toBe('2')
+  })
+
+  it.each([
+    ['an unknown skill', change('setSkillLevel', 'Rust', 3)],
+    ['a level out of range', change('setSkillLevel', 'React', 9)],
+    ['no change', change('setSkillLevel', 'React', 2)],
+    ['an unknown topic', change('markTopicDone', 'Nope')]
+  ])('proposes nothing for %s', async (_name, item) => {
+    const { ai, aiStore } = withData(reply([item]))
+    await ai.chat('Hi')
+    expect(aiStore.listProposals()).toEqual([])
+  })
+
+  it('applies a level change, refusing one made stale by an edit', () => {
+    const { store, skill } = withData({})
+    expect(applyProposal(store, 'updateSkillLevel', { skillId: skill.id, from: '2', to: '4' }).ok).toBe(true)
+    expect(store.listRecords('skill')[0]?.values).toMatchObject({ name: 'React', claimedLevel: '4', status: 'using' })
+    expect(applyProposal(store, 'updateSkillLevel', { skillId: skill.id, from: '2', to: '5' })).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('changed since')
+    })
+    expect(applyProposal(store, 'updateSkillLevel', { skillId: 999, from: '0', to: '1' }).ok).toBe(false)
+  })
+
+  it('proposes and applies marking a topic done, once', async () => {
+    const { ai, aiStore, store, roadmap, item } = withData(reply([change('markTopicDone', 'css')]))
+    await ai.chat('I finished CSS')
+    expect(aiStore.listProposals()[0]?.details).toContainEqual({ label: 'Status', value: 'Not done → Done' })
+    const payload = { roadmapId: roadmap.id, itemId: item.id }
+    expect(applyProposal(store, 'completeTopic', payload).ok).toBe(true)
+    expect(store.listRecords('roadmapItem', roadmap.id)[0]?.values['status']).toBe('done')
+    expect(applyProposal(store, 'completeTopic', payload)).toMatchObject({ ok: false, message: expect.stringContaining('already done') })
+    expect(applyProposal(store, 'completeTopic', { roadmapId: roadmap.id, itemId: 999 }).ok).toBe(false)
   })
 })
 
