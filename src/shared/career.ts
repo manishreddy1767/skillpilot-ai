@@ -327,6 +327,20 @@ export const recordFields: Record<RecordKind, FieldDef[]> = {
         { value: 'open', label: 'To do' },
         { value: 'done', label: 'Done' }
       ]
+    },
+    { key: 'remindAt', column: 'remind_at', label: 'Remind me at', type: 'time' },
+    {
+      key: 'repeat',
+      column: 'repeat',
+      label: 'Repeat',
+      type: 'select',
+      initial: 'none',
+      options: [
+        { value: 'none', label: 'Does not repeat' },
+        { value: 'daily', label: 'Every day' },
+        { value: 'weekdays', label: 'Every weekday' },
+        { value: 'weekly', label: 'Every week' }
+      ]
     }
   ]
 }

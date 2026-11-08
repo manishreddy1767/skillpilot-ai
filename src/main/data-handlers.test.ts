@@ -388,6 +388,57 @@ describe('learning', () => {
   })
 })
 
+describe('repeating tasks', () => {
+  const nextOpen = (db: DatabaseSync) =>
+    db.prepare("SELECT title, due_date AS due, repeat, remind_at AS remind FROM task WHERE status = 'open'").all()
+
+  it.each([
+    ['daily', '2026-11-06', '2026-11-07'],
+    ['weekly', '2026-11-06', '2026-11-13'],
+    ['weekdays', '2026-11-05', '2026-11-06'],
+    ['weekdays', '2026-11-06', '2026-11-09'],
+    ['weekdays', '2026-11-07', '2026-11-09']
+  ])('a %s task due %s comes back on %s', (repeat, dueDate, next) => {
+    const { h, db } = setup()
+    const task = h.saveRecord('task', null, { title: 'Practise', dueDate, repeat, remindAt: '09:00' })
+    if (!task.ok) throw new Error('not saved')
+    h.completeTask(task.value.id)
+    expect(nextOpen(db)).toEqual([{ title: 'Practise', due: next, repeat, remind: '09:00' }])
+  })
+
+  it('does not repeat a one-off task', () => {
+    const { h, db } = setup()
+    const task = h.saveRecord('task', null, { title: 'Once', dueDate: '2026-11-06' })
+    if (!task.ok) throw new Error('not saved')
+    h.completeTask(task.value.id)
+    expect(nextOpen(db)).toEqual([])
+  })
+
+  it('does not make a second copy when finished, reopened, and finished again', () => {
+    const { h, db } = setup()
+    const task = h.saveRecord('task', null, { title: 'Daily', dueDate: '2026-11-06', repeat: 'daily' })
+    if (!task.ok) throw new Error('not saved')
+    h.completeTask(task.value.id)
+    h.saveRecord('task', task.value.id, { title: 'Daily', dueDate: '2026-11-06', repeat: 'daily', status: 'open' })
+    h.completeTask(task.value.id)
+    expect(nextOpen(db)).toHaveLength(1)
+  })
+
+  it('repeats when finished through an edit, as well as by ticking', () => {
+    const { h, db } = setup()
+    const task = h.saveRecord('task', null, { title: 'Weekly', dueDate: '2026-11-06', repeat: 'weekly' })
+    if (!task.ok) throw new Error('not saved')
+    h.saveRecord('task', task.value.id, { title: 'Weekly', dueDate: '2026-11-06', repeat: 'weekly', status: 'done' })
+    expect(nextOpen(db)).toEqual([{ title: 'Weekly', due: '2026-11-13', repeat: 'weekly', remind: '' }])
+  })
+
+  it('refuses an unknown repeat or a bad reminder time', () => {
+    const { h } = setup()
+    expect(h.saveRecord('task', null, { title: 'T', repeat: 'hourly' }).ok).toBe(false)
+    expect(h.saveRecord('task', null, { title: 'T', remindAt: '25:00' }).ok).toBe(false)
+  })
+})
+
 describe('history', () => {
   it('records one snapshot a day, and builds the trend and month from them', () => {
     const { h, store } = setup()

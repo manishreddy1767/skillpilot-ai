@@ -286,6 +286,29 @@ export const migrations: string[] = [
     skill_id INTEGER NOT NULL REFERENCES skill (id) ON DELETE CASCADE,
     PRIMARY KEY (work_id, skill_id)
   );
+  `,
+  `
+  ALTER TABLE task ADD COLUMN remind_at TEXT NOT NULL DEFAULT '';
+  ALTER TABLE task ADD COLUMN repeat TEXT NOT NULL DEFAULT 'none'
+    CHECK (repeat IN ('none', 'daily', 'weekdays', 'weekly'));
+
+  -- Finishing a repeating task creates the next one, unless it already exists.
+  CREATE TRIGGER task_repeat AFTER UPDATE OF status ON task
+  WHEN new.status = 'done' AND old.status <> 'done' AND new.repeat <> 'none' BEGIN
+    INSERT INTO task (title, kind, due_date, minutes, status, remind_at, repeat)
+    SELECT new.title, new.kind, next.day, new.minutes, 'open', new.remind_at, new.repeat
+    FROM (
+      SELECT CASE new.repeat
+        WHEN 'daily' THEN date(base.day, '+1 day')
+        WHEN 'weekly' THEN date(base.day, '+7 days')
+        ELSE date(base.day, CASE strftime('%w', base.day) WHEN '5' THEN '+3 days' WHEN '6' THEN '+2 days' ELSE '+1 day' END)
+      END AS day
+      FROM (SELECT CASE WHEN new.due_date <> '' THEN new.due_date ELSE date('now', 'localtime') END AS day) AS base
+    ) AS next
+    WHERE NOT EXISTS (
+      SELECT 1 FROM task WHERE title = new.title AND status = 'open' AND due_date = next.day
+    );
+  END;
   `
 ]
 

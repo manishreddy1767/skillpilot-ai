@@ -46,8 +46,9 @@ function toValues(fields: FieldDef[], row: Row): FieldValues {
   return Object.fromEntries(fields.map((field) => [field.key, String(row[field.column] ?? '')]))
 }
 
+/** Missing values take the field's default, so a caller that leaves one out cannot break a constraint. */
 function inOrder(fields: FieldDef[], values: FieldValues): string[] {
-  return fields.map((field) => values[field.key] ?? '')
+  return fields.map((field) => values[field.key] || (field.initial ?? ''))
 }
 
 /** All reading and writing of career data. Input is validated before it gets here. */
@@ -173,7 +174,8 @@ export class CareerStore {
     const all = <T>(sql: string): T[] => this.db.prepare(sql).all() as T[]
     return {
       tasks: all(
-        `SELECT id, title, kind, due_date AS dueDate, minutes, status, completed_on AS completedOn FROM task`
+        `SELECT id, title, kind, due_date AS dueDate, minutes, status, completed_on AS completedOn,
+         remind_at AS remindAt FROM task`
       ),
       roadmaps: all('SELECT id, title, start_date AS startDate FROM roadmap ORDER BY id DESC'),
       items: all(

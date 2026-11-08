@@ -163,6 +163,12 @@ describe('CareerStore records', () => {
     expect(s.listRecords('education')[0]?.values['institution']).toBe('New Uni')
   })
 
+  it('fills in defaults a caller leaves out', () => {
+    const s = store()
+    const saved = s.saveRecord('task', null, { title: 'Bare' })!
+    expect(s.listRecords('task').find((t) => t.id === saved.id)?.values).toMatchObject({ repeat: 'none', status: 'open', minutes: '30' })
+  })
+
   it('reports an update to a record that no longer exists', () => {
     expect(store().saveRecord('education', 999, edu())).toBeNull()
   })

@@ -29,6 +29,8 @@ export interface HandlerDeps {
   latestPriority?(): string | null
   /** The weekly learning target, in minutes. */
   weeklyTarget?(): number
+  /** The monthly learning target, in minutes. */
+  monthlyTarget?(): number
 }
 
 export type { RoleReadiness }
@@ -63,7 +65,8 @@ export function createDataHandlers({
   logError,
   today,
   latestPriority = () => null,
-  weeklyTarget = () => 0
+  weeklyTarget = () => 0,
+  monthlyTarget = () => 0
 }: HandlerDeps) {
   const withStore = <T>(work: (store: CareerStore) => Result<T>): Result<T> => {
     const store = getStore()
@@ -186,7 +189,10 @@ export function createDataHandlers({
       }),
 
     getLearning: (): Result<Learning> =>
-      withStore((store) => ({ ok: true, value: buildLearning(store.readLearningRows(), today(), weeklyTarget()) })),
+      withStore((store) => ({
+        ok: true,
+        value: buildLearning(store.readLearningRows(), today(), weeklyTarget(), monthlyTarget())
+      })),
 
     getRecommendation: (): Result<string | null> =>
       withStore((store) => ({ ok: true, value: recommendation(store) })),
