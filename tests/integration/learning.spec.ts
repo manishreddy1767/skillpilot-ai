@@ -142,6 +142,33 @@ test('the dashboard brings learning together', async () => {
   await expect(page.getByText('Gaps: CSS')).toBeVisible()
 })
 
+test('finishing a repeating task schedules the next one', async () => {
+  h = await Harness.launch()
+  const page = await openApp()
+  await go(page, 'Tasks')
+  await page.getByRole('button', { name: 'Add task' }).click()
+  await page.getByLabel('Task', { exact: false }).first().fill('Daily practice')
+  await page.getByLabel('Due').fill(localToday())
+  await page.getByLabel('Repeat').selectOption('daily')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByRole('checkbox', { name: 'Daily practice' }).click()
+  await expect(page.getByText('Nothing is due today.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Edit Daily practice' })).toHaveCount(2)
+})
+
+test('a reminder arrives at its time', async () => {
+  h = await Harness.launch()
+  const page = await openApp()
+  await page.evaluate(
+    (today) => window.skillpilot.saveRecord('task', null, { title: 'Stretch', dueDate: today, remindAt: '00:00' }),
+    localToday()
+  )
+  await h.app.evaluate(({ powerMonitor }) => void powerMonitor.emit('resume'))
+  await expect
+    .poll(() => h.app.evaluate(() => (globalThis as unknown as { __notices: { body: string }[] }).__notices.map((n) => n.body)))
+    .toContain('Stretch')
+})
+
 test('tasks and streaks survive a restart', async () => {
   h = await Harness.launch()
   const page = await openApp()

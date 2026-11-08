@@ -112,7 +112,7 @@ test('chat works end to end, and a suggestion is saved only once accepted', asyn
   await enableClaude(page)
   replies.push({
     reply: 'Learn Docker next.',
-    proposals: [{ kind: 'addSkill', title: 'Docker', note: 'Needed for deployment', minutes: 0 }]
+    proposals: [{ kind: 'addSkill', title: 'Docker', note: 'Needed for deployment', minutes: 0, level: 0 }]
   })
   await go(page, 'Assistant')
   await page.getByLabel('Your message').fill('What next?')
@@ -134,7 +134,7 @@ test('a rejected suggestion is not saved', async () => {
   h = await Harness.launch({ aiBase: base })
   const page = await openApp()
   await enableClaude(page)
-  replies.push({ reply: 'Ok', proposals: [{ kind: 'addGoal', title: 'Unwanted', note: '', minutes: 0 }] })
+  replies.push({ reply: 'Ok', proposals: [{ kind: 'addGoal', title: 'Unwanted', note: '', minutes: 0, level: 0 }] })
   await go(page, 'Assistant')
   await page.getByLabel('Your message').fill('Hi')
   await page.getByRole('button', { name: 'Send' }).click()
@@ -269,6 +269,21 @@ test('project ideas link to existing skills when accepted', async () => {
   await page.getByRole('button', { name: 'Accept Add project: Portfolio shop' }).click()
   await page.getByRole('button', { name: 'Details for Portfolio shop' }).click()
   await expect(page.getByRole('checkbox', { name: 'React' })).toBeChecked()
+})
+
+test('the assistant can change an existing skill level, shown before and after', async () => {
+  h = await Harness.launch({ aiBase: base })
+  const page = await openApp()
+  await seed(page, (api) => api.saveRecord('skill', null, { name: 'React', claimedLevel: '2' }))
+  await enableClaude(page)
+  replies.push({ reply: 'Nice work.', proposals: [{ kind: 'setSkillLevel', title: 'React', note: 'You built two apps', minutes: 0, level: 4 }] })
+  await go(page, 'Assistant')
+  await page.getByLabel('Your message').fill('I built two React apps')
+  await page.getByRole('button', { name: 'Send' }).click()
+  await expect(page.getByText('Level: 2 → 4')).toBeVisible()
+  await page.getByRole('button', { name: 'Accept Change level: React' }).click()
+  await go(page, 'Skills')
+  await expect(page.getByLabel('React: claimed level 4 of 5')).toHaveText('4')
 })
 
 test('roadmaps can be created and edited without AI', async () => {
