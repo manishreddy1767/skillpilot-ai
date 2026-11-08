@@ -17,6 +17,7 @@ export const backupFolder = join(dataFolder, 'backups')
 export function clearSavedData(): void {
   for (const name of ['', '-wal', '-shm']) rmSync(databaseFile + name, { force: true })
   rmSync(join(dataFolder, 'api-key.enc'), { force: true })
+  rmSync(join(dataFolder, 'test-export.json'), { force: true })
   rmSync(backupFolder, { recursive: true, force: true })
 }
 
