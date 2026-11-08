@@ -39,6 +39,19 @@ describe('App', () => {
     expect(window.skillpilot.listRecords).toHaveBeenLastCalledWith(kind, undefined)
   })
 
+  it.each([
+    ['Experience', 'work', 'Skills used in this role'],
+    ['Certifications', 'certification', 'Skills this certifies']
+  ])('%s can link skills as evidence', async (label, kind, title) => {
+    vi.mocked(window.skillpilot.listRecords).mockImplementation((asked) =>
+      Promise.resolve({ ok: true, value: asked === kind ? [{ id: 3, values: { name: 'Cert', company: 'Co', role: 'Dev' } }] : [] })
+    )
+    render(<App />)
+    go(label)
+    fireEvent.click(await screen.findByRole('button', { name: /^Details for/ }))
+    expect(await screen.findByText(title)).toBeTruthy()
+  })
+
   it('reloads records when moving between sections', async () => {
     render(<App />)
     go('Education')

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AssistantView } from './AssistantView'
 import { DashboardView } from './DashboardView'
+import { LinkPicker } from './LinkPicker'
 import { GoalsView } from './GoalsView'
 import { ProfileForm } from './ProfileForm'
 import { ProjectsView } from './ProjectsView'
@@ -83,6 +84,15 @@ function Screen({ section }: { section: Section }) {
           title="Experience"
           addLabel="Add experience"
           emptyText="Add jobs, internships, and other work experience."
+          details={(record) => (
+            <LinkPicker
+              link="workSkill"
+              parentId={record.id}
+              optionKind="skill"
+              title="Skills used in this role"
+              emptyText="Add skills first, then choose the ones you used here. Each counts as strong evidence."
+            />
+          )}
         />
       )
     case 'certification':
@@ -93,6 +103,15 @@ function Screen({ section }: { section: Section }) {
           title="Certifications"
           addLabel="Add certification"
           emptyText="Add certifications you have earned."
+          details={(record) => (
+            <LinkPicker
+              link="certificationSkill"
+              parentId={record.id}
+              optionKind="skill"
+              title="Skills this certifies"
+              emptyText="Add skills first, then choose the ones this certification covers. Each counts as solid evidence."
+            />
+          )}
         />
       )
   }
