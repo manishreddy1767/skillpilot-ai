@@ -29,7 +29,8 @@ export const EXPORT_TABLES = [
   'proposed_change',
   'ai_request',
   'task',
-  'notification_log'
+  'notification_log',
+  'progress_snapshot'
 ] as const
 
 /** Tables whose triggers stamp today's date on insert, so the original date is put back afterwards. */

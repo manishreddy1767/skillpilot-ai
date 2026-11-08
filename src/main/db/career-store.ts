@@ -10,6 +10,7 @@ import {
   type RecordKind,
   type StoredRecord
 } from '../../shared/career'
+import type { Snapshot } from '../../shared/history'
 import type { LearningRows } from '../../shared/learning'
 import type { CareerRows } from '../../shared/progress'
 
@@ -173,6 +174,33 @@ export class CareerStore {
         `SELECT roadmap_id AS roadmapId, title, week, effort_hours AS effortHours, status FROM roadmap_item`
       )
     }
+  }
+
+  /** Keeps one snapshot a day, replaced as the day goes on. */
+  recordSnapshot(snapshot: Snapshot): void {
+    this.db
+      .prepare(
+        `INSERT INTO progress_snapshot (day, overall, skills) VALUES (?, ?, ?)
+         ON CONFLICT (day) DO UPDATE SET overall = excluded.overall, skills = excluded.skills`
+      )
+      .run(snapshot.day, snapshot.overall, JSON.stringify(snapshot.skills))
+  }
+
+  readSnapshots(): Snapshot[] {
+    const rows = this.db.prepare('SELECT day, overall, skills FROM progress_snapshot ORDER BY day').all() as {
+      day: string
+      overall: number | null
+      skills: string
+    }[]
+    return rows.map((row) => {
+      let skills: Snapshot['skills'] = {}
+      try {
+        skills = JSON.parse(row.skills) as Snapshot['skills']
+      } catch {
+        // A damaged value only loses that day's skill detail.
+      }
+      return { day: row.day, overall: row.overall, skills }
+    })
   }
 
   completeTask(id: number): boolean {

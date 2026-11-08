@@ -266,6 +266,13 @@ export const migrations: string[] = [
     dedupe_key TEXT NOT NULL UNIQUE,
     sent_on TEXT NOT NULL
   );
+  `,
+  `
+  CREATE TABLE progress_snapshot (
+    day TEXT PRIMARY KEY,
+    overall INTEGER,
+    skills TEXT NOT NULL DEFAULT '{}'
+  );
   `
 ]
 
