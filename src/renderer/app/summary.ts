@@ -1,7 +1,7 @@
 import { recordFields, type FieldDef, type FieldValues, type RecordKind } from '../../shared/career'
 
 function shown(field: FieldDef, value: string): string {
-  if (field.type === 'number') return `${field.label}: ${value}`
+  if (field.type === 'number' || field.type === 'time') return `${field.label}: ${value}`
   return field.options?.find((option) => option.value === value)?.label ?? value
 }
 

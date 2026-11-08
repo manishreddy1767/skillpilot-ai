@@ -33,6 +33,12 @@ describe('describeRecord', () => {
     )
   })
 
+  it('describes reminders and repeats', () => {
+    expect(
+      describeRecord('task', { title: 'Practise', kind: 'practice', dueDate: '', minutes: '20', status: 'open', remindAt: '09:00', repeat: 'daily' }).detail
+    ).toBe('Practice · Minutes: 20 · To do · Remind me at: 09:00 · Every day')
+  })
+
   it('keeps values with no matching option', () => {
     expect(describeRecord('goalMilestone', { title: 'Step', status: 'odd' }).detail).toBe('odd')
   })
