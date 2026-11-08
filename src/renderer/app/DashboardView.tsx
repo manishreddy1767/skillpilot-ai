@@ -4,6 +4,7 @@ import type { RoleReadiness } from '../../shared/ipc'
 import type { Learning } from '../../shared/learning'
 import { scoringRules } from '../../shared/progress'
 import { Meter, SkillChart } from './charts'
+import { HistorySection } from './HistorySection'
 import { useDashboard } from './useDashboard'
 
 const projectStatus = (value: string): string =>
@@ -198,6 +199,8 @@ export function DashboardView() {
           </ul>
         </section>
       ) : null}
+
+      <HistorySection />
 
       <div className="columns">
         <section>
