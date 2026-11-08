@@ -67,6 +67,8 @@ export interface CareerRows {
   history: { skillId: number; level: number }[]
   projects: { id: number; name: string; status: string; completedOn: string }[]
   projectSkills: { projectId: number; skillId: number }[]
+  /** Skills linked to a certification or to work experience. */
+  recordSkills: { skillId: number; source: 'certification' | 'work' }[]
   goals: {
     id: number
     title: string
@@ -89,11 +91,12 @@ export interface CareerRows {
 }
 
 export const PROJECT_POINTS: Record<string, number> = { planned: 0, active: 1, complete: 3 }
+export const RECORD_POINTS: Record<string, number> = { certification: 2, work: 3 }
 
 const LEVEL_THRESHOLDS = [1, 2, 4, 6, 9]
 
 export const scoringRules = [
-  'Demonstrated level comes only from evidence. Minor evidence earns 1 point, solid earns 2, and strong earns 3. A linked project earns 1 point while active and 3 once complete.',
+  'Demonstrated level comes only from evidence. Minor evidence earns 1 point, solid earns 2, and strong earns 3. A linked project earns 1 point while active and 3 once complete. A linked certification earns 2, and linked work experience earns 3.',
   'Points become levels at 1, 2, 4, 6, and 9 points, for levels 1 to 5.',
   'Goal progress averages milestones done and required skills reached. A skill counts fully for its demonstrated level, and half for any claimed level beyond that.',
   'Overall progress averages your active goals. High priority goals count three times as much as low, and medium twice as much.'
@@ -150,15 +153,18 @@ export function buildDashboard(rows: CareerRows, today: string): Dashboard {
     const projects = rows.projectSkills
       .filter((link) => link.skillId === skill.id)
       .flatMap((link) => rows.projects.filter((project) => project.id === link.projectId))
+    const records = rows.recordSkills.filter((link) => link.skillId === skill.id)
     const points =
       evidence.reduce((sum, item) => sum + item.strength, 0) +
-      projects.reduce((sum, project) => sum + (PROJECT_POINTS[project.status] ?? 0), 0)
+      projects.reduce((sum, project) => sum + (PROJECT_POINTS[project.status] ?? 0), 0) +
+      records.reduce((sum, link) => sum + (RECORD_POINTS[link.source] ?? 0), 0)
     const demonstrated = demonstratedLevel(points)
     return {
       ...skill,
       demonstrated,
       proof: proofStatus(skill.claimed, demonstrated),
-      evidenceCount: evidence.length + projects.filter((p) => (PROJECT_POINTS[p.status] ?? 0) > 0).length,
+      evidenceCount:
+        evidence.length + projects.filter((p) => (PROJECT_POINTS[p.status] ?? 0) > 0).length + records.length,
       history: rows.history.filter((item) => item.skillId === skill.id).map((item) => item.level)
     }
   })

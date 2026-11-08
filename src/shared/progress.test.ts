@@ -15,6 +15,7 @@ const empty: CareerRows = {
   history: [],
   projects: [],
   projectSkills: [],
+  recordSkills: [],
   goals: [],
   goalSkills: [],
   milestones: [],
@@ -207,6 +208,25 @@ describe('buildDashboard', () => {
       today
     )
     expect(skills[0]).toMatchObject({ demonstrated: level, evidenceCount: count })
+  })
+
+  it('counts certifications as 2 points and work experience as 3', () => {
+    const { skills } = buildDashboard(
+      {
+        ...empty,
+        skills: [skill(1, 'React'), skill(2, 'SQL')],
+        recordSkills: [
+          { skillId: 1, source: 'certification' },
+          { skillId: 1, source: 'work' },
+          { skillId: 2, source: 'certification' }
+        ]
+      },
+      today
+    )
+    expect(skills.map((s) => [s.demonstrated, s.evidenceCount])).toEqual([
+      [3, 2],
+      [2, 1]
+    ])
   })
 
   it('one project counts towards every linked skill', () => {

@@ -46,7 +46,7 @@ export const childKinds: readonly RecordKind[] = [
   'roadmapItem'
 ]
 
-export const linkKinds = ['goalSkill', 'goalProject', 'projectSkill'] as const
+export const linkKinds = ['goalSkill', 'goalProject', 'projectSkill', 'certificationSkill', 'workSkill'] as const
 export type LinkKind = (typeof linkKinds)[number]
 
 export interface Link {
