@@ -190,6 +190,13 @@ try {
   Glide ($r.X + 36) ($r.Y + 36); Wait 40; Press; Glide 700 420 12; Wait 60; Release
   TypeSafely 'ghi'
   Check 'typing elsewhere survives hovering and dragging' ($box.Text -eq 'abcdefghi') "typed '$($box.Text)'"
+
+  # The global shortcuts work from another app, and do not type into it.
+  TypeSafely '^%+s'; Wait 500
+  Check 'Ctrl+Alt+Shift+S hides the widget' (-not [W]::IsWindowVisible($widget))
+  TypeSafely '^%+s'; Wait 500
+  Check 'Ctrl+Alt+Shift+S shows it again' ([W]::IsWindowVisible($widget))
+  Check 'shortcuts do not type into the other app' ($box.Text -eq 'abcdefghi') "text '$($box.Text)'"
   Glide 300 600; Wait 500
   $r = Rect $widget
 

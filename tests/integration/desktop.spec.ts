@@ -126,6 +126,31 @@ test.describe('widget settings', () => {
   })
 })
 
+test.describe('shortcuts', () => {
+  test('are registered, and released when turned off', async () => {
+    h = await Harness.launch()
+    const registered = () =>
+      h.app.evaluate(({ globalShortcut }) => [
+        globalShortcut.isRegistered('Control+Alt+Shift+S'),
+        globalShortcut.isRegistered('Control+Alt+Shift+O')
+      ])
+    expect(await registered()).toEqual([true, true])
+    const page = await openApp()
+    await setOption(page, 'Keyboard shortcuts (Ctrl+Alt+Shift+S, Ctrl+Alt+Shift+O)', 'off')
+    expect(await registered()).toEqual([false, false])
+  })
+
+  test('the tray hides and shows the widget, and it returns to its spot', async () => {
+    h = await Harness.launch()
+    await h.dragWidgetTo(500, 400)
+    await h.clickTrayItem('Hide widget')
+    await expect.poll(() => h.visible(WIDGET)).toBe(false)
+    await h.clickTrayItem('Show widget')
+    await expect.poll(() => h.visible(WIDGET)).toBe(true)
+    expect((await h.state(WIDGET))?.bounds).toMatchObject({ x: 464, y: 364 })
+  })
+})
+
 test.describe('notifications', () => {
   test('a deadline tomorrow is shown once', async () => {
     h = await Harness.launch()
