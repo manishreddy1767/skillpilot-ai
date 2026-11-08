@@ -11,22 +11,10 @@ import { RolesView } from './RolesView'
 import { SettingsView } from './SettingsView'
 import { SkillsView } from './SkillsView'
 import { TasksView } from './TasksView'
+import type { SectionId } from '../../shared/voice-commands'
 import './app.css'
 
-type Section =
-  | 'dashboard'
-  | 'assistant'
-  | 'roles'
-  | 'roadmaps'
-  | 'settings'
-  | 'tasks'
-  | 'skills'
-  | 'goals'
-  | 'projects'
-  | 'profile'
-  | 'education'
-  | 'work'
-  | 'certification'
+type Section = SectionId
 
 const sections: { id: Section; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
@@ -44,14 +32,14 @@ const sections: { id: Section; label: string }[] = [
   { id: 'settings', label: 'Settings' }
 ]
 
-function Screen({ section }: { section: Section }) {
+function Screen({ section, onNavigate }: { section: Section; onNavigate: (section: Section, note: string) => void }) {
   switch (section) {
     case 'dashboard':
       return <DashboardView />
     case 'tasks':
       return <TasksView />
     case 'assistant':
-      return <AssistantView />
+      return <AssistantView onNavigate={onNavigate} />
     case 'roles':
       return <RolesView />
     case 'roadmaps':
@@ -119,6 +107,12 @@ function Screen({ section }: { section: Section }) {
 
 export function App() {
   const [section, setSection] = useState<Section>('dashboard')
+  const [note, setNote] = useState('')
+
+  const go = (next: Section, why = ''): void => {
+    setSection(next)
+    setNote(why)
+  }
 
   return (
     <div className="shell">
@@ -135,14 +129,22 @@ export function App() {
               key={id}
               type="button"
               aria-current={section === id ? 'page' : undefined}
-              onClick={() => setSection(id)}
+              onClick={() => go(id)}
             >
               {label}
             </button>
           ))}
         </nav>
         <main>
-          <Screen section={section} />
+          {note ? (
+            <div className="voice-note" role="status">
+              <span>{note}</span>
+              <button type="button" aria-label="Dismiss" onClick={() => setNote('')}>
+                ×
+              </button>
+            </div>
+          ) : null}
+          <Screen section={section} onNavigate={go} />
         </main>
       </div>
     </div>

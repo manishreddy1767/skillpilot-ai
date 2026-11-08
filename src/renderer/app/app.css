@@ -710,3 +710,83 @@ form .fields:first-child {
     animation: none !important;
   }
 }
+
+/* The chat input bar: message, microphone, and Send in one row. */
+.composer-label {
+  display: block;
+  margin-bottom: 4px;
+  color: #94a3b8;
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 8px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #111c33;
+}
+
+.composer.listening {
+  border-color: #f87171;
+}
+
+.composer textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  border: none;
+  background: transparent;
+  padding: 6px;
+}
+
+button.mic {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+button.mic[aria-pressed='true'] {
+  border-color: #f87171;
+  background: #7f1d1d;
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+
+button.mic:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@keyframes mic-pulse {
+  50% {
+    box-shadow: 0 0 0 6px rgba(248, 113, 113, 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.mic[aria-pressed='true'] {
+    animation: none;
+  }
+}
+
+.voice-state {
+  min-height: 1.5em;
+  margin: 6px 0;
+  color: #94a3b8;
+}
+
+.voice-note {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid #2dd4bf;
+  border-radius: 8px;
+  background: #0f2e2b;
+}
