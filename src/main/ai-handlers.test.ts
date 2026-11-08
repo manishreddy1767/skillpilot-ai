@@ -193,6 +193,19 @@ describe('gap analysis', () => {
   })
 })
 
+describe('project ideas', () => {
+  it('needs AI to be available', async () => {
+    expect((await setup().h.suggestProjects()).ok).toBe(false)
+  })
+
+  it('proposes projects when ready', async () => {
+    const s = setup({ projects: [{ name: 'Shop', description: '', technologies: '', skills: [] }] })
+    await s.h.saveApiKey('sk-test')
+    s.h.saveSettings(allSettings(s.h, { aiProvider: 'claude' }))
+    expect(await s.h.suggestProjects()).toEqual({ ok: true, value: 1 })
+  })
+})
+
 describe('proposals', () => {
   async function withProposal(payload: unknown = { name: 'Go' }) {
     const s = setup()

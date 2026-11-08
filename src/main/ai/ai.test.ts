@@ -422,6 +422,44 @@ describe('AiService', () => {
   })
 })
 
+describe('project ideas', () => {
+  it('targets missing skills, proposes up to three, and notes skills not yet listed', async () => {
+    const { ai, complete, store, aiStore } = service({
+      projects: [
+        { name: 'Shop', description: 'An online shop', technologies: 'React', skills: ['react', 'Docker'] },
+        { name: 'B', description: '', technologies: '', skills: [] },
+        { name: 'C', description: '', technologies: '', skills: [] },
+        { name: 'D', description: '', technologies: '', skills: [] }
+      ]
+    })
+    const skill = store.saveRecord('skill', null, { name: 'React', category: 'technical', claimedLevel: '0', status: 'learning', notes: '' })!
+    const goal = store.saveRecord('goal', null, { title: 'Job', targetDate: '', priority: '2', status: 'active', description: '' })!
+    store.setLink('goalSkill', goal.id, skill.id, true, 3)
+    await expect(ai.suggestProjects()).resolves.toBe(3)
+    const sent = (complete.mock.calls[0] as unknown as [{ messages: { content: string }[] }])[0]
+    expect(sent.messages[0]?.content).toContain('missing: React')
+    const [first] = aiStore.listProposals()
+    expect(first?.details).toContainEqual({ label: 'Builds your skills', value: 'react' })
+    expect(first?.details).toContainEqual({ label: 'Not in your skills yet', value: 'Docker' })
+    expect(store.listRecords('project')).toEqual([])
+  })
+
+  it('links an accepted project to existing skills only', () => {
+    const { store } = stores()
+    const skill = store.saveRecord('skill', null, { name: 'React', category: 'technical', claimedLevel: '0', status: 'learning', notes: '' })!
+    expect(applyProposal(store, 'addProject', { name: 'Shop', skills: ['REACT', 'Docker'], status: 'planned' }).ok).toBe(true)
+    const [project] = store.listRecords('project')
+    expect(project?.values).toMatchObject({ name: 'Shop', status: 'planned' })
+    expect(store.listLinks('projectSkill', project!.id)).toEqual([{ id: skill.id, level: null }])
+    expect(store.listRecords('skill')).toHaveLength(1)
+  })
+
+  it('refuses an invalid project', () => {
+    const { store } = stores()
+    expect(applyProposal(store, 'addProject', { name: '' }).ok).toBe(false)
+  })
+})
+
 describe('applyProposal', () => {
   it('saves each kind', () => {
     const { store } = stores()

@@ -165,6 +165,8 @@ export function createAiHandlers(deps: AiHandlerDeps) {
           })
         : Promise.resolve(failure('Unknown role.')),
 
+    suggestProjects: (): Promise<Result<number>> => ai((service) => service.suggestProjects()),
+
     suggestTasks: (): Promise<Result<number>> => {
       const stores = getStores()
       const minutes = Number(stores?.aiStore.getSettings()['dailyMinutes'] ?? 60)

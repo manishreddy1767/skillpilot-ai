@@ -1,5 +1,5 @@
 /** Things the AI may suggest. Nothing is applied until the user accepts it. */
-export type ProposalKind = 'addSkill' | 'addGoal' | 'addTask' | 'addRoleRequirement' | 'addRoadmap'
+export type ProposalKind = 'addSkill' | 'addGoal' | 'addTask' | 'addRoleRequirement' | 'addRoadmap' | 'addProject'
 
 export interface Proposal {
   id: number

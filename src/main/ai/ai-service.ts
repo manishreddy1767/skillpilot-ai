@@ -46,6 +46,10 @@ const roadmapSchema = object({
   )
 })
 
+const projectsSchema = object({
+  projects: list(object({ name: text, description: text, technologies: text, skills: list(text) }))
+})
+
 const tasksSchema = object({
   tasks: list(object({ title: text, kind: oneOf('learning', 'practice', 'project', 'other'), minutes: integer }))
 })
@@ -240,6 +244,44 @@ Order skills so prerequisites come first and break large skills into small topic
     ])
   }
 
+  async suggestProjects(): Promise<number> {
+    const { store, today } = this.deps
+    const { skills, goals } = buildDashboard(store.readCareerRows(), today())
+    const missing = new Set(goals.flatMap((goal) => goal.missingSkills))
+    for (const role of store.listRecords('targetRole')) {
+      const requirements = store.listRecords('roleRequirement', role.id).map(({ values }) => ({
+        skillName: values['skillName'] ?? '',
+        requiredLevel: Number(values['requiredLevel']),
+        importance: Number(values['importance'])
+      }))
+      for (const item of analyseGap(requirements, skills).items) if (item.status !== 'met') missing.add(item.skillName)
+    }
+
+    const { projects } = await this.ask<{
+      projects: { name: string; description: string; technologies: string; skills: string[] }[]
+    }>('Project ideas', projectsSchema, 'medium', [
+      {
+        role: 'user',
+        content: `Suggest up to 3 practical portfolio projects that would demonstrate the skills I am missing. missing: ${[...missing].join(', ') || 'none listed, so use my goals'}.
+Each should be achievable by one person. skills lists the skill names the project would demonstrate.`
+      }
+    ])
+
+    const known = new Set(skills.map((skill) => skill.name.toLowerCase()))
+    for (const project of projects.slice(0, 3)) {
+      const linked = project.skills.filter((name) => known.has(name.toLowerCase()))
+      const unknown = project.skills.filter((name) => !known.has(name.toLowerCase()))
+      this.propose('addProject', `Add project: ${project.name}`, { ...project, status: 'planned' }, [
+        ['Project', project.name],
+        ['Description', project.description],
+        ['Technologies', project.technologies],
+        ['Builds your skills', linked.join(', ')],
+        ['Not in your skills yet', unknown.join(', ')]
+      ])
+    }
+    return Math.min(projects.length, 3)
+  }
+
   async suggestTasks(availableMinutes: number): Promise<number> {
     const { tasks } = await this.ask<{ tasks: { title: string; kind: string; minutes: number }[] }>(
       'Daily tasks',
@@ -277,6 +319,17 @@ export function applyProposal(
   if (kind === 'addTask') return save('task', data) ? { ok: true } : invalid
   if (kind === 'addRoleRequirement') {
     return save('roleRequirement', data, Number(data['roleId'])) ? { ok: true } : invalid
+  }
+
+  if (kind === 'addProject') {
+    const project = save('project', data)
+    if (!project) return invalid
+    // Only existing skills are linked, matched without regard to case.
+    const wanted = new Set((Array.isArray(data['skills']) ? data['skills'] : []).map((name) => String(name).toLowerCase()))
+    for (const skill of store.listRecords('skill')) {
+      if (wanted.has((skill.values['name'] ?? '').toLowerCase())) store.setLink('projectSkill', project.id, skill.id, true)
+    }
+    return { ok: true }
   }
 
   const roadmap = save('roadmap', { title: data['title'], startDate: '' })
