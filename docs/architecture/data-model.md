@@ -41,6 +41,7 @@ and can always be traced back to the evidence behind it.
 | Daily work | `task` |
 | AI | `chat_message`, `proposed_change`, `ai_request` |
 | App | `setting`, `notification_log` |
+| History | `progress_snapshot`, one row a day with overall progress and each skill's levels |
 
 `milestone` serves both goals and projects. Skills and evidence link to projects so that finishing a
 project feeds straight into skill and goal progress.
@@ -60,4 +61,6 @@ every number can be explained.
 | Learning streak | Consecutive days with a finished task of any type except Other. Today not being done yet does not break it. See `src/shared/learning.ts`. |
 | Weekly minutes | Minutes of finished tasks since Monday, against the target in Settings |
 | Pace | Minutes finished in the last 14 days against the 14 before: up above 120%, down below 70% |
+| Skills improved | Demonstrated level now against the newest snapshot from before the period. See `src/shared/history.ts`. |
+| Month review | Learning minutes against last month, tasks finished, items completed, and the change in overall progress |
 | Roadmap | Topics done, hours left, the current week from the start date, and how many weeks behind the next topic is |

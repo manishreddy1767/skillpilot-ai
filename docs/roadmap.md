@@ -87,7 +87,7 @@ These milestones cover parts of the original brief that 1.0 left thin, and gaps 
 - Erase everything, with a typed confirmation
 - A backup before any import, restore, or erase
 
-### M9: Progress over time
+### M9: Progress over time, complete
 
 - A daily snapshot of progress, kept locally
 - A progress trend chart and a list of skills that improved
