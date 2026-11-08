@@ -37,6 +37,14 @@ export function dailyBackup(db: DatabaseSync, folder: string, now = new Date()):
   return true
 }
 
+/** A named copy taken before a change that replaces data. */
+export function namedBackup(db: DatabaseSync, folder: string, prefix: string, now = new Date()): string {
+  mkdirSync(folder, { recursive: true })
+  const target = join(folder, `${prefix}-${now.getTime()}.db`)
+  snapshot(db, target)
+  return target
+}
+
 export function preMigrationBackup(
   db: DatabaseSync,
   folder: string,
