@@ -107,6 +107,11 @@ Its minimize-to-widget button hides the window. The widget stays where it was th
 | Click-through mode | Off. When on, clicks pass through the widget. Turned off from the tray. |
 | Start at login | Off. Only the installed app registers this. |
 
+Two global shortcuts work from any app: Ctrl+Alt+Shift+S shows or hides the widget, and Ctrl+Alt+Shift+O opens the
+full window. They can be turned off in Settings. If another app already holds one, it is noted in the
+error log. If Windows is set not to show animations, the panel appears without fading and the
+screens skip their transitions.
+
 These are in Settings, apply at once, and are remembered. The tray's toggles change the same settings.
 
 Hover and drag stay active at every opacity. Click-through is the one mode that disables them, which

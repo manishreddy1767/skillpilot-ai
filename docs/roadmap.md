@@ -106,7 +106,7 @@ These milestones cover parts of the original brief that 1.0 left thin, and gaps 
 - A monthly learning target
 - Assistant suggestions that change existing items, shown with before and after
 
-### M12: Polish and release
+### M12: Polish and release, complete
 
 - Global keyboard shortcuts for the widget and the app
 - A keyboard and accessibility pass
