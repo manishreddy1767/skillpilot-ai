@@ -84,7 +84,12 @@ beforeEach(() => {
     getRecommendation: vi.fn(() => Promise.resolve({ ok: true as const, value: null })),
     getRoleReadiness: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
     completeTask: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
-    rescheduleRoadmap: vi.fn(() => Promise.resolve({ ok: true as const, value: true }))
+    rescheduleRoadmap: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    exportData: vi.fn(() => Promise.resolve({ ok: true as const, value: null as string | null })),
+    importData: vi.fn(() => Promise.resolve({ ok: true as const, value: null as string | null })),
+    listBackups: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
+    restoreBackup: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    eraseAll: vi.fn(() => Promise.resolve({ ok: true as const, value: true }))
   }
   window.skillpilot = api
   // jsdom has no pointer capture.

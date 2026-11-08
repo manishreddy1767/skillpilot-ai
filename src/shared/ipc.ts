@@ -5,6 +5,13 @@ import type { Learning } from './learning'
 import type { Dashboard } from './progress'
 import type { Settings } from './settings'
 
+export interface BackupInfo {
+  name: string
+  kind: 'daily' | 'before upgrade' | 'before change'
+  savedAt: string
+  sizeKb: number
+}
+
 export interface RoleReadiness {
   id: number
   title: string
@@ -51,7 +58,12 @@ export const Channel = {
   GetRecommendation: 'learning:recommendation',
   GetRoleReadiness: 'learning:roles',
   CompleteTask: 'tasks:complete',
-  RescheduleRoadmap: 'roadmaps:reschedule'
+  RescheduleRoadmap: 'roadmaps:reschedule',
+  ExportData: 'data:export',
+  ImportData: 'data:import',
+  ListBackups: 'data:backups',
+  RestoreBackup: 'data:restore',
+  EraseAll: 'data:erase'
 } as const
 
 /** The whole surface renderers can reach. They get nothing else from the main process. */
@@ -107,6 +119,11 @@ export interface SkillPilotApi {
   getRoleReadiness(): Promise<Result<RoleReadiness[]>>
   completeTask(id: number): Promise<Result<boolean>>
   rescheduleRoadmap(id: number): Promise<Result<boolean>>
+  exportData(): Promise<Result<string | null>>
+  importData(): Promise<Result<string | null>>
+  listBackups(): Promise<Result<BackupInfo[]>>
+  restoreBackup(name: string): Promise<Result<boolean>>
+  eraseAll(confirmation: string): Promise<Result<boolean>>
 }
 
 declare global {

@@ -16,6 +16,7 @@ import { defaultSettings, type Settings } from '../shared/settings'
 import { KeyStore } from './ai/key-store'
 import { createAiHandlers } from './ai-handlers'
 import { createDataHandlers } from './data-handlers'
+import { createPortabilityHandlers } from './portability-handlers'
 import { localDate } from './db/backup'
 import { openCareerData } from './db/open-career-data'
 import { installErrorLog, writeErrorLog } from './error-log'
@@ -261,6 +262,36 @@ function start(): void {
   ipcMain.handle(Channel.AcceptProposal, fromApp(aiHandlers.acceptProposal))
   ipcMain.handle(Channel.RejectProposal, fromApp(aiHandlers.rejectProposal))
   ipcMain.handle(Channel.GetAiLog, fromApp(aiHandlers.getAiLog))
+
+  const jsonFilter = [{ name: 'SkillPilot AI export', extensions: ['json'] }]
+  const portability = createPortabilityHandlers({
+    getTransfer: () => data.transfer,
+    chooseSavePath: async (suggested) => {
+      const options = { defaultPath: suggested, filters: jsonFilter }
+      const result = appWindow ? await dialog.showSaveDialog(appWindow, options) : await dialog.showSaveDialog(options)
+      return result.canceled || !result.filePath ? null : result.filePath
+    },
+    chooseOpenPath: async () => {
+      const options = { properties: ['openFile' as const], filters: jsonFilter }
+      const result = appWindow ? await dialog.showOpenDialog(appWindow, options) : await dialog.showOpenDialog(options)
+      return result.canceled ? null : (result.filePaths[0] ?? null)
+    },
+    afterReplace: () => {
+      if (data.aiStore) applySettings(data.aiStore.getSettings())
+      if (!overview.isDestroyed()) overview.webContents.send(Channel.OverviewChanged)
+      // Lets the reply reach the page before it reloads with the new data.
+      setTimeout(() => appWindow?.webContents.reload(), 300)
+    },
+    removeKey: () => keys.remove(),
+    logError: (error) => writeErrorLog(errorLogPath, error),
+    today: () => localDate(new Date())
+  })
+
+  ipcMain.handle(Channel.ExportData, fromApp(portability.exportData))
+  ipcMain.handle(Channel.ImportData, fromApp(portability.importData))
+  ipcMain.handle(Channel.ListBackups, fromApp(portability.listBackups))
+  ipcMain.handle(Channel.RestoreBackup, fromApp(portability.restoreBackup))
+  ipcMain.handle(Channel.EraseAll, fromApp(portability.eraseAll))
   ipcMain.handle(Channel.GetLearning, fromApp(handlers.getLearning))
   ipcMain.handle(Channel.GetRecommendation, fromApp(handlers.getRecommendation))
   ipcMain.handle(Channel.GetRoleReadiness, fromApp(handlers.getRoleReadiness))

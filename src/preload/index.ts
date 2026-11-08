@@ -47,7 +47,12 @@ const api: SkillPilotApi = {
   getRecommendation: () => ipcRenderer.invoke(Channel.GetRecommendation),
   getRoleReadiness: () => ipcRenderer.invoke(Channel.GetRoleReadiness),
   completeTask: (id) => ipcRenderer.invoke(Channel.CompleteTask, id),
-  rescheduleRoadmap: (id) => ipcRenderer.invoke(Channel.RescheduleRoadmap, id)
+  rescheduleRoadmap: (id) => ipcRenderer.invoke(Channel.RescheduleRoadmap, id),
+  exportData: () => ipcRenderer.invoke(Channel.ExportData),
+  importData: () => ipcRenderer.invoke(Channel.ImportData),
+  listBackups: () => ipcRenderer.invoke(Channel.ListBackups),
+  restoreBackup: (name) => ipcRenderer.invoke(Channel.RestoreBackup, name),
+  eraseAll: (confirmation) => ipcRenderer.invoke(Channel.EraseAll, confirmation)
 }
 
 contextBridge.exposeInMainWorld('skillpilot', api)

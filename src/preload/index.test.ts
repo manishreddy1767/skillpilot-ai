@@ -70,7 +70,12 @@ describe('preload bridge', () => {
       'getRecommendation',
       'getRoleReadiness',
       'completeTask',
-      'rescheduleRoadmap'
+      'rescheduleRoadmap',
+      'exportData',
+      'importData',
+      'listBackups',
+      'restoreBackup',
+      'eraseAll'
     ].sort())
   })
 
