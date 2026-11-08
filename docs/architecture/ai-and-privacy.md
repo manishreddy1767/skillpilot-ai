@@ -31,7 +31,7 @@ safety classifier can be retried on another model. Haiku has no such fallback.
 | Roadmap | The AI drafts ordered topics, effort, exercises, and resources, as one suggestion. Everything can be edited. |
 | Daily tasks | The AI suggests tasks that fit the daily time set in Settings. |
 | Project ideas | The AI suggests up to three projects that would demonstrate missing skills. Accepted ideas are linked to skills you already have. |
-| Assistant | Chat that knows your career data, and can suggest skills, goals, and tasks. |
+| Assistant | Chat that knows your career data. It can suggest new skills, goals, and tasks, and changes to existing items: your level for a skill, or marking a roadmap topic done. A change shows the current and new value, and is refused if the item changed after it was suggested. |
 | Resources | Named so they can be searched for. The AI is told not to give links, because invented links are a known failure. |
 
 ## Changes need confirmation

@@ -99,7 +99,7 @@ These milestones cover parts of the original brief that 1.0 left thin, and gaps 
 - Certifications and work experience can count as evidence for skills
 - AI project ideas that target missing skills, linked to those skills when accepted
 
-### M11: Planning
+### M11: Planning, complete
 
 - Task reminders at a set time
 - Repeating tasks
