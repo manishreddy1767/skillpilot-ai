@@ -43,6 +43,8 @@ function setup(overrides: Partial<TrayActions> = {}) {
     isClickThrough: vi.fn(() => false),
     setClickThrough: vi.fn(),
     resetWidgetPosition: vi.fn(),
+    isWidgetVisible: vi.fn(() => true),
+    toggleWidget: vi.fn(),
     quit: vi.fn(),
     ...overrides
   }
@@ -74,6 +76,7 @@ describe('tray', () => {
       'Open SkillPilot AI',
       'Always on top',
       'Click-through mode',
+      'Hide widget',
       'Reset widget position',
       'Quit SkillPilot AI'
     ])
@@ -83,6 +86,14 @@ describe('tray', () => {
     setup({ isAlwaysOnTop: () => false, isClickThrough: () => true })
     expect(item('Always on top').checked).toBe(false)
     expect(item('Click-through mode').checked).toBe(true)
+  })
+
+  it('hides and shows the widget, naming the action by its state', () => {
+    let visible = true
+    const actions = setup({ isWidgetVisible: () => visible, toggleWidget: vi.fn(() => void (visible = !visible)) })
+    item('Hide widget').click?.({ checked: false })
+    expect(actions.toggleWidget).toHaveBeenCalledOnce()
+    expect(item('Show widget')).toBeDefined()
   })
 
   it('resets the widget position from the menu', () => {
@@ -100,6 +111,8 @@ describe('tray', () => {
       isClickThrough: () => false,
       setClickThrough: vi.fn(),
       resetWidgetPosition: vi.fn(),
+    isWidgetVisible: vi.fn(() => true),
+    toggleWidget: vi.fn(),
       quit: vi.fn()
     }
     const { refresh } = createTray(actions)

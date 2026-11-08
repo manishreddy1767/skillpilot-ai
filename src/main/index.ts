@@ -4,6 +4,8 @@ import {
   Notification,
   app,
   dialog,
+  globalShortcut,
+  systemPreferences,
   ipcMain,
   powerMonitor,
   safeStorage,
@@ -26,6 +28,7 @@ import { HoverController } from './logic/hover-controller'
 import { isPoint } from './logic/validation'
 import { WidgetPlacement } from './logic/widget-placement'
 import { checkNotifications } from './notifier'
+import { applyShortcuts } from './shortcuts'
 import { loadPosition, savePosition } from './position-store'
 import { createTray } from './tray'
 import { APP_WINDOW_SIZE, createAppWindow } from './windows/app-window'
@@ -93,6 +96,12 @@ function start(): void {
 
   const fadeInOverview = (): void => {
     stopFade()
+    // Windows' "show animations" setting is respected: the panel then simply appears.
+    if (systemPreferences.getAnimationSettings().prefersReducedMotion) {
+      overview.setOpacity(1)
+      overview.showInactive()
+      return
+    }
     let opacity = 0
     overview.setOpacity(opacity)
     overview.showInactive()
@@ -341,9 +350,25 @@ function start(): void {
   powerMonitor.on('resume', refitWidget)
   app.on('second-instance', openApp)
 
+  // The tray names Hide or Show by the widget's state, which changes after the menu is first built.
+  widget.on('show', () => refreshTray())
+  widget.on('hide', () => refreshTray())
+
   const setAlwaysOnTop = (enabled: boolean): void => {
     widget.setAlwaysOnTop(enabled)
     overview.setAlwaysOnTop(enabled)
+  }
+
+  /** For when the widget is in the way, or cannot be found. The shortcut or the tray brings it back. */
+  const toggleWidget = (): void => {
+    if (widget.isVisible()) {
+      hover.close()
+      widget.hide()
+    } else {
+      moveWidget(placement.target())
+      widget.showInactive()
+    }
+    refreshTray()
   }
 
   const { tray, refresh: refreshTray } = createTray({
@@ -358,6 +383,8 @@ function start(): void {
       setClickThrough(enabled)
       data.aiStore?.saveSettings({ clickThrough: enabled ? 'on' : 'off' })
     },
+    isWidgetVisible: () => widget.isVisible(),
+    toggleWidget,
     resetWidgetPosition: () => {
       hover.close()
       moveWidget(placement.reset())
@@ -378,6 +405,8 @@ function start(): void {
     setClickThrough(settings['clickThrough'] === 'on')
     // A development build would register the bare Electron program, so only the installed app does this.
     if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: settings['startAtLogin'] === 'on' })
+    const taken = applyShortcuts(globalShortcut, settings['shortcuts'] === 'on', { toggleWidget, openApp })
+    if (taken.length) writeErrorLog(errorLogPath, new Error(`Shortcuts already used by another app: ${taken.join(', ')}`))
     refreshTray()
   }
 
@@ -423,7 +452,10 @@ function start(): void {
     tray.destroy()
   })
 
-  app.once('will-quit', () => data.close())
+  app.once('will-quit', () => {
+    globalShortcut.unregisterAll()
+    data.close()
+  })
 }
 
 if (!app.requestSingleInstanceLock()) {

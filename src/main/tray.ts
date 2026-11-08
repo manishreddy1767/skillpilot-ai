@@ -8,6 +8,8 @@ export interface TrayActions {
   isClickThrough(): boolean
   setClickThrough(enabled: boolean): void
   resetWidgetPosition(): void
+  isWidgetVisible(): boolean
+  toggleWidget(): void
   quit(): void
 }
 
@@ -39,6 +41,14 @@ export function createTray(actions: TrayActions): { tray: Tray; refresh: () => v
           checked: actions.isClickThrough(),
           click: (item) => {
             actions.setClickThrough(item.checked)
+            refresh()
+          }
+        },
+        {
+          label: actions.isWidgetVisible() ? 'Hide widget' : 'Show widget',
+          accelerator: 'Control+Alt+Shift+S',
+          click: () => {
+            actions.toggleWidget()
             refresh()
           }
         },
