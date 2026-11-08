@@ -1,4 +1,5 @@
 import { analyseGap } from '../shared/gap'
+import { lastWeekSummary } from '../shared/history'
 import { buildLearning } from '../shared/learning'
 import { dueNotices, type Notice } from '../shared/notifications'
 import { buildDashboard } from '../shared/progress'
@@ -32,16 +33,18 @@ export function checkNotifications({ store, aiStore, today, time, recommendation
     }
   })
 
+  const learningRows = store.readLearningRows()
   const notices = dueNotices({
     settings,
     today,
     time,
     dashboard,
-    learning: buildLearning(store.readLearningRows(), today, 0),
+    learning: buildLearning(learningRows, today, 0),
     roles,
     recommendation,
     alreadySent: aiStore.notifiedKeys(),
-    sentToday: aiStore.notifiedCount(today)
+    sentToday: aiStore.notifiedCount(today),
+    lastWeek: lastWeekSummary(learningRows.tasks, today)
   })
 
   for (const notice of notices) {

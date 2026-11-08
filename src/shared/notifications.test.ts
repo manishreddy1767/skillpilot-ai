@@ -37,6 +37,7 @@ const input = (over: Partial<NoticeInput> = {}): NoticeInput => ({
   recommendation: null,
   alreadySent: new Set(),
   sentToday: 0,
+  lastWeek: { minutes: 0, tasks: 0 },
   ...over
 })
 
@@ -126,6 +127,18 @@ describe('dueNotices', () => {
     expect(dueNotices(input(over))).toHaveLength(1)
     const settings = { ...defaultSettings, notifyDailyLimit: '10', [key]: 'off' }
     expect(dueNotices(input({ ...over, settings }))).toEqual([])
+  })
+
+  it('sends a weekly summary on Monday morning only', () => {
+    const lastWeek = { minutes: 90, tasks: 3 }
+    expect(dueNotices(input({ lastWeek, today: '2026-11-09', time: '09:30' }))[0]?.body).toBe(
+      'Last week you finished 3 tasks and learned for 90 minutes.'
+    )
+    expect(titles({ lastWeek, today: '2026-11-09', time: '08:59' })).toEqual([])
+    expect(titles({ lastWeek, today: '2026-11-10', time: '09:30' })).toEqual([])
+    expect(titles({ lastWeek: { minutes: 0, tasks: 0 }, today: '2026-11-09', time: '09:30' })).toEqual([])
+    const off = { ...defaultSettings, notifyDailyLimit: '10', notifySummary: 'off' }
+    expect(titles({ lastWeek, today: '2026-11-09', time: '09:30', settings: off })).toEqual([])
   })
 
   it('stays quiet during quiet hours', () => {

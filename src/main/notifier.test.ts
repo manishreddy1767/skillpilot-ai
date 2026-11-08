@@ -12,7 +12,7 @@ function setup() {
   open.push(db)
   db.exec('PRAGMA foreign_keys = ON')
   migrate(db, () => undefined)
-  return { store: new CareerStore(db), aiStore: new AiStore(db), send: vi.fn() }
+  return { db, store: new CareerStore(db), aiStore: new AiStore(db), send: vi.fn() }
 }
 
 afterEach(() => {
@@ -47,6 +47,19 @@ describe('checkNotifications', () => {
     s.store.saveRecord('skill', null, { name: 'CSS', category: 'technical', claimedLevel: '2', status: 'using', notes: '' })
     checkNotifications({ ...s, ...at })
     expect(s.send.mock.calls[0]?.[0].body).toContain('HTML')
+  })
+
+  it('sends the weekly summary on a Monday, from tasks finished the week before', () => {
+    const { db, ...s } = setup()
+    s.store.saveRecord('task', null, { title: 'Read', kind: 'learning', dueDate: '', minutes: '40', status: 'done' })
+    // The trigger stamps the real date, so the task is moved into the week before 9 November.
+    db.exec("UPDATE task SET completed_on = '2026-11-04'")
+    checkNotifications({ ...s, today: '2026-11-09', time: '10:00', recommendation: null })
+    expect(s.send).toHaveBeenCalledWith({
+      key: 'summary:2026-11-09',
+      title: 'Your week in review',
+      body: 'Last week you finished 1 task and learned for 40 minutes.'
+    })
   })
 
   it('respects saved settings', () => {

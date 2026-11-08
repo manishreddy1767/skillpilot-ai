@@ -80,6 +80,7 @@ export const notificationSettingFields: FieldDef[] = [
   toggle('notifyGaps', 'Missing skills for your target role'),
   toggle('notifySlowdown', 'Learning has slowed down'),
   toggle('notifyNextStep', 'A next step is available'),
+  toggle('notifySummary', 'Weekly summary on Mondays'),
   {
     key: 'notifyDailyLimit',
     column: 'notifyDailyLimit',

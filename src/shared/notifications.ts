@@ -1,3 +1,4 @@
+import type { WeekSummary } from './history'
 import { addDays, daysBetween, type Learning } from './learning'
 import type { Dashboard } from './progress'
 import type { Settings } from './settings'
@@ -20,9 +21,11 @@ export interface NoticeInput {
   recommendation: string | null
   alreadySent: Set<string>
   sentToday: number
+  lastWeek: WeekSummary
 }
 
 const EVENING = '18:00'
+const SUMMARY_TIME = '09:00'
 const DEADLINE_DAYS = 3
 
 /** Handles a quiet period that runs past midnight. Equal times mean no quiet hours. */
@@ -38,7 +41,7 @@ function mondayOf(date: string): string {
 
 /** The notifications to show now, most important first. */
 export function dueNotices(input: NoticeInput): Notice[] {
-  const { settings, today, time, dashboard, learning, roles, recommendation, alreadySent, sentToday } = input
+  const { settings, today, time, dashboard, learning, roles, recommendation, alreadySent, sentToday, lastWeek } = input
   const quiet = isQuietTime(time, settings['quietStart'] ?? '', settings['quietEnd'] ?? '')
   const room = Number(settings['notifyDailyLimit'] ?? 0) - sentToday
   if (quiet || room <= 0) return []
@@ -69,6 +72,15 @@ export function dueNotices(input: NoticeInput): Notice[] {
       if (date !== today) continue
       notices.push({ key: `achievement:${title}:${date}`, title: 'Well done', body: `${title}.` })
     }
+  }
+
+  const isMonday = new Date(`${today}T00:00:00Z`).getUTCDay() === 1
+  if (on('notifySummary') && isMonday && time >= SUMMARY_TIME && lastWeek.tasks > 0) {
+    notices.push({
+      key: `summary:${today}`,
+      title: 'Your week in review',
+      body: `Last week you finished ${lastWeek.tasks} ${lastWeek.tasks === 1 ? 'task' : 'tasks'} and learned for ${lastWeek.minutes} minutes.`
+    })
   }
 
   if (on('notifySlowdown') && learning.pace === 'down') {
