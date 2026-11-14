@@ -23,6 +23,9 @@ export interface AgentDeps {
 /** Below this, free speech is more often noise than words. Command phrases are trusted more. */
 export const DICTATION_CONFIDENCE = 0.45
 
+/** The loudest a microphone gets, out of 100, when it hears only a quiet room. */
+export const QUIET_PEAK = 2
+
 const EXAMPLES = 'Try "open Chrome", "search for React hooks", "play lofi on YouTube", or "add task read the guide tomorrow".'
 
 const FOLDER_NAMES = {
@@ -39,6 +42,15 @@ const label = (site: string): string => site.charAt(0).toUpperCase() + site.slic
 /** Turns what was heard into an action, does it, and says what happened. */
 export async function respond(heard: Heard, deps: AgentDeps): Promise<VoiceOutcome> {
   const text = heard.text.trim()
+  const unclear = !text || heard.source === 'none' || heard.source === 'rejected' || heard.confidence < DICTATION_CONFIDENCE
+  // A microphone that never got louder than this was not picking up a voice at all.
+  if (unclear && heard.peak !== undefined && heard.peak <= QUIET_PEAK) {
+    return {
+      heard: '',
+      reply:
+        "I couldn't hear you. Your microphone is picking up almost no sound. Check it isn't muted or turned down in Settings > System > Sound > Input, and speak a little closer."
+    }
+  }
   if (!text || heard.source === 'none') {
     return { heard: '', reply: "I didn't hear anything. Press the microphone and speak again." }
   }

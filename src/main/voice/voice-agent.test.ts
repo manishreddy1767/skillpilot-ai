@@ -64,6 +64,32 @@ describe('respond', () => {
     expect(desktop.launchApp).toHaveBeenCalledTimes(2)
   })
 
+  it('says the microphone is too quiet when it picked up almost nothing', async () => {
+    const { deps, desktop } = setup()
+    for (const heard of [
+      { text: '', confidence: 0, source: 'none' as const, peak: 1 },
+      { text: 'in the senate', confidence: 0.03, source: 'dictation' as const, peak: 2 },
+      { text: 'that whispers', confidence: 0.2, source: 'rejected' as const, peak: 0 }
+    ]) {
+      const outcome = await respond(heard, deps)
+      expect(outcome.reply).toContain("I couldn't hear you. Your microphone is picking up almost no sound.")
+      expect(outcome.draft).toBeUndefined()
+    }
+    expect(desktop.launchApp).not.toHaveBeenCalled()
+  })
+
+  it('a clear command still works with a soft voice, and silence from a recording is just silence', async () => {
+    const { deps, desktop } = setup()
+    await respond({ text: 'open chrome', confidence: 0.8, source: 'command', peak: 2 }, deps)
+    expect(desktop.launchApp).toHaveBeenCalled()
+    await expect(respond({ text: '', confidence: 0, source: 'none' }, deps)).resolves.toMatchObject({
+      reply: "I didn't hear anything. Press the microphone and speak again."
+    })
+    await expect(respond({ text: '', confidence: 0, source: 'none', peak: 30 }, deps)).resolves.toMatchObject({
+      reply: "I didn't hear anything. Press the microphone and speak again."
+    })
+  })
+
   it('only types it out when spoken requests should wait', async () => {
     const { deps, desktop } = setup({ actNow: () => false })
     await expect(respond(command('open chrome'), deps)).resolves.toMatchObject({ draft: 'open chrome' })

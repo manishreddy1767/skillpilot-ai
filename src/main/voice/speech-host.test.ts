@@ -94,6 +94,22 @@ describe('SpeechHost', () => {
     host.dispose()
   })
 
+  it('passes on how loud the microphone got, only when it reported a level', async () => {
+    const { child, host } = setup()
+    const first = host.listen('en-US', events())
+    say(child, { type: 'result', id: 1, text: '', confidence: 0, source: 'none', peak: 1 })
+    await expect(first).resolves.toEqual({ text: '', confidence: 0, source: 'none', peak: 1 })
+    const second = host.listen('en-US', events())
+    say(child, { type: 'result', id: 2, text: '', confidence: 0, source: 'none', peak: null })
+    await expect(second).resolves.toEqual({ text: '', confidence: 0, source: 'none' })
+    host.dispose()
+  })
+
+  it('checks the microphone is not muted before listening to it, but not for a recording', () => {
+    expect(HOST_SCRIPT).toContain('[SkillPilotMicrophone]::Muted()')
+    expect(HOST_SCRIPT).toContain("if ($parts.Length -le 3 -and (Test-Muted))")
+  })
+
   it('passes on what the engine was unsure of, marked as rejected', async () => {
     const { child, host } = setup()
     const heard = host.listen('en-US', events())

@@ -13,6 +13,8 @@ export interface Heard {
   text: string
   confidence: number
   source: 'command' | 'dictation' | 'rejected' | 'none'
+  /** The loudest the microphone got, from 0 to 100, when listening to a real microphone. */
+  peak?: number
 }
 
 export interface ListenEvents {
@@ -42,6 +44,35 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Speech
 function Send($value) { [Console]::Out.WriteLine(($value | ConvertTo-Json -Compress)); [Console]::Out.Flush() }
 function FromBase64($text) { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($text)) }
+
+# Reads whether Windows has the default microphone muted, through the Core Audio API.
+try {
+  Add-Type -TypeDefinition @'
+using System; using System.Runtime.InteropServices;
+[Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioEndpointVolume { int f(); int g(); int GetChannelCount(out int c); int SetMasterVolumeLevel(float l, Guid g); int SetMasterVolumeLevelScalar(float l, Guid g); int GetMasterVolumeLevel(out float l); int GetMasterVolumeLevelScalar(out float l); int a(); int b(); int c(); int d(); int e(); int SetMute(bool m, Guid g); int GetMute(out bool m); }
+[Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDevice { int Activate(ref Guid id, int ctx, IntPtr p, [MarshalAs(UnmanagedType.IUnknown)] out object o); }
+[Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDeviceEnumerator { int EnumAudioEndpoints(int f, int s, out IntPtr d); int GetDefaultAudioEndpoint(int flow, int role, out IMMDevice d); }
+[ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumerator {}
+public static class SkillPilotMicrophone {
+  public static bool Muted() {
+    var devices = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+    IMMDevice device;
+    if (devices.GetDefaultAudioEndpoint(1, 0, out device) != 0) return false;
+    var id = typeof(IAudioEndpointVolume).GUID;
+    object volume;
+    device.Activate(ref id, 23, IntPtr.Zero, out volume);
+    bool muted;
+    ((IAudioEndpointVolume)volume).GetMute(out muted);
+    return muted;
+  }
+}
+'@
+  $script:canCheckMute = $true
+} catch { $script:canCheckMute = $false }
+function Test-Muted { if (-not $script:canCheckMute) { return $false }; try { return [SkillPilotMicrophone]::Muted() } catch { return $false } }
 function Choices([string[]]$words) {
   $choices = New-Object System.Speech.Recognition.Choices
   foreach ($word in $words) { if ($word) { $choices.Add($word) } }
@@ -66,6 +97,8 @@ $script:busy = $false
 $script:stale = $false
 $script:queued = $null
 $script:listenId = 0
+$script:peak = 0
+$script:levels = 0
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
 
 function Get-Engine($language) {
@@ -127,6 +160,12 @@ function Reset-Engines {
 function Start-Listening($parts) {
   if ($script:stale) { Reset-Engines; $script:stale = $false }
   $script:listenId = [int]$parts[1]
+  if ($parts.Length -le 3 -and (Test-Muted)) {
+    Send @{ type = 'error'; id = $script:listenId; message = 'The microphone is muted in Windows.' }
+    return
+  }
+  $script:peak = 0
+  $script:levels = 0
   $script:engine = Get-Engine $parts[2]
   if ($parts.Length -gt 3) { $script:engine.SetInputToWaveFile((FromBase64 $parts[3])) } else { $script:engine.SetInputToDefaultAudioDevice() }
   $script:rejected = $null
@@ -159,6 +198,8 @@ function Handle-Event($item) {
   $info = $item.SourceEventArgs
   if ($name -eq 'level') {
     $now = [DateTime]::Now
+    $script:levels++
+    if ($info.AudioLevel -gt $script:peak) { $script:peak = $info.AudioLevel }
     if (($now - $script:lastLevel).TotalMilliseconds -ge 90) { $script:lastLevel = $now; Send @{ type = 'level'; id = $script:listenId; value = $info.AudioLevel } }
   } elseif ($name -eq 'rejected') {
     if ($info.Result -and $info.Result.Text) { $script:rejected = @{ text = $info.Result.Text; confidence = $info.Result.Confidence } }
@@ -168,9 +209,9 @@ function Handle-Event($item) {
     # The app already moved on from a cancelled listen, so it gets no answer.
     if ($info.Cancelled) { }
     elseif ($info.Error) { Send @{ type = 'error'; id = $script:listenId; message = $info.Error.Message } }
-    elseif ($info.Result) { Send @{ type = 'result'; id = $script:listenId; text = $info.Result.Text; confidence = $info.Result.Confidence; source = $info.Result.Grammar.Name } }
-    elseif ($script:rejected) { Send @{ type = 'result'; id = $script:listenId; text = $script:rejected.text; confidence = $script:rejected.confidence; source = 'rejected' } }
-    else { Send @{ type = 'result'; id = $script:listenId; text = ''; confidence = 0; source = 'none' } }
+    elseif ($info.Result) { Send @{ type = 'result'; id = $script:listenId; text = $info.Result.Text; confidence = $info.Result.Confidence; source = $info.Result.Grammar.Name; peak = $(if ($script:levels) { $script:peak } else { $null }) } }
+    elseif ($script:rejected) { Send @{ type = 'result'; id = $script:listenId; text = $script:rejected.text; confidence = $script:rejected.confidence; source = 'rejected'; peak = $(if ($script:levels) { $script:peak } else { $null }) } }
+    else { Send @{ type = 'result'; id = $script:listenId; text = ''; confidence = 0; source = 'none'; peak = $(if ($script:levels) { $script:peak } else { $null }) } }
     if ($script:queued) {
       $next = $script:queued
       $script:queued = $null
@@ -201,7 +242,7 @@ type HostMessage =
   | { type: 'started' }
   | { type: 'ready'; id: number }
   | { type: 'level'; id: number; value: number }
-  | { type: 'result'; id: number; text: string; confidence: number; source: string }
+  | { type: 'result'; id: number; text: string; confidence: number; source: string; peak?: number | null }
   | { type: 'error'; id?: number; message: string }
   | { type: 'warning'; message: string }
 
@@ -340,7 +381,8 @@ export class SpeechHost {
         this.finish({
           text: typeof message.text === 'string' ? message.text.trim() : '',
           confidence: typeof message.confidence === 'number' ? message.confidence : 0,
-          source: asSource(message.source)
+          source: asSource(message.source),
+          ...(typeof message.peak === 'number' ? { peak: message.peak } : {})
         })
         return
       case 'error':

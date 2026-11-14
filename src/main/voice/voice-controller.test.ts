@@ -100,6 +100,7 @@ describe('VoiceController', () => {
   })
 
   it.each([
+    ['The microphone is muted in Windows.', 'Your microphone is muted in Windows. Unmute it with the microphone key'],
     ['No audio input device found', 'No microphone could be used'],
     ['Something else', 'English speech language is installed']
   ])('explains "%s" plainly, logs it, and shows it', async (detail, plain) => {

@@ -25,6 +25,9 @@ const isLanguage = (value: string): value is VoiceLanguage => (VOICE_LANGUAGES a
 
 const plainError = (error: unknown): string => {
   const detail = error instanceof Error ? error.message : ''
+  if (/muted/i.test(detail)) {
+    return 'Your microphone is muted in Windows. Unmute it with the microphone key on your keyboard, or in Settings > System > Sound > Input, then try again.'
+  }
   return /audio|device|microphone/i.test(detail)
     ? 'No microphone could be used. Check one is connected, and that desktop apps may use it in Windows privacy settings.'
     : 'Windows speech recognition did not work. Check that an English speech language is installed in Windows settings.'
