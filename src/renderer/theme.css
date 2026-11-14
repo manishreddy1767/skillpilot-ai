@@ -1,0 +1,34 @@
+/*
+ * SkillPilot's look: a dark gunmetal console with a dim cyan glow, like a helpful robot's panel.
+ * Every colour lives here. The contrast test reads this file, so any change is checked against WCAG AA.
+ */
+:root {
+  /* Surfaces, darkest first. */
+  --bg: #07090c;
+  --panel: #0d1218;
+  --panel-2: #121921;
+  --line: #2a3644;
+
+  /* Text. Soft greys rather than white, so nothing glares. */
+  --text: #c4cfda;
+  --text-2: #a3b1bf;
+  --muted: #8292a3;
+
+  /* The robot's glow. Used sparingly: active items, headings, and status. */
+  --accent: #5fd3e6;
+  --accent-text: #8fe3f0;
+  --accent-bg: #0b252b;
+  --fill: #2a8fa1;
+  --grid: rgb(95 211 230 / 3.5%);
+
+  /* Other signals. */
+  --violet: #8b7ee0;
+  --danger: #e07070;
+  --danger-bg: #3d1518;
+  --error: #f3a3a3;
+  --user-bubble: #0f2a30;
+
+  --font-ui: 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+  --font-machine: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
+  --cut: 8px;
+}

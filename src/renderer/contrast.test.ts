@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { robotColors } from '../shared/robot-icon'
 
 /** WCAG relative luminance and contrast ratio. */
 function luminance(hex: string): number {
@@ -14,22 +17,38 @@ function contrast(a: string, b: string): number {
   return (light! + 0.05) / (dark! + 0.05)
 }
 
-const surfaces = { page: '#0f172a', card: '#1e293b' }
+/** The colours in theme.css, so these checks follow any change to it. */
+const theme = Object.fromEntries(
+  [...readFileSync(join(__dirname, 'theme.css'), 'utf8').matchAll(/--([\w-]+):\s*(#[0-9a-f]{6});/gi)].map(([, name, value]) => [
+    name!,
+    value!
+  ])
+) as Record<string, string>
+const t = (name: string): string => {
+  const value = theme[name]
+  if (!value) throw new Error(`theme.css has no --${name}`)
+  return value
+}
 
 // Every text colour used in the app, on each surface it appears on.
 const textPairs: [string, string, string][] = [
-  ['body text', '#e2e8f0', surfaces.page],
-  ['body text on cards', '#e2e8f0', surfaces.card],
-  ['secondary text', '#cbd5e1', surfaces.card],
-  ['muted text', '#94a3b8', surfaces.page],
-  ['muted text on cards', '#94a3b8', surfaces.card],
-  ['headings in teal', '#5eead4', surfaces.card],
-  ['active navigation', '#5eead4', surfaces.card],
-  ['primary button text', '#0f172a', '#2dd4bf'],
-  ['danger button text', '#e2e8f0', '#7f1d1d'],
-  ['error text', '#fca5a5', surfaces.page],
-  ['error text on cards', '#fca5a5', surfaces.card],
-  ['user chat bubble', '#e2e8f0', '#134e4a']
+  ['body text', 'text', 'bg'],
+  ['body text on panels', 'text', 'panel'],
+  ['body text in inputs', 'text', 'panel-2'],
+  ['secondary text', 'text-2', 'panel'],
+  ['muted text', 'muted', 'bg'],
+  ['muted text on panels', 'muted', 'panel'],
+  ['muted text in the input bar', 'muted', 'panel-2'],
+  ['headings and status in cyan', 'accent', 'bg'],
+  ['cyan on panels', 'accent', 'panel'],
+  ['primary button text', 'accent-text', 'accent-bg'],
+  ['active navigation', 'accent-text', 'accent-bg'],
+  ['primary button text on hover', 'accent-text', 'user-bubble'],
+  ['danger button text', 'text', 'danger-bg'],
+  ['error text', 'error', 'bg'],
+  ['error text on panels', 'error', 'panel'],
+  ['user chat bubble', 'text', 'user-bubble'],
+  ['voice note', 'text', 'accent-bg']
 ]
 
 describe('colour contrast', () => {
@@ -39,14 +58,30 @@ describe('colour contrast', () => {
   })
 
   it.each(textPairs)('%s meets WCAG AA for normal text', (_name, text, surface) => {
-    expect(contrast(text, surface)).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(t(text), t(surface))).toBeGreaterThanOrEqual(4.5)
   })
 
   it.each([
-    ['input borders', '#334155', surfaces.page, 1.4],
-    ['chart bars', '#0d9488', surfaces.card, 3],
-    ['focus ring', '#5eead4', surfaces.page, 3]
+    ['input and card borders', 'line', 'bg', 1.4],
+    ['chart bars and card corners', 'fill', 'panel', 3],
+    ['claimed level bars', 'violet', 'panel', 3],
+    ['focus ring', 'accent', 'bg', 3],
+    ['danger borders', 'danger', 'bg', 3]
   ])('%s are visible enough against the surface', (_name, colour, surface, minimum) => {
-    expect(contrast(colour, surface)).toBeGreaterThanOrEqual(minimum)
+    expect(contrast(t(colour), t(surface))).toBeGreaterThanOrEqual(minimum)
+  })
+
+  it('stays dark, so nothing glares', () => {
+    for (const surface of ['bg', 'panel', 'panel-2', 'accent-bg', 'user-bubble']) {
+      expect(luminance(t(surface))).toBeLessThan(0.03)
+    }
+    // Soft grey text rather than white.
+    expect(luminance(t('text'))).toBeLessThan(0.7)
+  })
+
+  it('the robot stands out from its base', () => {
+    expect(contrast(robotColors.light, robotColors.base)).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(robotColors.metal, robotColors.base)).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(robotColors.ring, robotColors.base)).toBeGreaterThanOrEqual(3)
   })
 })
