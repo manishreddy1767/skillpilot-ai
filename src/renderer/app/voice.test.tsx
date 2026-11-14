@@ -204,11 +204,11 @@ describe('the microphone in the chat bar', () => {
   it('"open my skills" switches screens and says why', async () => {
     heard('open my skills')
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Assistant', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Assistant' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Speak a message or command' }))
     expect(await screen.findByRole('heading', { name: 'Skills' })).toBeTruthy()
     expect(screen.getByText('Heard "open my skills". Opened Skills.')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Skills', exact: true }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByRole('button', { name: 'Skills' }).getAttribute('aria-current')).toBe('page')
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(screen.queryByText(/Opened Skills/)).toBeNull()
   })
