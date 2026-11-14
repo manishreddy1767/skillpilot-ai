@@ -1,3 +1,4 @@
+import type { Browser } from './desktop-commands'
 import { addDays } from './learning'
 
 /** The screens a spoken command can open. */
@@ -24,6 +25,13 @@ export type VoiceIntent =
   | { kind: 'completeTask'; query: string }
   | { kind: 'whatsDue' }
   | { kind: 'minimize' }
+  /** Open an app, website, or folder outside SkillPilot. */
+  | { kind: 'open'; target: string; browser?: Browser }
+  | { kind: 'search'; query: string; site: 'google' | 'youtube'; browser?: Browser }
+  | { kind: 'volume'; change: 'up' | 'down' | 'mute' }
+  | { kind: 'lock' }
+  | { kind: 'time' }
+  | { kind: 'date' }
   | { kind: 'ask'; text: string }
 
 const SPOKEN_SECTIONS: [string[], SectionId, string][] = [
@@ -40,6 +48,38 @@ const SPOKEN_SECTIONS: [string[], SectionId, string][] = [
   [['experience', 'work experience', 'work'], 'work', 'Experience'],
   [['certifications', 'certification', 'certificates'], 'certification', 'Certifications'],
   [['settings', 'preferences'], 'settings', 'Settings']
+]
+
+/** Every name a SkillPilot section can be opened by. */
+export const SPOKEN_SECTION_NAMES = SPOKEN_SECTIONS.flatMap(([names]) => names)
+
+/** Whole commands with nothing to fill in, so the speech engine can listen for them exactly. */
+export const FIXED_PHRASES = [
+  "what's due today",
+  'what is due today',
+  'what should i do today',
+  'what should i learn today',
+  'read my tasks',
+  'list my tasks',
+  'minimise',
+  'hide the app',
+  'volume up',
+  'volume down',
+  'turn the volume up',
+  'turn the volume down',
+  'increase volume',
+  'decrease volume',
+  'mute',
+  'unmute',
+  'lock my computer',
+  'lock my laptop',
+  'lock the screen',
+  'what time is it',
+  "what's the time",
+  'what is the time',
+  "what's the date today",
+  'what is the date today',
+  'what day is it'
 ]
 
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
@@ -84,6 +124,13 @@ export function splitDay(phrase: string, today: string): { rest: string; date: s
   return { rest: phrase, date: today }
 }
 
+/** Splits "in chrome", "on edge", or "using firefox" from the end of a phrase. */
+export function splitBrowser(phrase: string): { rest: string; browser?: Browser } {
+  const match = phrase.match(/^(.*?)\s*(?:in|on|using|with) (?:google )?(chrome|edge|firefox)(?: browser)?$/)
+  if (!match) return { rest: phrase }
+  return { rest: match[1]!.trim(), browser: match[2] as Browser }
+}
+
 const capitalise = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1)
 
 /** Turns recognised speech into one action. Anything unrecognised is passed on as a question. */
@@ -94,6 +141,43 @@ export function parseVoiceCommand(spoken: string, today: string): VoiceIntent {
   if (open) {
     const found = SPOKEN_SECTIONS.find(([names]) => names.includes(open[1]!))
     if (found) return { kind: 'navigate', section: found[1], label: found[2] }
+  }
+
+  const time = text.match(/^(?:what(?:'s| is) the time(?: now)?|what time is it(?: now)?|tell me the time)$/)
+  if (time) return { kind: 'time' }
+  if (/^(?:what(?:'s| is) (?:the date|today's date)(?: today)?|what day is (?:it|today)|what is today)$/.test(text)) {
+    return { kind: 'date' }
+  }
+
+  const volume = text.match(
+    /^(?:turn (?:the )?volume (up|down)|volume (up|down)|(increase|raise|decrease|lower|reduce) (?:the )?volume|(mute|unmute)(?: the)?(?: sound| volume| audio)?)$/
+  )
+  if (volume) {
+    const word = volume[1] ?? volume[2] ?? volume[3] ?? volume[4]!
+    const change = ['up', 'increase', 'raise'].includes(word) ? 'up' : ['mute', 'unmute'].includes(word) ? 'mute' : 'down'
+    return { kind: 'volume', change }
+  }
+  if (/^lock (?:my |the )?(?:computer|pc|laptop|screen|system)$/.test(text)) return { kind: 'lock' }
+
+  const search =
+    text.match(/^(?:search|google|look up)(?: for)?\s+(.+)$/) ?? text.match(/^(play|watch)\s+(.+)$/)
+  if (search) {
+    let rest = search.length === 3 ? search[2]! : search[1]!
+    const { rest: withoutBrowser, browser } = splitBrowser(rest)
+    rest = withoutBrowser
+    let site: 'google' | 'youtube' = search.length === 3 ? 'youtube' : 'google'
+    const on = rest.match(/^(.+?)\s+(?:on|in|from) (youtube|google)$/)
+    if (on) {
+      rest = on[1]!
+      site = on[2] as 'google' | 'youtube'
+    }
+    if (rest) return { kind: 'search', query: rest, site, ...(browser ? { browser } : {}) }
+  }
+
+  const launch = text.match(/^(?:open|launch|start|run|go to)\s+(?:up\s+)?(?:the\s+|my\s+)?(.+)$/)
+  if (launch && !/^(?:a |the )?(?:task|tasks|skill|goal)/.test(launch[1]!)) {
+    const { rest, browser } = splitBrowser(launch[1]!)
+    if (rest) return { kind: 'open', target: rest, ...(browser ? { browser } : {}) }
   }
 
   if (/^(?:minimi[sz]e|hide (?:the )?(?:app|window)|close (?:the )?(?:app|window))$/.test(text)) return { kind: 'minimize' }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchTitle, normalise, parseVoiceCommand, splitDay } from './voice-commands'
+import { FIXED_PHRASES, SPOKEN_SECTION_NAMES, matchTitle, normalise, parseVoiceCommand, splitDay } from './voice-commands'
 
 // A Sunday.
 const today = '2026-11-08'
@@ -86,12 +86,50 @@ describe('parseVoiceCommand', () => {
     expect(parse('hide the app')).toEqual({ kind: 'minimize' })
   })
 
-  it.each(['Am I ready for a junior developer role?', 'open the pod bay doors', 'add task', 'mark'])(
+  it.each(['Am I ready for a junior developer role?', 'add task', 'mark', 'tell me a joke'])(
     'passes "%s" on as a question',
     (text) => {
       expect(parse(text)).toEqual({ kind: 'ask', text })
     }
   )
+})
+
+describe('desktop commands', () => {
+  it.each([
+    ['open chrome', { kind: 'open', target: 'chrome' }],
+    ['launch vs code', { kind: 'open', target: 'vs code' }],
+    ['Open YouTube in Chrome', { kind: 'open', target: 'youtube', browser: 'chrome' }],
+    ['go to example.com using edge', { kind: 'open', target: 'example com', browser: 'edge' }],
+    ['open the pod bay doors', { kind: 'open', target: 'pod bay doors' }],
+    ['search for react hooks', { kind: 'search', query: 'react hooks', site: 'google' }],
+    ['google best laptops 2026', { kind: 'search', query: 'best laptops 2026', site: 'google' }],
+    ['search lofi music on youtube', { kind: 'search', query: 'lofi music', site: 'youtube' }],
+    ['play arijit singh songs', { kind: 'search', query: 'arijit singh songs', site: 'youtube' }],
+    ['play lofi on youtube in chrome', { kind: 'search', query: 'lofi', site: 'youtube', browser: 'chrome' }],
+    ['look up typescript generics in edge', { kind: 'search', query: 'typescript generics', site: 'google', browser: 'edge' }],
+    ['volume up', { kind: 'volume', change: 'up' }],
+    ['turn the volume down', { kind: 'volume', change: 'down' }],
+    ['increase volume', { kind: 'volume', change: 'up' }],
+    ['mute', { kind: 'volume', change: 'mute' }],
+    ['lock my computer', { kind: 'lock' }],
+    ['what time is it', { kind: 'time' }],
+    ["what's the date today", { kind: 'date' }]
+  ])('"%s"', (text, intent) => {
+    expect(parse(text)).toEqual(intent)
+  })
+
+  it.each(FIXED_PHRASES)('the engine listens for "%s", and it is understood as a command', (phrase) => {
+    expect(parse(phrase).kind).not.toBe('ask')
+  })
+
+  it.each(SPOKEN_SECTION_NAMES)('"open %s" opens a SkillPilot section', (name) => {
+    expect(parse(`open ${name}`).kind).toBe('navigate')
+  })
+
+  it('still opens SkillPilot sections before anything outside', () => {
+    expect(parse('open settings')).toMatchObject({ kind: 'navigate', section: 'settings' })
+    expect(parse('open my tasks')).toMatchObject({ kind: 'navigate', section: 'tasks' })
+  })
 })
 
 describe('matchTitle', () => {
