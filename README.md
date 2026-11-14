@@ -3,12 +3,12 @@
 A private, single-user career assistant for Windows that lives on the desktop as a small floating
 robot widget. It tracks skills, goals, projects, and learning, and uses AI to recommend what to do next.
 
-Status: version 1.3.0, with milestones M0 to M12 and voice built. See the [quality report](docs/quality-report.md) for
+Status: version 1.4.0, with milestones M0 to M12 and voice built. See the [quality report](docs/quality-report.md) for
 test results and what has not been tested yet. See the [roadmap](docs/roadmap.md).
 
 ## Install
 
-Run `npm run dist`, then run `releaseSkillPilot AI Setup 1.3.0.exe`. It is unsigned, so Windows shows a
+Run `npm run dist`, then run `releaseSkillPilot AI Setup 1.4.0.exe`. It is unsigned, so Windows shows a
 SmartScreen warning: choose **More info**, then **Run anyway**.
 
 AI is optional and off by default. To use it, go to Settings, choose a provider, and add your Anthropic API
@@ -35,10 +35,12 @@ Use `npm run dev` or `npm start`. They build the app first, whereas `npx electro
 
 Your data stays on this laptop in `%APPDATA%\SkillPilot AI`, with daily backups in its `backups` folder.
 
-Voice: open the Assistant and press the microphone in the input bar, then speak. Commands such as
-"add task read the guide tomorrow", "mark read the guide as done", "add skill Python", "what's due today",
-and "open my skills" are carried out at once. Anything else is sent to the assistant. Speech is recognised
-offline by Windows, and audio is never saved or sent.
+Voice: press the microphone at the robot's bottom-right, or the one in the Assistant's input bar, and
+speak. SkillPilot answers aloud and does it straight away: "open Chrome", "open YouTube in Chrome",
+"search for React hooks", "play lofi on YouTube", "open downloads", "volume up", "what time is it",
+"add task read the guide tomorrow", or "open my skills". Anything else goes to the AI assistant when it
+is on. Speech is recognised offline by Windows, and audio is never saved or sent. See
+[AI and privacy](docs/architecture/ai-and-privacy.md#voice) for everything it can do.
 
 Shortcuts: Ctrl+Alt+Shift+S shows or hides the widget, and Ctrl+Alt+Shift+O opens SkillPilot. Settings
 can export, import, and restore your data.

@@ -118,6 +118,12 @@ These milestones cover parts of the original brief that 1.0 left thin, and gaps 
 - Spoken commands carried out at once, and spoken questions sent to the assistant
 - Settings for the speech language and for acting at once, and version 1.2.0
 
+### Voice actions, complete
+
+- A microphone beside the robot on the widget, with replies in the hover panel and spoken aloud
+- Command phrases first, for reliable recognition, and nothing done on unsure speech
+- Opening apps, websites, searches, and folders, volume, lock, and the time, and version 1.4.0
+
 ## Testing
 
 Every feature ships with unit tests and integration tests, and they must pass before it counts as
