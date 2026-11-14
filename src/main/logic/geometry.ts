@@ -72,6 +72,30 @@ export function circleRows(diameter: number): Rect[] {
   return rows
 }
 
+/**
+ * The widget's clickable shape: the round robot plus the round microphone badge at its bottom-right.
+ * Rows where the two meet are merged, so there are never gaps or overlaps.
+ */
+export function widgetShape(size: number, badgeRatio: number): Rect[] {
+  const badge = Math.round(size * badgeRatio)
+  const offset = size - badge
+  const badgeRows = new Map(circleRows(badge).map((row) => [row.y + offset, row.x + offset]))
+  const rows: Rect[] = []
+  for (const row of circleRows(size)) {
+    const badgeX = badgeRows.get(row.y)
+    if (badgeX === undefined) {
+      rows.push(row)
+      continue
+    }
+    const badgeEnd = size - (badgeX - offset)
+    const start = Math.min(row.x, badgeX)
+    const end = Math.max(row.x + row.width, badgeEnd)
+    if (badgeX <= row.x + row.width) rows.push({ x: start, y: row.y, width: end - start, height: 1 })
+    else rows.push(row, { x: badgeX, y: row.y, width: badgeEnd - badgeX, height: 1 })
+  }
+  return rows
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), Math.max(min, max))
 }

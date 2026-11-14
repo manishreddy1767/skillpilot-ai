@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bridgeBetween, centreIn, circleRows, contains, overlaps, placePanel } from './geometry'
+import { bridgeBetween, centreIn, circleRows, contains, overlaps, placePanel, widgetShape } from './geometry'
 
 const workArea = { x: 0, y: 0, width: 1536, height: 816 }
 const panel = { width: 340, height: 420 }
@@ -89,5 +89,36 @@ describe('circleRows', () => {
     expect(rows).toHaveLength(72)
     expect(rows[36]?.width).toBe(72)
     expect(rows[0]?.width).toBeLessThan(30)
+  })
+})
+
+describe('widgetShape', () => {
+  const covers = (rows: { x: number; y: number; width: number }[], x: number, y: number) =>
+    rows.some((row) => row.y === y && x >= row.x && x < row.x + row.width)
+
+  it('is the robot circle plus the microphone badge at the bottom-right', () => {
+    const rows = widgetShape(64, 0.38)
+    expect(covers(rows, 32, 32)).toBe(true)
+    expect(covers(rows, 0, 0)).toBe(false)
+    expect(covers(rows, 63, 0)).toBe(false)
+    expect(covers(rows, 0, 63)).toBe(false)
+    // The very corner of the window belongs to the badge, which the circle alone would leave out.
+    expect(covers(circleRows(64), 60, 60)).toBe(false)
+    expect(covers(rows, 60, 60)).toBe(true)
+    expect(covers(rows, 63, 63)).toBe(false)
+  })
+
+  it('never overlaps itself, and stays inside the window', () => {
+    for (const size of [48, 64, 72, 128]) {
+      const rows = widgetShape(size, 0.38)
+      for (let y = 0; y < size; y++) {
+        const line = rows.filter((row) => row.y === y).sort((a, b) => a.x - b.x)
+        for (const [index, row] of line.entries()) {
+          expect(row.x).toBeGreaterThanOrEqual(0)
+          expect(row.x + row.width).toBeLessThanOrEqual(size)
+          if (index > 0) expect(row.x).toBeGreaterThanOrEqual(line[index - 1]!.x + line[index - 1]!.width)
+        }
+      }
+    }
   })
 })
