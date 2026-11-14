@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { robotShapes } from '../../shared/robot-icon'
 import { Widget } from './Widget'
 
 const widget = () => {
@@ -8,6 +9,17 @@ const widget = () => {
 }
 
 describe('Widget', () => {
+  it('shows the robot, drawn from the same shapes as the app icon', () => {
+    const svg = widget().querySelector('svg')!
+    expect(svg.getAttribute('aria-hidden')).toBe('true')
+    expect(svg.children).toHaveLength(robotShapes.length)
+    expect([...svg.children].map((child) => child.tagName)).toEqual(
+      robotShapes.map((shape) => ({ circle: 'circle', ring: 'circle', rect: 'rect', line: 'polyline' })[shape.kind])
+    )
+    const smile = svg.querySelectorAll('polyline')[2]!
+    expect(smile.getAttribute('stroke-linecap')).toBe('round')
+  })
+
   it('starts a press on left button, reporting where it was grabbed', () => {
     const el = widget()
     fireEvent.pointerDown(el, { button: 0, clientX: 30, clientY: 20, pointerId: 1 })

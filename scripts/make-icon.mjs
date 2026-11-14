@@ -1,26 +1,66 @@
 // Draws the app icon as a PNG using only Node, so no image tooling is needed.
+// The shapes come from the same list the widget draws, so the icon always matches it.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { crc32, deflateSync } from 'node:zlib'
+import { ROBOT_SIZE, robotShapes } from '../src/shared/robot-icon.ts'
 
 const size = 256
+const scale = ROBOT_SIZE / size
+const samples = 4
 const pixels = Buffer.alloc(size * (size * 4 + 1))
 
-// A slim diamond pointing up and to the right, like a compass needle.
-const inNeedle = (x, y) => {
-  const u = (x + y) / Math.SQRT2
-  const v = (x - y) / Math.SQRT2
-  return Math.abs(u) / 0.16 + Math.abs(v) / 0.6 <= 1
+const rgb = (hex) => [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16))
+
+/** Distance from a point to a segment. */
+function toSegment(px, py, [ax, ay], [bx, by]) {
+  const dx = bx - ax
+  const dy = by - ay
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1)))
+  return Math.hypot(px - ax - t * dx, py - ay - t * dy)
 }
+
+/** Whether a point on the 72 grid is inside a shape. */
+function covers(shape, x, y) {
+  switch (shape.kind) {
+    case 'circle':
+      return Math.hypot(x - shape.cx, y - shape.cy) <= shape.r
+    case 'ring':
+      return Math.abs(Math.hypot(x - shape.cx, y - shape.cy) - shape.r) <= shape.width / 2
+    case 'rect': {
+      const r = shape.rx
+      const qx = Math.abs(x - (shape.x + shape.w / 2)) - (shape.w / 2 - r)
+      const qy = Math.abs(y - (shape.y + shape.h / 2)) - (shape.h / 2 - r)
+      return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) <= r
+    }
+    case 'line':
+      return shape.points.slice(1).some((end, i) => toSegment(x, y, shape.points[i], end) <= shape.width / 2)
+  }
+}
+
+const painted = robotShapes.map((shape) => ({ shape, color: rgb(shape.kind === 'ring' || shape.kind === 'line' ? shape.stroke : shape.fill) }))
 
 for (let row = 0; row < size; row++) {
   const start = row * (size * 4 + 1)
   for (let col = 0; col < size; col++) {
-    const x = (col + 0.5 - size / 2) / (size / 2)
-    const y = (row + 0.5 - size / 2) / (size / 2)
-    const distance = Math.hypot(x, y)
-    const alpha = Math.round(Math.min(1, Math.max(0, (1 - distance) * (size / 2))) * 255)
-    const color = inNeedle(x, y) ? [255, 255, 255] : distance > 0.84 ? [45, 212, 191] : [15, 23, 42]
-    pixels.set([...color, alpha], start + 1 + col * 4)
+    // Average the colour of several points inside the pixel, for smooth edges.
+    const sum = [0, 0, 0, 0]
+    for (let sy = 0; sy < samples; sy++) {
+      for (let sx = 0; sx < samples; sx++) {
+        const x = (col + (sx + 0.5) / samples) * scale
+        const y = (row + (sy + 0.5) / samples) * scale
+        let color = null
+        for (const { shape, color: fill } of painted) if (covers(shape, x, y)) color = fill
+        if (color) {
+          sum[0] += color[0]
+          sum[1] += color[1]
+          sum[2] += color[2]
+          sum[3] += 1
+        }
+      }
+    }
+    const covered = sum[3]
+    const pixel = covered ? [sum[0] / covered, sum[1] / covered, sum[2] / covered, (covered / samples ** 2) * 255] : [0, 0, 0, 0]
+    pixels.set(pixel.map(Math.round), start + 1 + col * 4)
   }
 }
 
