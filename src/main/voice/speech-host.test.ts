@@ -60,7 +60,7 @@ describe('SpeechHost', () => {
     const first = host.listen('en-GB', events())
     expect(spawnFake).toHaveBeenCalledOnce()
     expect(JSON.parse(decode(child.sent[0]!))).toEqual({ open: ['chrome', 'vs code'], phrases: ["what's due today"] })
-    expect(child.sent[1]).toBe('listen en-GB')
+    expect(child.sent[1]).toBe('listen 1 en-GB')
     say(child, { type: 'result', text: 'open chrome', confidence: 0.93, source: 'command' })
     await expect(first).resolves.toEqual({ text: 'open chrome', confidence: 0.93, source: 'command' })
 
@@ -105,7 +105,7 @@ describe('SpeechHost', () => {
   it('sends a recording path safely encoded', () => {
     const { child, host } = setup()
     void host.listen('en-US', events(), "C:\\it's here\\a.wav")
-    expect(decode(child.sent[1]!.replace('listen en-US ', 'x '))).toBe("C:\\it's here\\a.wav")
+    expect(decode(child.sent[1]!.replace('listen 1 en-US ', 'x '))).toBe("C:\\it's here\\a.wav")
     host.dispose()
   })
 
@@ -143,6 +143,21 @@ describe('SpeechHost', () => {
     const second = host.listen('en-US', events())
     say(child, { type: 'result', text: 'open chrome', confidence: 0.9, source: 'command' })
     await expect(second).resolves.toMatchObject({ text: 'open chrome' })
+    host.dispose()
+  })
+
+  it('an answer to an earlier listen is never taken as the answer to a newer one', async () => {
+    const { child, host } = setup()
+    const first = host.listen('en-US', events())
+    host.cancel()
+    await first
+    const second = host.listen('en-US', events())
+    expect(child.sent.filter((line) => line.startsWith('listen'))).toEqual(['listen 1 en-US', 'listen 2 en-US'])
+    const listening = vi.fn()
+    say(child, { type: 'result', id: 1, text: 'open chrome', confidence: 0.9, source: 'command' })
+    say(child, { type: 'result', id: 2, text: 'volume up', confidence: 0.9, source: 'command' })
+    await expect(second).resolves.toMatchObject({ text: 'volume up' })
+    expect(listening).not.toHaveBeenCalled()
     host.dispose()
   })
 
@@ -226,6 +241,34 @@ describe.runIf(process.platform === 'win32' && existsSync(POWERSHELL))('the real
     console.log(`Spoken "${phrase}", heard "${heard.text}" (${heard.source}, ${heard.confidence.toFixed(2)})`)
     expect(heard.source).toBe('command')
     expect(parseVoiceCommand(heard.text, '2026-11-14')).toMatchObject(intent)
+  })
+
+  it('keeps listening when new vocabulary arrives mid-listen', { timeout: 60_000 }, async () => {
+    const heard = host.listen('en-US', { onReady: () => undefined, onLevel: () => undefined }, record('open notepad'))
+    host.setVocabulary(['notepad', 'chrome', 'calculator'], ['mute', 'volume up'])
+    await expect(heard).resolves.toMatchObject({ text: 'open notepad', source: 'command' })
+    const next = await host.listen('en-US', { onReady: () => undefined, onLevel: () => undefined }, record('open calculator'))
+    expect(next).toMatchObject({ text: 'open calculator', source: 'command' })
+  })
+
+  it('listens again straight after a cancel, without the old answer', { timeout: 60_000 }, async () => {
+    const first = host.listen('en-US', { onReady: () => undefined, onLevel: () => undefined }, record('open chrome'))
+    host.cancel()
+    await expect(first).resolves.toMatchObject({ source: 'none' })
+    const second = await host.listen('en-US', { onReady: () => undefined, onLevel: () => undefined }, record('volume up'))
+    expect(second).toMatchObject({ text: expect.stringMatching(/^volume up$/i), source: 'command' })
+  })
+
+  it('still listens for commands when it has no names to open yet', { timeout: 60_000 }, async () => {
+    const bare = new SpeechHost(spawn, POWERSHELL, (message) => console.log(`Warning: ${message}`))
+    const warnings: string[] = []
+    const quiet = new SpeechHost(spawn, POWERSHELL, (message) => warnings.push(message))
+    quiet.setVocabulary([], ['volume up'])
+    const heard = await quiet.listen('en-US', { onReady: () => undefined, onLevel: () => undefined }, record('volume up'))
+    quiet.dispose()
+    bare.dispose()
+    expect(warnings).toEqual([])
+    expect(heard).toMatchObject({ source: 'command' })
   })
 
   it('hears free speech through dictation', { timeout: 60_000 }, async () => {

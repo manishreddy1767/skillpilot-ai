@@ -34,7 +34,8 @@ const encode = (text: string): string => Buffer.from(text, 'utf8').toString('bas
  * It reads one command per line and writes one JSON object per line. Audio is never saved, and
  * nothing leaves the laptop.
  *
- * Commands: `grammar <base64 json>`, `listen <language> [base64 wav path]`, `cancel`, `say <base64 text>`.
+ * Commands: `grammar <base64 json>`, `listen <id> <language> [base64 wav path]`, `cancel`, `say <base64 text>`.
+ * Every message about a listen carries its id, so a late answer to an old listen is never mistaken for a new one.
  */
 export const HOST_SCRIPT = String.raw`
 $ErrorActionPreference = 'Stop'
@@ -60,6 +61,11 @@ $script:engines = @{}
 $script:engine = $null
 $script:rejected = $null
 $script:lastLevel = [DateTime]::MinValue
+# A recognition is running. New vocabulary waits until it ends, and so does a new listen.
+$script:busy = $false
+$script:stale = $false
+$script:queued = $null
+$script:listenId = 0
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
 
 function Get-Engine($language) {
@@ -68,20 +74,24 @@ function Get-Engine($language) {
   $engine = New-Object System.Speech.Recognition.SpeechRecognitionEngine($script:culture)
   try {
     $all = New-Object System.Speech.Recognition.Choices
+    # Windows refuses an empty choice, so only listen for what there is.
+    $names = @($script:vocabulary.open | Where-Object { $_ })
+    if ($names.Count -gt 0) {
     $open = New-Object System.Speech.Recognition.GrammarBuilder
     $open.Culture = $script:culture
     $open.Append((Choices @('open', 'launch', 'start', 'go to', 'open up', 'show me', 'switch to')))
     $open.Append((New-Object System.Speech.Recognition.GrammarBuilder((Choices @('the', 'my')))), 0, 1)
-    $open.Append((Choices $script:vocabulary.open))
+    $open.Append((Choices $names))
     $open.Append((New-Object System.Speech.Recognition.GrammarBuilder((Choices @('in chrome', 'in edge', 'in firefox', 'on chrome', 'using chrome')))), 0, 1)
     $all.Add($open)
+    }
     $all.Add((Phrase @('add task', 'add a task', 'add a new task', 'create a task', 'new task', 'remind me to') $true $null))
     $all.Add((Phrase @('add skill', 'add a skill', 'add a new skill', 'i am learning') $true $null))
     $all.Add((Phrase @('add goal', 'add a goal', 'set a goal to', 'new goal') $true $null))
     $all.Add((Phrase @('mark', 'tick off', 'complete', 'i finished') $true @('as done', 'done', 'as complete')))
     $all.Add((Phrase @('search for', 'search', 'google', 'look up') $true @('on youtube', 'on google', 'in chrome', 'in edge')))
     $all.Add((Phrase @('play') $true @('on youtube')))
-    foreach ($phrase in $script:vocabulary.phrases) { $all.Add($phrase) }
+    foreach ($phrase in @($script:vocabulary.phrases | Where-Object { $_ })) { $all.Add($phrase) }
     $builder = New-Object System.Speech.Recognition.GrammarBuilder($all)
     $builder.Culture = $script:culture
     $commands = New-Object System.Speech.Recognition.Grammar($builder)
@@ -114,24 +124,31 @@ function Reset-Engines {
   $script:engines = @{}
 }
 
+function Start-Listening($parts) {
+  if ($script:stale) { Reset-Engines; $script:stale = $false }
+  $script:listenId = [int]$parts[1]
+  $script:engine = Get-Engine $parts[2]
+  if ($parts.Length -gt 3) { $script:engine.SetInputToWaveFile((FromBase64 $parts[3])) } else { $script:engine.SetInputToDefaultAudioDevice() }
+  $script:rejected = $null
+  $script:busy = $true
+  $script:engine.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Single)
+  Send @{ type = 'ready'; id = $script:listenId }
+}
+
 function Handle-Command($line) {
   $parts = $line.Split(' ')
   switch ($parts[0]) {
     'grammar' {
       $value = (FromBase64 $parts[1]) | ConvertFrom-Json
       $script:vocabulary = @{ open = @($value.open); phrases = @($value.phrases) }
-      Reset-Engines
+      if ($script:busy) { $script:stale = $true } else { Reset-Engines }
     }
     'listen' {
       $synth.SpeakAsyncCancelAll()
-      if ($script:engine) { $script:engine.RecognizeAsyncCancel() }
-      $script:engine = Get-Engine $parts[1]
-      if ($parts.Length -gt 2) { $script:engine.SetInputToWaveFile((FromBase64 $parts[2])) } else { $script:engine.SetInputToDefaultAudioDevice() }
-      $script:rejected = $null
-      $script:engine.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Single)
-      Send @{ type = 'ready' }
+      if ($script:busy) { $script:queued = $line; $script:engine.RecognizeAsyncCancel() }
+      else { Start-Listening $parts }
     }
-    'cancel' { if ($script:engine) { $script:engine.RecognizeAsyncCancel() } }
+    'cancel' { if ($script:busy) { $script:engine.RecognizeAsyncCancel() } }
     'say' { $synth.SpeakAsyncCancelAll(); $synth.SpeakAsync((FromBase64 $parts[1])) | Out-Null }
     'quit' { exit 0 }
   }
@@ -142,16 +159,23 @@ function Handle-Event($item) {
   $info = $item.SourceEventArgs
   if ($name -eq 'level') {
     $now = [DateTime]::Now
-    if (($now - $script:lastLevel).TotalMilliseconds -ge 90) { $script:lastLevel = $now; Send @{ type = 'level'; value = $info.AudioLevel } }
+    if (($now - $script:lastLevel).TotalMilliseconds -ge 90) { $script:lastLevel = $now; Send @{ type = 'level'; id = $script:listenId; value = $info.AudioLevel } }
   } elseif ($name -eq 'rejected') {
     if ($info.Result -and $info.Result.Text) { $script:rejected = @{ text = $info.Result.Text; confidence = $info.Result.Confidence } }
   } elseif ($name -eq 'done') {
+    $script:busy = $false
     try { $script:engine.SetInputToNull() } catch {}
-    if ($info.Error) { Send @{ type = 'error'; message = $info.Error.Message } }
-    elseif ($info.Cancelled) { Send @{ type = 'result'; text = ''; confidence = 0; source = 'none' } }
-    elseif ($info.Result) { Send @{ type = 'result'; text = $info.Result.Text; confidence = $info.Result.Confidence; source = $info.Result.Grammar.Name } }
-    elseif ($script:rejected) { Send @{ type = 'result'; text = $script:rejected.text; confidence = $script:rejected.confidence; source = 'rejected' } }
-    else { Send @{ type = 'result'; text = ''; confidence = 0; source = 'none' } }
+    # The app already moved on from a cancelled listen, so it gets no answer.
+    if ($info.Cancelled) { }
+    elseif ($info.Error) { Send @{ type = 'error'; id = $script:listenId; message = $info.Error.Message } }
+    elseif ($info.Result) { Send @{ type = 'result'; id = $script:listenId; text = $info.Result.Text; confidence = $info.Result.Confidence; source = $info.Result.Grammar.Name } }
+    elseif ($script:rejected) { Send @{ type = 'result'; id = $script:listenId; text = $script:rejected.text; confidence = $script:rejected.confidence; source = 'rejected' } }
+    else { Send @{ type = 'result'; id = $script:listenId; text = ''; confidence = 0; source = 'none' } }
+    if ($script:queued) {
+      $next = $script:queued
+      $script:queued = $null
+      try { Start-Listening $next.Split(' ') } catch { Send @{ type = 'error'; message = $_.Exception.Message } }
+    }
   }
 }
 
@@ -174,12 +198,15 @@ while ($true) {
 `
 
 type HostMessage =
-  | { type: 'started' | 'ready' }
-  | { type: 'level'; value: number }
-  | { type: 'result'; text: string; confidence: number; source: string }
-  | { type: 'error' | 'warning'; message: string }
+  | { type: 'started' }
+  | { type: 'ready'; id: number }
+  | { type: 'level'; id: number; value: number }
+  | { type: 'result'; id: number; text: string; confidence: number; source: string }
+  | { type: 'error'; id?: number; message: string }
+  | { type: 'warning'; message: string }
 
 interface Waiting extends ListenEvents {
+  id: number
   resolve(heard: Heard): void
   reject(error: Error): void
   timer: NodeJS.Timeout
@@ -199,6 +226,7 @@ export class SpeechHost {
   private waiting: Waiting | null = null
   private idle: NodeJS.Timeout | null = null
   private vocabulary = { open: [] as string[], phrases: [] as string[] }
+  private nextId = 0
 
   constructor(
     private readonly spawn: Spawn,
@@ -224,10 +252,11 @@ export class SpeechHost {
   listen(language: VoiceLanguage, events: ListenEvents, audioFile?: string): Promise<Heard> {
     this.cancel()
     this.ensure()
+    const id = ++this.nextId
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => this.finish({ text: '', confidence: 0, source: 'none' }), LISTEN_LIMIT_MS)
-      this.waiting = { ...events, resolve, reject, timer }
-      this.send(`listen ${language}${audioFile ? ` ${encode(audioFile)}` : ''}`)
+      const timer = setTimeout(() => this.cancel(), LISTEN_LIMIT_MS)
+      this.waiting = { ...events, id, resolve, reject, timer }
+      this.send(`listen ${id} ${language}${audioFile ? ` ${encode(audioFile)}` : ''}`)
     })
   }
 
@@ -298,6 +327,8 @@ export class SpeechHost {
   }
 
   private handle(message: HostMessage): void {
+    // Anything about an earlier listen is out of date.
+    if ('id' in message && message.id !== undefined && message.id !== this.waiting?.id) return
     switch (message.type) {
       case 'ready':
         this.waiting?.onReady()
