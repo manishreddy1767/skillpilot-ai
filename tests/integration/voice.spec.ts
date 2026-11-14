@@ -77,6 +77,8 @@ test.describe('the microphone in the chat bar', () => {
     await speak(page)
     await expect(status(page)).toContainText('Opening Google Chrome.', { timeout: 30_000 })
     expect(await desktopLog()).toContainEqual(expect.stringMatching(/^launchApp \[\{"name":"Google Chrome","id":"Chrome"\}\]$/))
+    // The hover panel only shows the widget's own conversations.
+    expect(await (await h.page(OVERVIEW)).locator('.voice-card').count()).toBe(0)
   })
 
   test('"open youtube in chrome" opens the website in Chrome', async () => {
@@ -160,6 +162,20 @@ test.describe('the microphone beside the robot', () => {
     await expect(widget.getByRole('button', { name: 'Talk to SkillPilot' })).toBeVisible()
     await (await h.page(OVERVIEW)).waitForTimeout(3_000)
     expect(await desktopLog()).toEqual([])
+  })
+
+  test('the microphone is clearly drawn, beside the robot at its bottom-right', async () => {
+    await launch()
+    const widget = await h.page(WIDGET)
+    const box = await widget.evaluate(() => {
+      const button = document.querySelector('.widget-mic')!.getBoundingClientRect()
+      const icon = document.querySelector('.widget-mic svg')!.getBoundingClientRect()
+      return { button, icon, width: window.innerWidth, height: window.innerHeight }
+    })
+    expect(box.icon.width).toBeGreaterThan(box.button.width * 0.5)
+    expect(box.button.right).toBeCloseTo(box.width, 0)
+    expect(box.button.bottom).toBeCloseTo(box.height, 0)
+    expect(box.button.width).toBeGreaterThan(box.width * 0.3)
   })
 
   test('the robot still drags and opens the app as before', async () => {
