@@ -11,6 +11,9 @@ const choices = (values: number[], unit = '') =>
 /** The widget's default size in pixels. Tests read it from here too. */
 export const DEFAULT_WIDGET_SIZE = 64
 
+/** The widget's microphone sits at its bottom-right, this share of the widget's size across. */
+export const MIC_BADGE_RATIO = 0.38
+
 export const claudeModels = [
   { value: 'claude-opus-5-5', label: 'Claude Opus 5.5 (most capable)' },
   { value: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 (balanced)' },
@@ -143,7 +146,8 @@ export const voiceSettingFields: FieldDef[] = [
     initial: 'en-US',
     options: voiceLanguages
   },
-  toggle('voiceActNow', 'Carry out spoken requests straight away, including AI suggestions')
+  toggle('voiceActNow', 'Carry out spoken requests straight away, including AI suggestions'),
+  toggle('voiceReplies', 'Speak replies aloud')
 ]
 
 export const settingFields: FieldDef[] = [

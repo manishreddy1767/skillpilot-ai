@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RobotIcon } from '../RobotIcon'
 import { AssistantView } from './AssistantView'
 import { DashboardView } from './DashboardView'
@@ -33,14 +33,21 @@ const sections: { id: Section; label: string }[] = [
   { id: 'settings', label: 'Settings' }
 ]
 
-function Screen({ section, onNavigate }: { section: Section; onNavigate: (section: Section, note: string) => void }) {
+interface ScreenProps {
+  section: Section
+  onNavigate: (section: Section, note: string) => void
+  pendingAsk: string | null
+  onPendingAskTaken: () => void
+}
+
+function Screen({ section, onNavigate, pendingAsk, onPendingAskTaken }: ScreenProps) {
   switch (section) {
     case 'dashboard':
       return <DashboardView />
     case 'tasks':
       return <TasksView />
     case 'assistant':
-      return <AssistantView onNavigate={onNavigate} />
+      return <AssistantView onNavigate={onNavigate} pendingAsk={pendingAsk} onPendingAskTaken={onPendingAskTaken} />
     case 'roles':
       return <RolesView />
     case 'roadmaps':
@@ -110,10 +117,26 @@ export function App() {
   const [section, setSection] = useState<Section>('dashboard')
   const [note, setNote] = useState('')
 
+  const [pendingAsk, setPendingAsk] = useState<string | null>(null)
+
   const go = (next: Section, why = ''): void => {
     setSection(next)
     setNote(why)
   }
+
+  // Requests spoken to the widget arrive here. Saying ready lets any that waited while this loaded through.
+  useEffect(() => {
+    const stopNavigate = window.skillpilot.onNavigate((next, why) => go(next as Section, why))
+    const stopAsk = window.skillpilot.onVoiceAsk((text) => {
+      go('assistant')
+      setPendingAsk(text)
+    })
+    window.skillpilot.appReady()
+    return () => {
+      stopNavigate()
+      stopAsk()
+    }
+  }, [])
 
   return (
     <div className="shell">
@@ -149,7 +172,7 @@ export function App() {
               </button>
             </div>
           ) : null}
-          <Screen section={section} onNavigate={go} />
+          <Screen section={section} onNavigate={go} pendingAsk={pendingAsk} onPendingAskTaken={() => setPendingAsk(null)} />
         </main>
       </div>
     </div>

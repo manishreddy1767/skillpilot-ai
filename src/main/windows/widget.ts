@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron'
-import { circleRows, type Point } from '../logic/geometry'
+import { MIC_BADGE_RATIO } from '../../shared/settings'
+import { widgetShape, type Point } from '../logic/geometry'
 import { loadPage, secureWebPreferences } from './common'
 
 export function createWidgetWindow(position: Point, size: number): BrowserWindow {
@@ -25,8 +26,8 @@ export function createWidgetWindow(position: Point, size: number): BrowserWindow
     webPreferences: secureWebPreferences
   })
 
-  // The window is square but the icon is round: let clicks through at the corners.
-  widget.setShape(circleRows(size))
+  // The window is square but the robot and its microphone are round: let clicks through elsewhere.
+  widget.setShape(widgetShape(size, MIC_BADGE_RATIO))
   loadPage(widget, 'widget')
   widget.once('ready-to-show', () => widget.showInactive())
   return widget

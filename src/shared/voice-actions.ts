@@ -1,12 +1,17 @@
-import type { StoredRecord } from '../../shared/career'
-import type { SkillPilotApi } from '../../shared/ipc'
-import { matchTitle, type SectionId, type VoiceIntent } from '../../shared/voice-commands'
+import type { FieldValues, Result, StoredRecord } from './career'
+import { matchTitle, type VoiceIntent } from './voice-commands'
 
-export interface VoiceContext {
-  api: SkillPilotApi
-  navigate(section: SectionId): void
-  today: string
+/** The career data a spoken command may read or change. Results may be returned directly or awaited. */
+export interface VoiceApi {
+  listRecords(kind: 'task' | 'skill' | 'goal'): Result<StoredRecord[]> | Promise<Result<StoredRecord[]>>
+  saveRecord(kind: 'task' | 'skill' | 'goal', id: null, values: FieldValues): Result<StoredRecord> | Promise<Result<StoredRecord>>
+  completeTask(id: number): Result<boolean> | Promise<Result<boolean>>
 }
+
+export type DataIntent = Extract<VoiceIntent, { kind: 'addTask' | 'addSkill' | 'addGoal' | 'completeTask' | 'whatsDue' }>
+
+export const isDataIntent = (intent: VoiceIntent): intent is DataIntent =>
+  ['addTask', 'addSkill', 'addGoal', 'completeTask', 'whatsDue'].includes(intent.kind)
 
 /** Today on this laptop's clock, as YYYY-MM-DD. */
 export function localToday(now = new Date()): string {
@@ -14,7 +19,8 @@ export function localToday(now = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
-const dayName = (date: string, today: string): string => {
+/** "today", "tomorrow", or the weekday and date. */
+export function dayName(date: string, today: string): string {
   if (date === today) return 'today'
   const [year, month, day] = date.split('-').map(Number)
   const when = new Date(year!, month! - 1, day!)
@@ -24,31 +30,20 @@ const dayName = (date: string, today: string): string => {
   return when.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-const openTasks = async (api: SkillPilotApi): Promise<StoredRecord[] | string> => {
+const openTasks = async (api: VoiceApi): Promise<StoredRecord[] | string> => {
   const result = await api.listRecords('task')
   if (!result.ok) return result.message
   return result.value.filter((task) => task.values['status'] !== 'done')
 }
 
-const exists = async (api: SkillPilotApi, kind: 'skill' | 'goal', key: string, value: string): Promise<boolean> => {
+const exists = async (api: VoiceApi, kind: 'skill' | 'goal', key: string, value: string): Promise<boolean> => {
   const result = await api.listRecords(kind)
   return result.ok && result.value.some((record) => (record.values[key] ?? '').toLowerCase() === value.toLowerCase())
 }
 
-/**
- * Carries out one spoken command straight away and says what happened, in a sentence.
- * Questions for the assistant are not handled here.
- */
-export async function carryOut(intent: Exclude<VoiceIntent, { kind: 'ask' }>, { api, navigate, today }: VoiceContext): Promise<string> {
+/** Carries out one spoken change to career data straight away, and says what happened in a sentence. */
+export async function carryOut(intent: DataIntent, api: VoiceApi, today: string): Promise<string> {
   switch (intent.kind) {
-    case 'navigate':
-      navigate(intent.section)
-      return `Opened ${intent.label}.`
-
-    case 'minimize':
-      api.minimizeToWidget()
-      return 'Minimised to the widget.'
-
     case 'addTask': {
       const result = await api.saveRecord('task', null, { title: intent.title, dueDate: intent.dueDate })
       return result.ok ? `Added the task "${intent.title}" for ${dayName(intent.dueDate, today)}.` : result.message

@@ -1,3 +1,5 @@
+import { MIC_BADGE_RATIO } from '../../shared/settings'
+import { widgetShape } from '../logic/geometry'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mock = vi.hoisted(() => {
@@ -102,12 +104,12 @@ describe('widget window', () => {
   it('uses the size it is given', () => {
     const window = asFake(createWidgetWindow(spot, 128))
     expect(window.options).toMatchObject({ width: 128, height: 128 })
-    expect(window.setShape.mock.calls[0]?.[0]).toHaveLength(128)
+    expect(window.setShape.mock.calls[0]?.[0]).toEqual(widgetShape(128, MIC_BADGE_RATIO))
   })
 
-  it('uses a round clickable shape', () => {
+  it('is clickable only on the round robot and its microphone', () => {
     const shape = asFake(createWidgetWindow(spot, 72)).setShape.mock.calls[0]?.[0] as unknown[]
-    expect(shape).toHaveLength(72)
+    expect(shape).toEqual(widgetShape(72, MIC_BADGE_RATIO))
   })
 
   it('appears without taking focus, only once it is ready', () => {

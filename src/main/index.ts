@@ -1,4 +1,5 @@
-import { spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   BrowserWindow,
@@ -11,11 +12,14 @@ import {
   powerMonitor,
   safeStorage,
   screen,
+  shell,
   type IpcMainEvent,
   type IpcMainInvokeEvent
 } from 'electron'
-import { Channel } from '../shared/ipc'
-import { defaultSettings, type Settings } from '../shared/settings'
+import { openVocabulary, type StartApp } from '../shared/desktop-commands'
+import { Channel, type VoiceStatus } from '../shared/ipc'
+import { FIXED_PHRASES, SPOKEN_SECTION_NAMES } from '../shared/voice-commands'
+import { MIC_BADGE_RATIO, defaultSettings, type Settings } from '../shared/settings'
 import { KeyStore } from './ai/key-store'
 import { createAiHandlers } from './ai-handlers'
 import { createDataHandlers } from './data-handlers'
@@ -24,7 +28,7 @@ import { localDate } from './db/backup'
 import { openCareerData } from './db/open-career-data'
 import { installErrorLog, writeErrorLog } from './error-log'
 import { DragTracker } from './logic/drag-tracker'
-import { centreIn, circleRows, overlaps, placePanel, type Point } from './logic/geometry'
+import { centreIn, overlaps, placePanel, widgetShape, type Point } from './logic/geometry'
 import { HoverController } from './logic/hover-controller'
 import { isPoint } from './logic/validation'
 import { WidgetPlacement } from './logic/widget-placement'
@@ -35,8 +39,11 @@ import { createTray } from './tray'
 import { APP_WINDOW_SIZE, createAppWindow } from './windows/app-window'
 import { OVERVIEW_SIZE, createOverviewWindow } from './windows/overview'
 import { createWidgetWindow } from './windows/widget'
-import { SpeechRecognizer } from './voice/recognizer'
-import { createVoiceHandlers } from './voice/voice-handlers'
+import { createDesktopActions, type DesktopActions } from './voice/desktop-actions'
+import { SpeechHost } from './voice/speech-host'
+import { START_APPS_SCRIPT, StartApps } from './voice/start-apps'
+import { respond } from './voice/voice-agent'
+import { VoiceController } from './voice/voice-controller'
 
 const PANEL_GAP = 8
 /** Displays often report several changes in a row, so wait for them to settle. */
@@ -316,24 +323,145 @@ function start(): void {
   ipcMain.handle(Channel.GetRoleReadiness, fromApp(handlers.getRoleReadiness))
   ipcMain.handle(Channel.RescheduleRoadmap, fromApp(handlers.rescheduleRoadmap))
 
-  // Voice: Windows' own offline speech engine, run in a hidden PowerShell. Only the app window may listen.
-  const recognizer = new SpeechRecognizer(
-    spawn,
-    join(process.env['SystemRoot'] ?? 'C:\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  // Voice: Windows' own offline speech engine, kept running in a hidden PowerShell between requests.
+  const systemRoot = process.env['SystemRoot'] ?? 'C:\Windows'
+  const powershell = join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  const logError = (error: unknown): void => writeErrorLog(errorLogPath, error)
+  const speech = new SpeechHost(spawn, powershell, (message) => logError(new Error(message)))
+  const startApps = new StartApps(
+    () =>
+      new Promise((resolve, reject) =>
+        execFile(powershell, ['-NoProfile', '-NonInteractive', '-Command', START_APPS_SCRIPT], { windowsHide: true, maxBuffer: 4_000_000 }, (error, stdout) =>
+          error ? reject(error) : resolve(stdout)
+        )
+      )
   )
-  const voice = createVoiceHandlers({
-    recognizer,
-    language: () => data.aiStore?.getSettings()['voiceLanguage'] ?? 'en-US',
-    onReady: () => {
-      if (appWindow && !appWindow.isDestroyed()) appWindow.webContents.send(Channel.VoiceReady)
-    },
-    // Tests set this from outside to play a recorded command instead of using the microphone.
-    audioFile: () => (globalThis as { __skillpilotVoiceFile?: string }).__skillpilotVoiceFile,
-    logError: (error) => writeErrorLog(errorLogPath, error)
+  /** Teaches the speech engine the apps, sites, and sections people can ask for by name. */
+  const teach = (apps: StartApp[]): void =>
+    speech.setVocabulary([...openVocabulary(apps), ...SPOKEN_SECTION_NAMES], FIXED_PHRASES)
+  const teachSpeech = async (): Promise<void> => teach(await startApps.get())
+  // Sites, folders, and sections are known at once. Installed apps follow when Windows has listed them.
+  teach([])
+  void teachSpeech()
+
+  // Test hooks, set from outside: a recording to hear instead of the microphone, and a log that
+  // records desktop actions and spoken replies instead of doing them.
+  const testHooks = globalThis as { __skillpilotVoiceFile?: string; __skillpilotDesktopLog?: string[] }
+  const realDesktop = createDesktopActions({
+    launch: (file, args) => spawn(file, args, { detached: true, stdio: 'ignore', windowsHide: false }).unref(),
+    openExternal: (url) => shell.openExternal(url),
+    openPath: (path) => shell.openPath(path),
+    folderPath: (folder) => app.getPath(folder),
+    exists: existsSync,
+    env: process.env
   })
-  ipcMain.handle(Channel.Listen, fromApp(voice.listen))
-  ipcMain.handle(Channel.StopListening, fromApp(voice.stopListening))
-  app.once('before-quit', () => recognizer.cancel())
+  const desktop = new Proxy(realDesktop, {
+    get: (target, name: keyof DesktopActions) => {
+      const log = testHooks.__skillpilotDesktopLog
+      if (!log) return target[name]
+      return (...args: unknown[]) => {
+        log.push(`${String(name)} ${JSON.stringify(args)}`)
+        return name === 'openUrl' ? Promise.resolve('') : Promise.resolve()
+      }
+    }
+  })
+
+  // Messages for the app window wait until its page says it is ready, so none are lost while it loads.
+  let appReady = false
+  let appQueue: [string, unknown[]][] = []
+  const sendToApp = (channel: string, ...args: unknown[]): void => {
+    if (appWindow && !appWindow.isDestroyed() && appReady) appWindow.webContents.send(channel, ...args)
+    else appQueue.push([channel, args])
+  }
+  ipcMain.on(Channel.AppReady, (event) => {
+    if (!appWindow || appWindow.isDestroyed() || event.sender !== appWindow.webContents) return
+    appReady = true
+    for (const [channel, args] of appQueue) appWindow.webContents.send(channel, ...args)
+    appQueue = []
+  })
+  app.on('browser-window-created', (_event, window) => {
+    window.webContents.on('did-start-loading', () => {
+      if (window === appWindow) appReady = false
+    })
+  })
+
+  const broadcast = (status: VoiceStatus): void => {
+    for (const window of [widget, overview, appWindow]) {
+      if (window && !window.isDestroyed()) window.webContents.send(Channel.VoiceStatus, status)
+    }
+  }
+  const voice = new VoiceController({
+    host: {
+      listen: (...args) => speech.listen(...args),
+      cancel: () => speech.cancel(),
+      say: (text) => {
+        if (testHooks.__skillpilotDesktopLog) testHooks.__skillpilotDesktopLog.push(`say ${JSON.stringify(text)}`)
+        else speech.say(text)
+      }
+    },
+    respond: async (heard) => {
+      await teachSpeech()
+      return respond(heard, {
+        data: {
+          listRecords: (kind) => handlers.listRecords(kind),
+          saveRecord: (kind, id, values) => handlers.saveRecord(kind, id, values),
+          completeTask: (id) => handlers.completeTask(id)
+        },
+        desktop,
+        apps: () => startApps.get(),
+        today: () => localDate(new Date()),
+        now: () => new Date(),
+        actNow: () => data.aiStore?.getSettings()['voiceActNow'] !== 'off',
+        aiBlocked: () => {
+          const status = aiHandlers.getAiStatus()
+          return status.ok ? status.value.blocked : status.message
+        },
+        logError
+      })
+    },
+    language: () => data.aiStore?.getSettings()['voiceLanguage'] ?? 'en-US',
+    speakReplies: () => data.aiStore?.getSettings()['voiceReplies'] !== 'off',
+    audioFile: () => testHooks.__skillpilotVoiceFile,
+    broadcast,
+    logError
+  })
+
+  ipcMain.handle(Channel.Listen, fromApp(() => voice.listen()))
+  ipcMain.handle(Channel.StopListening, (event) => {
+    const allowed = [widget, appWindow].some((window) => window && !window.isDestroyed() && event.sender === window.webContents)
+    return allowed ? voice.stop() : denied
+  })
+
+  /** The widget's microphone. Replies show in the hover panel, which stays open until a moment after. */
+  let releaseTimer: NodeJS.Timeout | null = null
+  ipcMain.on(
+    Channel.WidgetListen,
+    from(widget, async () => {
+      if (voice.listening) {
+        voice.stop()
+        hover.release()
+        return
+      }
+      if (releaseTimer) clearTimeout(releaseTimer)
+      hover.hold()
+      const result = await voice.listen()
+      if (result.ok) {
+        const { heard, reply, navigate, ask, minimize } = result.value
+        const note = heard ? `Heard "${heard}". ${reply}` : reply
+        if (navigate) {
+          openApp()
+          sendToApp(Channel.Navigate, navigate, note)
+        } else if (ask) {
+          openApp()
+          sendToApp(Channel.VoiceAsk, ask)
+        } else if (minimize) {
+          appWindow?.hide()
+        }
+      }
+      releaseTimer = setTimeout(() => hover.release(), 4_000)
+    })
+  )
+  app.once('before-quit', () => speech.dispose())
   // The one change the hover panel may make: ticking off a task.
   ipcMain.handle(Channel.CompleteTask, (event, id: unknown) => {
     const fromPanel = !overview.isDestroyed() && event.sender === overview.webContents
@@ -349,7 +477,7 @@ function start(): void {
   ipcMain.on(Channel.OpenApp, from(overview, openApp))
   ipcMain.on(Channel.MinimizeToWidget, (event) => {
     if (appWindow && event.sender === appWindow.webContents) {
-      recognizer.cancel()
+      voice.stop()
       appWindow.hide()
     }
   })
@@ -423,7 +551,7 @@ function start(): void {
     if (size !== widgetSize) {
       widgetSize = size
       moveWidget(widget.getBounds())
-      widget.setShape(circleRows(size))
+      widget.setShape(widgetShape(size, MIC_BADGE_RATIO))
     }
     widget.setOpacity(Number(settings['widgetOpacity']) / 100)
     setAlwaysOnTop(settings['alwaysOnTop'] === 'on')

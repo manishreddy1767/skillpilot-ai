@@ -5,10 +5,26 @@ import type { History } from './history'
 import type { Learning } from './learning'
 import type { Dashboard } from './progress'
 import type { Settings } from './settings'
+import type { SectionId } from './voice-commands'
 
-export interface Heard {
-  text: string
-  confidence: number
+/** How a spoken request is going, sent to every window. */
+export interface VoiceStatus {
+  phase: 'idle' | 'starting' | 'listening' | 'working' | 'done'
+  /** Microphone loudness from 0 to 100, while listening. */
+  level?: number
+  heard?: string
+  reply?: string
+  failed?: boolean
+}
+
+/** What a spoken request led to. */
+export interface VoiceOutcome {
+  heard: string
+  reply: string
+  navigate?: SectionId
+  ask?: string
+  draft?: string
+  minimize?: boolean
 }
 
 export interface BackupInfo {
@@ -73,8 +89,12 @@ export const Channel = {
   GetHistory: 'history:get',
   SuggestProjects: 'ai:suggest-projects',
   Listen: 'voice:listen',
+  WidgetListen: 'voice:widget-listen',
   StopListening: 'voice:stop',
-  VoiceReady: 'voice:ready'
+  VoiceStatus: 'voice:status',
+  Navigate: 'app:navigate',
+  VoiceAsk: 'app:voice-ask',
+  AppReady: 'app:ready'
 } as const
 
 /** The whole surface renderers can reach. They get nothing else from the main process. */
@@ -137,11 +157,19 @@ export interface SkillPilotApi {
   eraseAll(confirmation: string): Promise<Result<boolean>>
   getHistory(): Promise<Result<History>>
   suggestProjects(): Promise<Result<number>>
-  /** Listens for one spoken phrase with Windows' offline speech engine. Empty text if nothing was heard. */
-  listen(): Promise<Result<Heard>>
+  /** Listens for one spoken request with Windows' offline speech engine, and carries it out. */
+  listen(): Promise<Result<VoiceOutcome>>
+  /** The widget's microphone: starts listening, or stops if already listening. */
+  widgetListen(): void
   stopListening(): Promise<Result<boolean>>
-  /** Calls back once the microphone is open. Returns a function that stops listening for it. */
-  onVoiceReady(listener: () => void): () => void
+  /** Calls back as listening progresses. Returns a function that stops listening for it. */
+  onVoiceStatus(listener: (status: VoiceStatus) => void): () => void
+  /** The app window is asked to open a section, with a note saying why. */
+  onNavigate(listener: (section: SectionId, note: string) => void): () => void
+  /** The app window is asked to put a spoken question to the assistant. */
+  onVoiceAsk(listener: (text: string) => void): () => void
+  /** The app window is listening for requests, so ones that waited while it loaded can be sent. */
+  appReady(): void
 }
 
 declare global {

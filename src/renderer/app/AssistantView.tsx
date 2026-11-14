@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { ChatMessage } from '../../shared/ai'
-import { parseVoiceCommand, type SectionId } from '../../shared/voice-commands'
+import type { VoiceStatus } from '../../shared/ipc'
+import type { SectionId } from '../../shared/voice-commands'
 import { RobotIcon } from '../RobotIcon'
 import { ProposalList } from './ProposalList'
 import { useAiBlocked } from './useAiStatus'
-import { carryOut, localToday } from './voice-actions'
-
-type Voice = 'idle' | 'starting' | 'listening' | 'working'
 
 interface AssistantViewProps {
-  /** Opens another section, with a note saying why. Spoken "open tasks" uses this. */
+  /** Opens another section, with a note saying why. Spoken "open my skills" uses this. */
   onNavigate?: (section: SectionId, note: string) => void
+  /** A question spoken to the widget, to send as soon as this screen opens. */
+  pendingAsk?: string | null
+  onPendingAskTaken?: () => void
 }
 
 function MicIcon() {
@@ -32,33 +33,43 @@ function StopIcon() {
   )
 }
 
-export function AssistantView({ onNavigate = () => undefined }: AssistantViewProps) {
+/** Five bars that rise with the microphone level, so you can see you are being heard. */
+export function LevelMeter({ level }: { level: number }) {
+  return (
+    <span className="level-meter" aria-hidden="true">
+      {[4, 12, 22, 34, 48].map((threshold) => (
+        <span key={threshold} className={level >= threshold ? 'on' : ''} />
+      ))}
+    </span>
+  )
+}
+
+export function AssistantView({ onNavigate = () => undefined, pendingAsk = null, onPendingAskTaken }: AssistantViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [note, setNote] = useState('')
   const [refresh, setRefresh] = useState(0)
-  const [voice, setVoice] = useState<Voice>('idle')
-  const [actNow, setActNow] = useState(true)
-  const stopped = useRef(false)
+  const [voice, setVoice] = useState<VoiceStatus>({ phase: 'idle' })
+  const waiting = useRef(false)
   const blocked = useAiBlocked()
 
   useEffect(() => {
     void window.skillpilot.getChat().then((result) => {
       if (result.ok) setMessages(result.value)
     })
-    void window.skillpilot.getSettings().then((result) => {
-      if (result.ok) setActNow(result.value['voiceActNow'] !== 'off')
+    const stop = window.skillpilot.onVoiceStatus((status) => {
+      // Only this screen's own request shows here. The widget's shows in the hover panel.
+      if (waiting.current && status.phase !== 'done' && status.phase !== 'idle') setVoice(status)
     })
-    const stop = window.skillpilot.onVoiceReady(() => setVoice((now) => (now === 'starting' ? 'listening' : now)))
     return () => {
       stop()
-      void window.skillpilot.stopListening()
+      if (waiting.current) void window.skillpilot.stopListening()
     }
   }, [])
 
-  /** Sends a message. Spoken ones may accept the AI's suggestions straight away. */
+  /** Sends a message. Spoken ones accept the AI's suggestions straight away. */
   const ask = async (text: string, acceptSuggestions: boolean): Promise<boolean> => {
     setBusy(true)
     setError('')
@@ -85,63 +96,51 @@ export function AssistantView({ onNavigate = () => undefined }: AssistantViewPro
     return true
   }
 
+  // A question spoken to the widget is sent once, as soon as this screen opens.
+  useEffect(() => {
+    if (!pendingAsk) return
+    onPendingAskTaken?.()
+    setNote(`Heard "${pendingAsk}".`)
+    void ask(pendingAsk, true)
+  }, [pendingAsk])
+
   const send = async (event: FormEvent): Promise<void> => {
     event.preventDefault()
     await ask(draft, false)
   }
 
-  const heard = async (text: string): Promise<void> => {
-    const intent = parseVoiceCommand(text, localToday())
-    if (!actNow) {
-      setDraft(text)
-      setNote(`Heard "${text}". Check it, then press Send.`)
-      return
-    }
-    if (intent.kind === 'ask') {
-      if (blocked) {
-        setDraft(text)
-        setNote(`Heard "${text}". The assistant is not set up, so it was not sent.`)
-        return
-      }
-      setNote(`Heard "${text}". Asking the assistant…`)
-      if (await ask(text, true)) setNote((now) => (now.endsWith('Asking the assistant…') ? `Heard "${text}".` : now))
-      return
-    }
-    if (intent.kind === 'navigate') {
-      onNavigate(intent.section, `Heard "${text}". Opened ${intent.label}.`)
-      return
-    }
-    const done = await carryOut(intent, { api: window.skillpilot, navigate: () => undefined, today: localToday() })
-    setNote(`Heard "${text}". ${done}`)
-  }
+  const listening = voice.phase === 'starting' || voice.phase === 'listening'
 
   const toggleMic = async (): Promise<void> => {
-    if (voice === 'starting' || voice === 'listening') {
-      stopped.current = true
-      setVoice('idle')
+    if (listening) {
+      waiting.current = false
+      setVoice({ phase: 'idle' })
       await window.skillpilot.stopListening()
       return
     }
-    stopped.current = false
+    waiting.current = true
     setError('')
     setNote('')
-    setVoice('starting')
+    setVoice({ phase: 'starting' })
     const result = await window.skillpilot.listen()
-    if (stopped.current) return
+    if (!waiting.current) return
+    waiting.current = false
+    setVoice({ phase: 'idle' })
     if (!result.ok) {
-      setVoice('idle')
       setError(result.message)
       return
     }
-    const text = result.value.text.trim()
-    if (!text) {
-      setVoice('idle')
-      setNote('Nothing was heard. Press the microphone and speak again.')
+    const { heard, reply, navigate, minimize, draft: typed, ask: question } = result.value
+    if (!heard && !reply) return
+    const said = heard ? `Heard "${heard}". ${reply}` : reply
+    if (navigate) {
+      onNavigate(navigate, said)
       return
     }
-    setVoice('working')
-    await heard(text)
-    setVoice('idle')
+    if (minimize) window.skillpilot.minimizeToWidget()
+    if (typed) setDraft(typed)
+    setNote(question ? `Heard "${heard}".` : said)
+    if (question) await ask(question, true)
   }
 
   const clear = async (): Promise<void> => {
@@ -149,8 +148,15 @@ export function AssistantView({ onNavigate = () => undefined }: AssistantViewPro
     if (result.ok) setMessages([])
   }
 
-  const listening = voice === 'starting' || voice === 'listening'
   const micLabel = listening ? 'Stop listening' : 'Speak a message or command'
+  const statusText =
+    voice.phase === 'starting'
+      ? 'Starting the microphone…'
+      : voice.phase === 'listening'
+        ? 'Listening… speak now.'
+        : voice.phase === 'working'
+          ? `Heard "${voice.heard ?? ''}". Working on it…`
+          : note
 
   return (
     <div>
@@ -160,14 +166,11 @@ export function AssistantView({ onNavigate = () => undefined }: AssistantViewPro
           <RobotIcon />
           <div>
             <p className="hello-title">Ready to help.</p>
-            {blocked ? (
-              <p className="lead">{blocked}</p>
-            ) : (
-              <p className="lead">
-                Ask what to learn next, or whether you are ready for a role. Press the microphone to speak, for
-                example “add task read chapter four tomorrow” or “open my skills”.
-              </p>
-            )}
+            {blocked ? <p className="lead">{blocked}</p> : null}
+            <p className="lead">
+              Press the microphone and say things like “open Chrome”, “open YouTube in Chrome”, “search for React
+              hooks”, “add task read the guide tomorrow”, or “open my skills”.
+            </p>
           </div>
         </div>
       ) : blocked ? (
@@ -198,13 +201,14 @@ export function AssistantView({ onNavigate = () => undefined }: AssistantViewPro
             placeholder={listening ? 'Listening…' : 'Type, or press the microphone to speak'}
             onChange={(event) => setDraft(event.target.value)}
           />
+          {voice.phase === 'listening' ? <LevelMeter level={voice.level ?? 0} /> : null}
           <button
             type="button"
             className="mic"
             aria-label={micLabel}
             title={micLabel}
             aria-pressed={listening}
-            disabled={busy || voice === 'working'}
+            disabled={busy || voice.phase === 'working'}
             onClick={() => void toggleMic()}
           >
             {listening ? <StopIcon /> : <MicIcon />}
@@ -214,7 +218,7 @@ export function AssistantView({ onNavigate = () => undefined }: AssistantViewPro
           </button>
         </div>
         <p className="voice-state" role="status">
-          {voice === 'starting' ? 'Starting the microphone…' : voice === 'listening' ? 'Listening… speak now.' : note}
+          {statusText}
         </p>
         <div className="actions">
           {messages.length > 0 ? (

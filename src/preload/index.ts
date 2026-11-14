@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { Channel, type SkillPilotApi } from '../shared/ipc'
+import { Channel, type SkillPilotApi, type VoiceStatus } from '../shared/ipc'
+import type { SectionId } from '../shared/voice-commands'
 
 const api: SkillPilotApi = {
   dragPress: (grabOffset) => ipcRenderer.send(Channel.DragPress, grabOffset),
@@ -56,11 +57,23 @@ const api: SkillPilotApi = {
   getHistory: () => ipcRenderer.invoke(Channel.GetHistory),
   suggestProjects: () => ipcRenderer.invoke(Channel.SuggestProjects),
   listen: () => ipcRenderer.invoke(Channel.Listen),
+  widgetListen: () => ipcRenderer.send(Channel.WidgetListen),
   stopListening: () => ipcRenderer.invoke(Channel.StopListening),
-  onVoiceReady: (listener) => {
-    const forward = (): void => listener()
-    ipcRenderer.on(Channel.VoiceReady, forward)
-    return () => void ipcRenderer.removeListener(Channel.VoiceReady, forward)
+  onVoiceStatus: (listener) => {
+    const forward = (_event: unknown, status: VoiceStatus): void => listener(status)
+    ipcRenderer.on(Channel.VoiceStatus, forward)
+    return () => void ipcRenderer.removeListener(Channel.VoiceStatus, forward)
+  },
+  onNavigate: (listener) => {
+    const forward = (_event: unknown, section: SectionId, note: string): void => listener(section, note)
+    ipcRenderer.on(Channel.Navigate, forward)
+    return () => void ipcRenderer.removeListener(Channel.Navigate, forward)
+  },
+  appReady: () => ipcRenderer.send(Channel.AppReady),
+  onVoiceAsk: (listener) => {
+    const forward = (_event: unknown, text: string): void => listener(text)
+    ipcRenderer.on(Channel.VoiceAsk, forward)
+    return () => void ipcRenderer.removeListener(Channel.VoiceAsk, forward)
   }
 }
 

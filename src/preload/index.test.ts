@@ -79,8 +79,12 @@ describe('preload bridge', () => {
       'getHistory',
       'suggestProjects',
       'listen',
+      'widgetListen',
       'stopListening',
-      'onVoiceReady'
+      'onVoiceStatus',
+      'onNavigate',
+      'onVoiceAsk',
+      'appReady'
     ].sort())
   })
 
@@ -134,16 +138,28 @@ describe('preload bridge', () => {
     expect(invoke).toHaveBeenLastCalledWith(Channel.StopListening)
   })
 
-  it('tells the page when the microphone opens, without the event, and can stop', () => {
+  it.each([
+    ['widgetListen', Channel.WidgetListen],
+    ['appReady', Channel.AppReady]
+  ] as const)('%s sends on its own channel', (method, channel) => {
+    api[method]()
+    expect(electron.ipcRenderer.send).toHaveBeenCalledExactlyOnceWith(channel)
+  })
+
+  it.each([
+    ['onVoiceStatus', Channel.VoiceStatus, [{ phase: 'listening', level: 20 }]],
+    ['onNavigate', Channel.Navigate, ['skills', 'Opening Skills.']],
+    ['onVoiceAsk', Channel.VoiceAsk, ['Am I ready?']]
+  ] as const)('%s passes on the data but never the event, and can stop', (method, channel, data) => {
     const { on, removeListener } = electron.ipcRenderer
     const listener = vi.fn()
-    const stop = api.onVoiceReady(listener)
-    const [channel, forward] = on.mock.lastCall as unknown as [string, (...args: unknown[]) => void]
-    expect(channel).toBe(Channel.VoiceReady)
-    forward({ sender: 'secret' })
-    expect(listener).toHaveBeenCalledExactlyOnceWith()
+    const stop = (api[method] as (listener: unknown) => () => void)(listener)
+    const [heard, forward] = on.mock.lastCall as unknown as [string, (...args: unknown[]) => void]
+    expect(heard).toBe(channel)
+    forward({ sender: 'secret' }, ...data)
+    expect(listener).toHaveBeenCalledExactlyOnceWith(...data)
     stop()
-    expect(removeListener).toHaveBeenCalledWith(Channel.VoiceReady, forward)
+    expect(removeListener).toHaveBeenCalledWith(channel, forward)
   })
 
   it('forwards overview changes without the event, and can stop', () => {

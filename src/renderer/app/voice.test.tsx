@@ -1,134 +1,77 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { StoredRecord } from '../../shared/career'
+import type { VoiceOutcome, VoiceStatus } from '../../shared/ipc'
+import { Overview } from '../overview/Overview'
+import { Widget } from '../widget/Widget'
 import { App } from './App'
 import { AssistantView } from './AssistantView'
-import { carryOut, localToday, type VoiceContext } from './voice-actions'
 
 const api = () => vi.mocked(window.skillpilot)
-const today = '2026-11-08'
-const task = (id: number, title: string, extra: Record<string, string> = {}): StoredRecord => ({
-  id,
-  values: { title, status: 'open', ...extra }
-})
-const context = (): VoiceContext => ({ api: window.skillpilot, navigate: vi.fn(), today })
-const heard = (text: string) => api().listen.mockResolvedValueOnce({ ok: true, value: { text, confidence: 0.9 } })
+const outcome = (value: VoiceOutcome) => api().listen.mockResolvedValueOnce({ ok: true, value })
 const mic = () => screen.getByRole('button', { name: 'Speak a message or command' })
 const ready = () =>
   api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'claude', model: 'm', hasKey: true, blocked: '' } })
 
-describe('localToday', () => {
-  it('uses the laptop clock, not UTC', () => {
-    expect(localToday(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05')
+/** Captures the status listener a component registers, so tests can play the main process. */
+function statusFeed() {
+  const listeners: ((status: VoiceStatus) => void)[] = []
+  api().onVoiceStatus.mockImplementation((listener) => {
+    listeners.push(listener)
+    return () => undefined
   })
-})
-
-describe('carryOut', () => {
-  it('adds a task for the spoken day and says which day', async () => {
-    await expect(carryOut({ kind: 'addTask', title: 'Read', dueDate: '2026-11-09' }, context())).resolves.toBe(
-      'Added the task "Read" for tomorrow.'
-    )
-    expect(api().saveRecord).toHaveBeenCalledWith('task', null, { title: 'Read', dueDate: '2026-11-09' })
-    await expect(carryOut({ kind: 'addTask', title: 'Now', dueDate: today }, context())).resolves.toContain('for today')
-    await expect(carryOut({ kind: 'addTask', title: 'Later', dueDate: '2026-11-13' }, context())).resolves.toContain(
-      'Friday 13 November'
-    )
-  })
-
-  it('reports a save that failed', async () => {
-    api().saveRecord.mockResolvedValueOnce({ ok: false, message: 'Disk full.' })
-    await expect(carryOut({ kind: 'addTask', title: 'Read', dueDate: today }, context())).resolves.toBe('Disk full.')
-  })
-
-  it('adds a skill or goal once, never a duplicate', async () => {
-    await expect(carryOut({ kind: 'addSkill', name: 'Docker' }, context())).resolves.toBe('Added Docker to your skills.')
-    expect(api().saveRecord).toHaveBeenCalledWith('skill', null, { name: 'Docker' })
-    api().listRecords.mockResolvedValueOnce({ ok: true, value: [{ id: 1, values: { name: 'docker' } }] })
-    await expect(carryOut({ kind: 'addSkill', name: 'Docker' }, context())).resolves.toContain('already')
-    await expect(carryOut({ kind: 'addGoal', title: 'Get hired' }, context())).resolves.toBe('Added the goal "Get hired".')
-    expect(api().saveRecord).toHaveBeenCalledTimes(2)
-  })
-
-  it('ticks off the one matching open task', async () => {
-    api().listRecords.mockResolvedValue({
-      ok: true,
-      value: [task(1, 'Read chapter four', { status: 'done' }), task(2, 'Read chapter four again'), task(3, 'Practise SQL')]
-    })
-    await expect(carryOut({ kind: 'completeTask', query: 'practise sql' }, context())).resolves.toBe(
-      'Marked "Practise SQL" as done.'
-    )
-    expect(api().completeTask).toHaveBeenCalledExactlyOnceWith(3)
-  })
-
-  it('ticks nothing off when it is unsure', async () => {
-    api().listRecords.mockResolvedValue({ ok: true, value: [task(1, 'Read chapter four'), task(2, 'Read the guide')] })
-    await expect(carryOut({ kind: 'completeTask', query: 'read' }, context())).resolves.toContain('nothing was ticked off')
-    expect(api().completeTask).not.toHaveBeenCalled()
-  })
-
-  it("lists what is due today and overdue, but not later or finished tasks", async () => {
-    api().listRecords.mockResolvedValue({
-      ok: true,
-      value: [
-        task(1, 'Overdue', { dueDate: '2026-11-01' }),
-        task(2, 'Today', { dueDate: today }),
-        task(3, 'Later', { dueDate: '2026-11-20' }),
-        task(4, 'Finished', { dueDate: today, status: 'done' }),
-        task(5, 'Undated')
-      ]
-    })
-    await expect(carryOut({ kind: 'whatsDue' }, context())).resolves.toBe('Due today: Overdue, Today.')
-    api().listRecords.mockResolvedValue({ ok: true, value: [] })
-    await expect(carryOut({ kind: 'whatsDue' }, context())).resolves.toBe('Nothing is due today.')
-  })
-
-  it('opens a section and minimises', async () => {
-    const ctx = context()
-    await expect(carryOut({ kind: 'navigate', section: 'skills', label: 'Skills' }, ctx)).resolves.toBe('Opened Skills.')
-    expect(ctx.navigate).toHaveBeenCalledWith('skills')
-    await carryOut({ kind: 'minimize' }, ctx)
-    expect(api().minimizeToWidget).toHaveBeenCalled()
-  })
-})
+  return (status: VoiceStatus) => act(() => listeners.forEach((listener) => listener(status)))
+}
 
 describe('the microphone in the chat bar', () => {
-  it('sits in the input bar with Send, and shows listening while the microphone is open', async () => {
-    let finish: (value: { ok: true; value: { text: string; confidence: number } }) => void = () => undefined
-    let ready: () => void = () => undefined
-    api().onVoiceReady.mockImplementation((listener) => {
-      ready = listener
-      return () => undefined
-    })
+  it('sits in the input bar with Send, and shows listening with a level meter', async () => {
+    const send = statusFeed()
+    let finish: (value: { ok: true; value: VoiceOutcome }) => void = () => undefined
     api().listen.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
-    render(<AssistantView />)
+    const { container } = render(<AssistantView />)
     const bar = screen.getByLabelText('Your message').closest('.composer')!
     expect(bar.contains(mic())).toBe(true)
     expect(bar.contains(screen.getByRole('button', { name: 'Send' }))).toBe(true)
 
     fireEvent.click(mic())
     expect(await screen.findByText('Starting the microphone…')).toBeTruthy()
-    act(() => ready())
-    expect(await screen.findByText('Listening… speak now.')).toBeTruthy()
+    send({ phase: 'listening', level: 25 })
+    expect(screen.getByText('Listening… speak now.')).toBeTruthy()
+    expect(container.querySelectorAll('.level-meter .on')).toHaveLength(3)
     expect(screen.getByRole('button', { name: 'Stop listening' }).getAttribute('aria-pressed')).toBe('true')
-    await act(async () => finish({ ok: true, value: { text: '', confidence: 0 } }))
-    expect(await screen.findByText(/Nothing was heard/)).toBeTruthy()
+    send({ phase: 'working', heard: 'open chrome' })
+    expect(screen.getByText('Heard "open chrome". Working on it…')).toBeTruthy()
+    await act(async () => finish({ ok: true, value: { heard: 'open chrome', reply: 'Opening Google Chrome.' } }))
+    expect(await screen.findByText('Heard "open chrome". Opening Google Chrome.')).toBeTruthy()
   })
 
-  it('carries out a spoken command straight away and says what it did', async () => {
-    heard('add task read chapter four')
+  it('ignores voice updates meant for the widget', () => {
+    const send = statusFeed()
+    render(<AssistantView />)
+    send({ phase: 'listening', level: 40 })
+    expect(screen.queryByText('Listening… speak now.')).toBeNull()
+  })
+
+  it('says when nothing was heard', async () => {
+    outcome({ heard: '', reply: "I didn't hear anything. Press the microphone and speak again." })
     render(<AssistantView />)
     fireEvent.click(mic())
-    expect(await screen.findByText(/Heard "add task read chapter four". Added the task "Read chapter four" for today./)).toBeTruthy()
-    expect(api().saveRecord).toHaveBeenCalledWith('task', null, { title: 'Read chapter four', dueDate: localToday() })
-    expect(api().sendChat).not.toHaveBeenCalled()
+    expect(await screen.findByText(/I didn't hear anything/)).toBeTruthy()
+  })
+
+  it('puts unsure speech in the box to check', async () => {
+    outcome({ heard: 'in the senate', draft: 'in the senate', reply: "I'm not sure I heard that right." })
+    render(<AssistantView />)
+    fireEvent.click(mic())
+    expect(await screen.findByText(/not sure I heard that right/)).toBeTruthy()
+    expect((screen.getByLabelText('Your message') as HTMLTextAreaElement).value).toBe('in the senate')
   })
 
   it('sends a spoken question to the assistant and applies its suggestions', async () => {
     ready()
-    heard('What should I learn next?')
+    outcome({ heard: 'What should I learn next?', ask: 'What should I learn next?', reply: 'Let me ask the assistant.' })
     const proposal = { id: 9, kind: 'addSkill' as const, summary: 'Add skill: Go', details: [] }
     const old = { ...proposal, id: 4, summary: 'Older one' }
-    api().listProposals.mockResolvedValueOnce({ ok: true, value: [] }) // ProposalList on load
+    api().listProposals.mockResolvedValueOnce({ ok: true, value: [] })
     api().listProposals.mockResolvedValueOnce({ ok: true, value: [old] })
     api().listProposals.mockResolvedValueOnce({ ok: true, value: [old, proposal] })
     render(<AssistantView />)
@@ -150,30 +93,11 @@ describe('the microphone in the chat bar', () => {
     expect(api().acceptProposal).not.toHaveBeenCalled()
   })
 
-  it('only fills the message box when spoken requests should wait', async () => {
-    api().getSettings.mockResolvedValue({ ok: true, value: { voiceActNow: 'off' } })
-    heard('add skill docker')
+  it('minimises when asked', async () => {
+    outcome({ heard: 'minimise', minimize: true, reply: 'Minimising to the widget.' })
     render(<AssistantView />)
-    await waitFor(() => expect(api().getSettings).toHaveBeenCalled())
-    await act(async () => undefined)
     fireEvent.click(mic())
-    expect(await screen.findByText(/Check it, then press Send/)).toBeTruthy()
-    expect((screen.getByLabelText('Your message') as HTMLTextAreaElement).value).toBe('add skill docker')
-    expect(api().saveRecord).not.toHaveBeenCalled()
-  })
-
-  it('keeps a spoken question in the box when the assistant is not set up', async () => {
-    api().getAiStatus.mockResolvedValue({
-      ok: true,
-      value: { provider: 'off', model: '', hasKey: false, blocked: 'Turn on an AI provider in Settings.' }
-    })
-    heard('Am I ready?')
-    render(<AssistantView />)
-    expect(await screen.findByText('Turn on an AI provider in Settings.')).toBeTruthy()
-    fireEvent.click(mic())
-    expect(await screen.findByText(/not set up, so it was not sent/)).toBeTruthy()
-    expect((screen.getByLabelText('Your message') as HTMLTextAreaElement).value).toBe('Am I ready?')
-    expect(api().sendChat).not.toHaveBeenCalled()
+    await waitFor(() => expect(api().minimizeToWidget).toHaveBeenCalled())
   })
 
   it('shows a microphone problem plainly', async () => {
@@ -184,32 +108,125 @@ describe('the microphone in the chat bar', () => {
   })
 
   it('the stop button stops listening and ignores anything heard late', async () => {
-    let finish: (value: { ok: true; value: { text: string; confidence: number } }) => void = () => undefined
+    let finish: (value: { ok: true; value: VoiceOutcome }) => void = () => undefined
     api().listen.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
     render(<AssistantView />)
     fireEvent.click(mic())
     fireEvent.click(await screen.findByRole('button', { name: 'Stop listening' }))
     await waitFor(() => expect(api().stopListening).toHaveBeenCalled())
-    await act(async () => finish({ ok: true, value: { text: 'add skill docker', confidence: 1 } }))
-    expect(api().saveRecord).not.toHaveBeenCalled()
+    await act(async () => finish({ ok: true, value: { heard: 'open chrome', reply: 'Opening Google Chrome.' } }))
+    expect(screen.queryByText(/Opening Google Chrome/)).toBeNull()
     expect(mic()).toBeTruthy()
   })
 
-  it('stops the microphone when leaving the screen', () => {
+  it('stops the microphone when leaving the screen mid-listen', async () => {
+    api().listen.mockReturnValueOnce(new Promise(() => undefined))
     const { unmount } = render(<AssistantView />)
+    fireEvent.click(mic())
+    await screen.findByRole('button', { name: 'Stop listening' })
     unmount()
     expect(api().stopListening).toHaveBeenCalled()
   })
 
   it('"open my skills" switches screens and says why', async () => {
-    heard('open my skills')
+    outcome({ heard: 'open my skills', navigate: 'skills', reply: 'Opening Skills.' })
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Assistant' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Speak a message or command' }))
     expect(await screen.findByRole('heading', { name: 'Skills' })).toBeTruthy()
-    expect(screen.getByText('Heard "open my skills". Opened Skills.')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Skills' }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByText('Heard "open my skills". Opening Skills.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    expect(screen.queryByText(/Opened Skills/)).toBeNull()
+    expect(screen.queryByText(/Opening Skills/)).toBeNull()
+  })
+})
+
+describe('requests spoken to the widget, arriving in the app', () => {
+  it('says it is ready only after listening for them', () => {
+    render(<App />)
+    expect(api().onNavigate).toHaveBeenCalled()
+    expect(api().onVoiceAsk).toHaveBeenCalled()
+    expect(api().appReady).toHaveBeenCalledOnce()
+    const order = (fn: { mock: { invocationCallOrder: number[] } }) => fn.mock.invocationCallOrder[0]!
+    expect(order(api().appReady)).toBeGreaterThan(order(api().onNavigate))
+  })
+
+  it('opens the section the widget was asked for', async () => {
+    let navigate: (section: string, note: string) => void = () => undefined
+    api().onNavigate.mockImplementation((listener) => {
+      navigate = listener as never
+      return () => undefined
+    })
+    render(<App />)
+    act(() => navigate('tasks', 'Heard "open my tasks". Opening Tasks.'))
+    expect(await screen.findByRole('heading', { name: 'Tasks' })).toBeTruthy()
+    expect(screen.getByText('Heard "open my tasks". Opening Tasks.')).toBeTruthy()
+  })
+
+  it('puts a question to the assistant once, and applies its suggestions', async () => {
+    ready()
+    let askAssistant: (text: string) => void = () => undefined
+    api().onVoiceAsk.mockImplementation((listener) => {
+      askAssistant = listener
+      return () => undefined
+    })
+    render(<App />)
+    act(() => askAssistant('Am I ready for a junior role?'))
+    expect(await screen.findByRole('heading', { name: 'Assistant' })).toBeTruthy()
+    await waitFor(() => expect(api().sendChat).toHaveBeenCalledExactlyOnceWith('Am I ready for a junior role?'))
+    expect(screen.getByText('Heard "Am I ready for a junior role?".')).toBeTruthy()
+  })
+})
+
+describe('the microphone beside the robot', () => {
+  it('sits on the widget, apart from the robot, and starts listening', () => {
+    render(<Widget />)
+    const robot = screen.getByRole('button', { name: 'SkillPilot AI' })
+    const micButton = screen.getByRole('button', { name: 'Talk to SkillPilot' })
+    expect(robot.contains(micButton)).toBe(false)
+    expect(micButton.style.width).toBe('38%')
+    fireEvent.pointerDown(micButton, { button: 0 })
+    fireEvent.click(micButton)
+    expect(api().widgetListen).toHaveBeenCalledOnce()
+    expect(api().dragPress).not.toHaveBeenCalled()
+  })
+
+  it('turns into a stop button while listening, and back after', () => {
+    const send = statusFeed()
+    render(<Widget />)
+    send({ phase: 'listening', level: 10 })
+    const stop = screen.getByRole('button', { name: 'Stop listening' })
+    expect(stop.getAttribute('aria-pressed')).toBe('true')
+    expect(stop.className).toContain('listening')
+    send({ phase: 'done', heard: 'open chrome', reply: 'Opening Google Chrome.' })
+    expect(screen.getByRole('button', { name: 'Talk to SkillPilot' })).toBeTruthy()
+  })
+
+  it('hovering anywhere on the widget, including the microphone, shows the panel', () => {
+    render(<Widget />)
+    fireEvent.pointerEnter(screen.getByRole('button', { name: 'Talk to SkillPilot' }).parentElement!)
+    expect(api().hoverEnter).toHaveBeenCalled()
+  })
+})
+
+describe('the hover panel talking back', () => {
+  it('shows listening with a level, then what was heard and done', () => {
+    const send = statusFeed()
+    const { container } = render(<Overview />)
+    expect(screen.queryByText('Voice')).toBeNull()
+    send({ phase: 'listening', level: 40 })
+    expect(screen.getByText('Listening… speak now.')).toBeTruthy()
+    expect(container.querySelectorAll('.voice-card .meter .on')).toHaveLength(4)
+    send({ phase: 'done', heard: 'open youtube in chrome', reply: 'Opening Youtube in Chrome.' })
+    expect(screen.getByText('“open youtube in chrome”')).toBeTruthy()
+    expect(screen.getByText('Opening Youtube in Chrome.')).toBeTruthy()
+    send({ phase: 'idle' })
+    expect(screen.queryByText('Voice')).toBeNull()
+  })
+
+  it('marks a failure', () => {
+    const send = statusFeed()
+    const { container } = render(<Overview />)
+    send({ phase: 'done', reply: 'No microphone could be used.', failed: true })
+    expect(container.querySelector('.voice-card.failed')).toBeTruthy()
   })
 })

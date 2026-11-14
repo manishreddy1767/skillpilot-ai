@@ -922,3 +922,30 @@ button.mic:disabled {
 .hello .lead {
   margin: 0;
 }
+
+/* Five bars that rise with the microphone level. */
+.level-meter {
+  display: flex;
+  flex: none;
+  gap: 3px;
+  align-items: flex-end;
+  align-self: center;
+  height: 20px;
+}
+
+.level-meter span {
+  width: 4px;
+  border-radius: 1px;
+  background: var(--line);
+}
+
+.level-meter span.on {
+  background: var(--accent);
+  box-shadow: 0 0 4px rgb(95 211 230 / 50%);
+}
+
+.level-meter span:nth-child(1) { height: 25%; }
+.level-meter span:nth-child(2) { height: 45%; }
+.level-meter span:nth-child(3) { height: 65%; }
+.level-meter span:nth-child(4) { height: 85%; }
+.level-meter span:nth-child(5) { height: 100%; }

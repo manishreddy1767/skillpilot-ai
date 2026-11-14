@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
+import type { VoiceStatus } from '../../shared/ipc'
 import type { OverviewData } from '../../shared/career'
 import { RobotIcon } from '../RobotIcon'
 import './overview.css'
 
 export function Overview() {
   const [data, setData] = useState<OverviewData | null>(null)
+  const [voice, setVoice] = useState<VoiceStatus>({ phase: 'idle' })
+
+  useEffect(() => window.skillpilot.onVoiceStatus(setVoice), [])
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -28,6 +32,7 @@ export function Overview() {
           <p>{firstName ? `Hi ${firstName}, here's your career at a glance` : 'Your career at a glance'}</p>
         </div>
       </header>
+      <VoiceCard status={voice} />
       <section>
         <h2>Current goal</h2>
         <p className="clamped">{data?.currentGoal || 'No goal set yet'}</p>
@@ -88,5 +93,34 @@ export function Overview() {
         Open SkillPilot
       </button>
     </main>
+  )
+}
+
+const BARS = [4, 12, 22, 34, 48]
+
+/** The widget's microphone, talking back: listening, what was heard, and what was done. */
+function VoiceCard({ status }: { status: VoiceStatus }) {
+  if (status.phase === 'idle') return null
+  const text =
+    status.phase === 'starting'
+      ? 'Starting the microphone…'
+      : status.phase === 'listening'
+        ? 'Listening… speak now.'
+        : status.phase === 'working'
+          ? 'Working on it…'
+          : status.reply
+  return (
+    <section className={`voice-card${status.failed ? ' failed' : ''}`} role="status" aria-live="polite">
+      <h2>Voice</h2>
+      {status.phase === 'listening' ? (
+        <span className="meter" aria-hidden="true">
+          {BARS.map((threshold) => (
+            <span key={threshold} className={(status.level ?? 0) >= threshold ? 'on' : ''} />
+          ))}
+        </span>
+      ) : null}
+      {status.heard ? <p className="heard">“{status.heard}”</p> : null}
+      <p>{text}</p>
+    </section>
   )
 }

@@ -144,6 +144,55 @@ body,
   box-shadow: 0 0 10px rgb(95 211 230 / 18%);
 }
 
+/* The widget's voice conversation sits over the summary, so the panel never grows. */
+.panel {
+  position: relative;
+}
+
+.panel .voice-card {
+  position: absolute;
+  top: 72px;
+  right: 18px;
+  left: 18px;
+  z-index: 1;
+  border-color: var(--accent);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
+}
+
+.panel .voice-card.failed {
+  border-color: var(--danger);
+}
+
+.voice-card .heard {
+  color: var(--accent-text);
+  font-style: italic;
+}
+
+.voice-card .meter {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 16px;
+  margin: 6px 0 2px;
+}
+
+.voice-card .meter span,
+.level-meter span {
+  width: 5px;
+  border-radius: 1px;
+  background: var(--line);
+}
+
+.voice-card .meter span.on {
+  background: var(--accent);
+}
+
+.voice-card .meter span:nth-child(1) { height: 25%; }
+.voice-card .meter span:nth-child(2) { height: 45%; }
+.voice-card .meter span:nth-child(3) { height: 65%; }
+.voice-card .meter span:nth-child(4) { height: 85%; }
+.voice-card .meter span:nth-child(5) { height: 100%; }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

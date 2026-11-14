@@ -1,3 +1,5 @@
+@import '../theme.css';
+
 html,
 body,
 #root {
@@ -7,6 +9,12 @@ body,
   overflow: hidden;
   background: transparent;
   user-select: none;
+}
+
+.widget-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .widget {
@@ -30,6 +38,50 @@ body,
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* The microphone, sitting on the robot's bottom-right like a badge. */
+.widget-mic {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: 18%;
+  border: 1.5px solid var(--fill);
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.widget-mic:hover {
+  background: var(--user-bubble);
+}
+
+.widget-mic svg {
+  width: 100%;
+  height: 100%;
+}
+
+.widget-mic.starting,
+.widget-mic.listening {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+  color: var(--error);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+
+.widget-mic.working {
+  border-color: var(--accent);
+  animation: mic-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  50% {
+    box-shadow: 0 0 0 3px rgb(224 112 112 / 30%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
