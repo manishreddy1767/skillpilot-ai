@@ -87,6 +87,7 @@ test.describe('security', () => {
     const keys = await (await h.page(WIDGET)).evaluate(() => Object.keys(window.skillpilot).sort())
     expect(keys).toEqual([
       'acceptProposal',
+      'appReady',
       'clearChat',
       'completeTask',
       'createGapReport',
@@ -119,8 +120,10 @@ test.describe('security', () => {
       'listRecords',
       'listen',
       'minimizeToWidget',
+      'onNavigate',
       'onOverviewChanged',
-      'onVoiceReady',
+      'onVoiceAsk',
+      'onVoiceStatus',
       'openApp',
       'rejectProposal',
       'removeApiKey',
@@ -134,7 +137,8 @@ test.describe('security', () => {
       'setLink',
       'stopListening',
       'suggestProjects',
-      'suggestTasks'
+      'suggestTasks',
+      'widgetListen'
     ])
   })
 
