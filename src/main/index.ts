@@ -385,10 +385,18 @@ function start(): void {
     })
   })
 
+  // The hover panel shows only the widget's own conversations.
+  let panelTalking = false
   const broadcast = (status: VoiceStatus): void => {
-    for (const window of [widget, overview, appWindow]) {
+    for (const window of [widget, panelTalking ? overview : null, appWindow]) {
       if (window && !window.isDestroyed()) window.webContents.send(Channel.VoiceStatus, status)
     }
+  }
+  /** Ends the widget's conversation: the panel goes back to its summary and may close again. */
+  const endPanelTalk = (): void => {
+    if (!overview.isDestroyed()) overview.webContents.send(Channel.VoiceStatus, { phase: 'idle' })
+    panelTalking = false
+    hover.release()
   }
   const voice = new VoiceController({
     host: {
@@ -439,10 +447,11 @@ function start(): void {
     from(widget, async () => {
       if (voice.listening) {
         voice.stop()
-        hover.release()
+        endPanelTalk()
         return
       }
       if (releaseTimer) clearTimeout(releaseTimer)
+      panelTalking = true
       hover.hold()
       const result = await voice.listen()
       if (result.ok) {
@@ -458,7 +467,7 @@ function start(): void {
           appWindow?.hide()
         }
       }
-      releaseTimer = setTimeout(() => hover.release(), 4_000)
+      if (panelTalking) releaseTimer = setTimeout(endPanelTalk, 5_000)
     })
   )
   app.once('before-quit', () => speech.dispose())

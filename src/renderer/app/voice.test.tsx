@@ -219,8 +219,11 @@ describe('the hover panel talking back', () => {
     send({ phase: 'done', heard: 'open youtube in chrome', reply: 'Opening Youtube in Chrome.' })
     expect(screen.getByText('“open youtube in chrome”')).toBeTruthy()
     expect(screen.getByText('Opening Youtube in Chrome.')).toBeTruthy()
+    expect(screen.queryByText('Current goal')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Open SkillPilot' })).toBeTruthy()
     send({ phase: 'idle' })
     expect(screen.queryByText('Voice')).toBeNull()
+    expect(screen.getByText('Current goal')).toBeTruthy()
   })
 
   it('marks a failure', () => {

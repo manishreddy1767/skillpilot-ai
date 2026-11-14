@@ -144,19 +144,9 @@ body,
   box-shadow: 0 0 10px rgb(95 211 230 / 18%);
 }
 
-/* The widget's voice conversation sits over the summary, so the panel never grows. */
-.panel {
-  position: relative;
-}
-
+/* While the robot talks, the panel shows only the conversation, then returns to the summary. */
 .panel .voice-card {
-  position: absolute;
-  top: 72px;
-  right: 18px;
-  left: 18px;
-  z-index: 1;
   border-color: var(--accent);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
 }
 
 .panel .voice-card.failed {

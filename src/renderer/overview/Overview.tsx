@@ -32,63 +32,68 @@ export function Overview() {
           <p>{firstName ? `Hi ${firstName}, here's your career at a glance` : 'Your career at a glance'}</p>
         </div>
       </header>
-      <VoiceCard status={voice} />
-      <section>
-        <h2>Current goal</h2>
-        <p className="clamped">{data?.currentGoal || 'No goal set yet'}</p>
-        {data?.targetRoles ? <p className="detail clamped">Target: {data.targetRoles}</p> : null}
-        {progress !== null ? (
-          <div className="progress">
-            <div
-              className="track"
-              role="progressbar"
-              aria-label="Overall progress"
-              aria-valuenow={progress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <div className="fill" style={{ width: `${progress}%` }} />
+      {voice.phase === 'idle' ? (
+        <>
+        <section>
+          <h2>Current goal</h2>
+          <p className="clamped">{data?.currentGoal || 'No goal set yet'}</p>
+          {data?.targetRoles ? <p className="detail clamped">Target: {data.targetRoles}</p> : null}
+          {progress !== null ? (
+            <div className="progress">
+              <div
+                className="track"
+                role="progressbar"
+                aria-label="Overall progress"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div className="fill" style={{ width: `${progress}%` }} />
+              </div>
+              <span>Overall {progress}%</span>
             </div>
-            <span>Overall {progress}%</span>
-          </div>
-        ) : null}
-      </section>
-      <section>
-        <h2>Today's tasks</h2>
-        {data?.tasks.length ? (
-          data.tasks.map((task) => (
-            <label className="task" key={task.id}>
-              <input type="checkbox" checked={false} onChange={() => void window.skillpilot.completeTask(task.id)} />
-              <span className="clamped">{task.title}</span>
-            </label>
-          ))
-        ) : (
-          <p>Nothing planned for today</p>
-        )}
-        {data?.streak ? <p className="detail">{data.streak} day streak</p> : null}
-      </section>
-      <section>
-        <h2>Learning now</h2>
-        <p className="clamped">{data?.learning.length ? data.learning.join(', ') : 'No skills in progress'}</p>
-      </section>
-      <section>
-        <h2>Next deadline</h2>
-        <p className="clamped">{deadline ? deadline.title : 'No upcoming deadlines'}</p>
-        {deadline ? (
-          <p className="detail">
-            {deadline.overdue ? 'Overdue · ' : ''}
-            {deadline.date}
-          </p>
-        ) : null}
-      </section>
-      <section>
-        <h2>Latest achievement</h2>
-        <p className="clamped">{data?.latestAchievement ?? 'Nothing yet'}</p>
-      </section>
-      <section>
-        <h2>Recommended next</h2>
-        <p className="clamped">{data?.recommendation ?? 'Nothing yet'}</p>
-      </section>
+          ) : null}
+        </section>
+        <section>
+          <h2>Today's tasks</h2>
+          {data?.tasks.length ? (
+            data.tasks.map((task) => (
+              <label className="task" key={task.id}>
+                <input type="checkbox" checked={false} onChange={() => void window.skillpilot.completeTask(task.id)} />
+                <span className="clamped">{task.title}</span>
+              </label>
+            ))
+          ) : (
+            <p>Nothing planned for today</p>
+          )}
+          {data?.streak ? <p className="detail">{data.streak} day streak</p> : null}
+        </section>
+        <section>
+          <h2>Learning now</h2>
+          <p className="clamped">{data?.learning.length ? data.learning.join(', ') : 'No skills in progress'}</p>
+        </section>
+        <section>
+          <h2>Next deadline</h2>
+          <p className="clamped">{deadline ? deadline.title : 'No upcoming deadlines'}</p>
+          {deadline ? (
+            <p className="detail">
+              {deadline.overdue ? 'Overdue · ' : ''}
+              {deadline.date}
+            </p>
+          ) : null}
+        </section>
+        <section>
+          <h2>Latest achievement</h2>
+          <p className="clamped">{data?.latestAchievement ?? 'Nothing yet'}</p>
+        </section>
+        <section>
+          <h2>Recommended next</h2>
+          <p className="clamped">{data?.recommendation ?? 'Nothing yet'}</p>
+        </section>
+        </>
+      ) : (
+        <VoiceCard status={voice} />
+      )}
       <button type="button" onClick={() => window.skillpilot.openApp()}>
         Open SkillPilot
       </button>
