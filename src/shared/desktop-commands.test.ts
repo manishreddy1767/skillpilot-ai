@@ -100,6 +100,10 @@ describe('searchUrl', () => {
 })
 
 describe('openVocabulary', () => {
+  it('knows common apps before Windows has listed what is installed', () => {
+    expect(openVocabulary([])).toEqual(expect.arrayContaining(['chrome', 'google chrome', 'edge', 'vs code', 'notepad', 'whatsapp']))
+  })
+
   it('lists sites, folders, and every app name without duplicates', () => {
     const words = openVocabulary(apps)
     expect(words).toEqual(

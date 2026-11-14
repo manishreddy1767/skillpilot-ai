@@ -161,9 +161,39 @@ export function searchUrl(query: string, site: 'google' | 'youtube'): string {
   return site === 'youtube' ? `https://www.youtube.com/results?search_query=${q}` : `https://www.google.com/search?q=${q}`
 }
 
+/** Apps people often ask for, known to the speech engine before Windows has listed what is installed. */
+const COMMON_APPS = [
+  'notepad',
+  'calculator',
+  'paint',
+  'word',
+  'excel',
+  'powerpoint',
+  'outlook',
+  'whatsapp',
+  'spotify',
+  'teams',
+  'zoom',
+  'discord',
+  'telegram',
+  'slack',
+  'file explorer',
+  'task manager',
+  'camera',
+  'photos',
+  'clock'
+]
+
 /** Names the speech engine should listen for after "open". */
 export function openVocabulary(apps: StartApp[]): string[] {
-  const names = new Set<string>([...Object.keys(SITES), ...Object.keys(FOLDERS), 'windows settings'])
+  const nicknames = Object.entries(APP_NICKNAMES).flatMap(([name, others]) => [name, ...others])
+  const names = new Set<string>([
+    ...Object.keys(SITES),
+    ...Object.keys(FOLDERS),
+    'windows settings',
+    ...COMMON_APPS,
+    ...nicknames
+  ])
   for (const app of apps) for (const alias of appAliases(app.name)) if (alias.split(' ').length <= 4) names.add(alias)
   return [...names].sort()
 }
