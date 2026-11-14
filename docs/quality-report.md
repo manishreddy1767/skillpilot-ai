@@ -1,20 +1,20 @@
 # Quality report
 
-Version 1.2.0, tested 2026-11-08 on the development laptop: Windows 11 Home, one monitor, 125% display
+Version 1.3.0, tested 2026-11-14 on the development laptop: Windows 11 Home, one monitor, 125% display
 scaling.
 
 ## Test results
 
 | Layer | Command | Result |
 |---|---|---|
-| Unit | `npm test` | 776 of 776 |
+| Unit | `npm test` | 787 of 787 |
 | Integration, the real app with a faked cursor | `npm run test:integration` | 152 of 152, including a WCAG AA scan of every screen and voice through the real Windows speech engine |
 | Installer, the real installed app | `npm run test:installer` | 7 of 7 |
 | Real mouse | `npm run test:desktop` | 39 of 39 in most runs, including the global shortcuts. See open items. |
 
 Line coverage from unit tests alone is about 96%. Startup wiring is covered by the integration tests.
 
-Each milestone was also checked by breaking the app on purpose, to confirm a test notices. All 103 such
+Each milestone was also checked by breaking the app on purpose, to confirm a test notices. All 105 such
 breaks are caught, including sending private details to the AI, storing the key unencrypted, and letting
 other windows read career data.
 
@@ -41,6 +41,8 @@ Memory is the known cost of Electron. See [ADR 0001](decisions/0001-electron-des
 - **Accessibility:** every screen passes an automated WCAG 2.1 AA scan, every text colour meets AA
   contrast, and the main controls can be reached with the keyboard. A manual screen reader test has not
   been done.
+- **Look:** every colour lives in `src/renderer/theme.css`, and a test reads it to confirm AA contrast and that
+  surfaces stay dark. The robot symbol is one list of shapes, drawn by both the widget and the PNG icon.
 - **Data tools:** export, import, restore, and erase are checked end to end, including that the API key is
   never exported and a bad file changes nothing.
 - **Voice:** Windows reads commands aloud into sound files, and the real app hears them through the same

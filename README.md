@@ -1,14 +1,14 @@
 # SkillPilot AI
 
 A private, single-user career assistant for Windows that lives on the desktop as a small floating
-widget. It tracks skills, goals, projects, and learning, and uses AI to recommend what to do next.
+robot widget. It tracks skills, goals, projects, and learning, and uses AI to recommend what to do next.
 
-Status: version 1.2.0, with milestones M0 to M12 and voice built. See the [quality report](docs/quality-report.md) for
+Status: version 1.3.0, with milestones M0 to M12 and voice built. See the [quality report](docs/quality-report.md) for
 test results and what has not been tested yet. See the [roadmap](docs/roadmap.md).
 
 ## Install
 
-Run `npm run dist`, then run `releaseSkillPilot AI Setup 1.2.0.exe`. It is unsigned, so Windows shows a
+Run `npm run dist`, then run `releaseSkillPilot AI Setup 1.3.0.exe`. It is unsigned, so Windows shows a
 SmartScreen warning: choose **More info**, then **Run anyway**.
 
 AI is optional and off by default. To use it, go to Settings, choose a provider, and add your Anthropic API
