@@ -47,15 +47,39 @@ do this. Turn off **Carry out spoken requests straight away** in Settings to rev
 
 ## Voice
 
-The microphone in the assistant's input bar uses Windows' own offline speech engine (`System.Speech`),
-run in a hidden PowerShell started by the main process. Recognition happens on the laptop: audio is
-never saved and never sent anywhere. Only the recognised text is used, and only the app window may
-start listening. Listening stops when you press stop, leave the assistant, minimise, or quit.
+There are two microphones: one in the assistant's input bar, and one on the widget at the robot's
+bottom-right. Both use Windows' own offline speech engine (`System.Speech`), kept running in a hidden
+PowerShell between requests so listening starts at once. It closes after 10 idle minutes and with the
+app. Recognition happens on the laptop: audio is never saved and never sent anywhere. Only the app
+window and the widget may start listening.
 
-Simple commands are understood without AI and carried out at once: open a section, add a task (with
-"today", "tomorrow", a weekday, or "in 3 days"), add a skill or goal, mark a task done, ask what is due,
-and minimise. A task is ticked off only when exactly one open task matches. Anything else is sent to the
-assistant as a message, which needs AI to be set up.
+**How it listens.** The engine first listens for the app's own command phrases, such as "open ...",
+"add task ...", or "search for ...", with the names of installed apps, websites, folders, and sections.
+This is far more reliable than free dictation, especially across accents. Anything else falls back to
+dictation. Speech the engine is unsure of is never acted on: the app says what it thought it heard and
+asks again.
+
+**What it can do,** at once and without AI:
+
+| Say | Does |
+|---|---|
+| "open Chrome", "open VS Code", "open WhatsApp" | Opens the installed app, by its Start menu entry |
+| "open YouTube in Chrome", "go to example dot com" | Opens the website, in the named browser if installed |
+| "search for React hooks", "play lofi on YouTube" | Opens a Google or YouTube search |
+| "open downloads", "open Windows settings" | Opens the folder or Windows settings |
+| "volume up", "mute", "lock my computer" | Presses the volume keys, or locks Windows |
+| "what time is it", "what's the date today" | Says the time or date |
+| "open my skills", "add task read the guide tomorrow", "mark the guide as done", "add skill Python", "what's due today" | SkillPilot itself |
+
+Anything else is sent to the AI assistant when it is on.
+
+**Safety.** Spoken text is never run as a command. Apps launch only from the Windows Start menu list,
+web pages only as `http` or `https` addresses, and folders only from a fixed list. Nothing is closed,
+deleted, or bought by voice. A task is ticked off only when exactly one open task matches.
+
+**Replies** show in the assistant, or for the widget in the hover panel, which stays open while it talks.
+They are also spoken aloud with Windows' offline voice; turn this off with **Speak replies aloud** in
+Settings.
 
 ## What leaves the laptop
 
