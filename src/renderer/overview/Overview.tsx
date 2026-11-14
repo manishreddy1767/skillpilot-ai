@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { OverviewData } from '../../shared/career'
+import { RobotIcon } from '../RobotIcon'
 import './overview.css'
 
 export function Overview() {
@@ -21,8 +22,11 @@ export function Overview() {
   return (
     <main className="panel">
       <header>
-        <h1>SkillPilot AI</h1>
-        <p>{firstName ? `Hi ${firstName}, here's your career at a glance` : 'Your career at a glance'}</p>
+        <RobotIcon />
+        <div>
+          <h1>SkillPilot AI</h1>
+          <p>{firstName ? `Hi ${firstName}, here's your career at a glance` : 'Your career at a glance'}</p>
+        </div>
       </header>
       <section>
         <h2>Current goal</h2>

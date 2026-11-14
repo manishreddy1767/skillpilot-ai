@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { RobotIcon } from '../RobotIcon'
 import { AssistantView } from './AssistantView'
 import { DashboardView } from './DashboardView'
 import { LinkPicker } from './LinkPicker'
@@ -117,7 +118,11 @@ export function App() {
   return (
     <div className="shell">
       <div className="titlebar">
-        <span>SkillPilot AI</span>
+        <span className="brand">
+          <RobotIcon />
+          SkillPilot AI
+        </span>
+        <span className="online">Ready to help</span>
         <button type="button" onClick={() => window.skillpilot.minimizeToWidget()}>
           Minimize to widget
         </button>

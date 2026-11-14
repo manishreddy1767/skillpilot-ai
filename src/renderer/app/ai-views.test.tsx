@@ -60,6 +60,17 @@ describe('ProposalList', () => {
 })
 
 describe('AssistantView', () => {
+  it('the robot greets you while the chat is empty, then steps aside', async () => {
+    const { container, unmount } = render(<AssistantView />)
+    expect(screen.getByText('Ready to help.')).toBeTruthy()
+    expect(container.querySelector('.hello svg')?.getAttribute('aria-hidden')).toBe('true')
+    unmount()
+    api().getChat.mockResolvedValue({ ok: true, value: [message(1, 'user', 'Hi')] })
+    render(<AssistantView />)
+    await screen.findByText('Hi')
+    expect(screen.queryByText('Ready to help.')).toBeNull()
+  })
+
   it('explains when AI is unavailable and blocks sending', async () => {
     api().getAiStatus.mockResolvedValue({
       ok: true,

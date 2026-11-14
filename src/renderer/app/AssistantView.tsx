@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { ChatMessage } from '../../shared/ai'
 import { parseVoiceCommand, type SectionId } from '../../shared/voice-commands'
+import { RobotIcon } from '../RobotIcon'
 import { ProposalList } from './ProposalList'
 import { useAiBlocked } from './useAiStatus'
 import { carryOut, localToday } from './voice-actions'
@@ -154,12 +155,23 @@ export function AssistantView({ onNavigate = () => undefined }: AssistantViewPro
   return (
     <div>
       <h1>Assistant</h1>
-      {blocked ? <p className="lead">{blocked}</p> : null}
-      {messages.length === 0 && !blocked ? (
-        <p className="lead">
-          Ask what to learn next, or whether you are ready for a role. Press the microphone to speak, for example
-          “add task read chapter four tomorrow” or “open my skills”.
-        </p>
+      {messages.length === 0 ? (
+        <div className="hello">
+          <RobotIcon />
+          <div>
+            <p className="hello-title">Ready to help.</p>
+            {blocked ? (
+              <p className="lead">{blocked}</p>
+            ) : (
+              <p className="lead">
+                Ask what to learn next, or whether you are ready for a role. Press the microphone to speak, for
+                example “add task read chapter four tomorrow” or “open my skills”.
+              </p>
+            )}
+          </div>
+        </div>
+      ) : blocked ? (
+        <p className="lead">{blocked}</p>
       ) : null}
 
       <ul className="chat">
