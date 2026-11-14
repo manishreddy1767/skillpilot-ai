@@ -22,6 +22,7 @@ export class HoverController {
   private pollTimer: NodeJS.Timeout | null = null
   private outsideFor = 0
   private suspended = false
+  private held = false
 
   constructor(private readonly deps: HoverDeps) {}
 
@@ -46,7 +47,22 @@ export class HoverController {
   /** Closes the panel and keeps it closed, for example during a drag. */
   suspend(): void {
     this.suspended = true
+    this.held = false
     this.close()
+  }
+
+  /** Opens the panel at once and keeps it open wherever the cursor is, for example while listening. */
+  hold(): void {
+    if (this.suspended) return
+    this.cancelOpening()
+    this.held = true
+    if (!this.isOpen) this.open()
+  }
+
+  /** Lets a held panel close again once the cursor is away from it. */
+  release(): void {
+    this.held = false
+    this.outsideFor = 0
   }
 
   resume(): void {
@@ -68,6 +84,7 @@ export class HoverController {
   }
 
   private checkCursor(): void {
+    if (this.held) return
     const cursor = this.deps.getCursor()
     const widget = this.deps.getWidgetBounds()
     const panel = this.deps.getPanelBounds()
