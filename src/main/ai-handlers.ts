@@ -1,6 +1,8 @@
 import type { AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from '../shared/ai'
 import { validateFields, type Result } from '../shared/career'
 import { analyseGap, type GapAnalysis } from '../shared/gap'
+import { requirementsFor, roadmapFromGaps } from '../shared/library-plans'
+import { libraryRole } from '../shared/skills-library'
 import { buildDashboard } from '../shared/progress'
 import { isLocalAddress, settingFields, type Settings } from '../shared/settings'
 import { AiService, applyProposal } from './ai/ai-service'
@@ -107,6 +109,57 @@ export function createAiHandlers(deps: AiHandlerDeps) {
       if (message.length > MAX_MESSAGE_LENGTH) return Promise.resolve(failure('That message is too long.'))
       return ai((service) => service.chat(message))
     },
+
+    /**
+     * Suggestions from SkillPilot's own skills library, made offline with no AI: a role's requirements,
+     * or a roadmap for its gaps. Like AI suggestions, nothing is saved until accepted.
+     */
+    suggestFromLibrary: (roleId: unknown, libraryRoleId: unknown, what: unknown): Result<number> =>
+      sync(({ store, aiStore }) => {
+        if (!isId(roleId)) return failure('Unknown role.')
+        const role = store.listRecords('targetRole').find((item) => item.id === roleId)
+        if (!role) return failure('That target role no longer exists.')
+        const title = role.values['title'] ?? ''
+        const requirements = store.listRecords('roleRequirement', roleId).map(({ values }) => ({
+          skillName: values['skillName'] ?? '',
+          requiredLevel: Number(values['requiredLevel']),
+          importance: Number(values['importance'])
+        }))
+
+        if (what === 'requirements') {
+          const library = typeof libraryRoleId === 'string' ? libraryRole(libraryRoleId) : null
+          if (!library) return failure('Choose a role from the skills library.')
+          const needs = requirementsFor(library, requirements.map((item) => item.skillName))
+          for (const need of needs) {
+            const payload = { roleId, skillName: need.skillName, requiredLevel: String(need.requiredLevel), importance: String(need.importance) }
+            aiStore.addProposal('addRoleRequirement', `Add requirement: ${need.skillName}`, payload, [
+              { label: 'Role', value: title },
+              { label: 'Skill', value: need.skillName },
+              { label: 'Level needed', value: String(need.requiredLevel) },
+              { label: 'Importance', value: `${need.importance} of 3` },
+              { label: 'From', value: `Skills library: ${library.title}` }
+            ])
+          }
+          return { ok: true, value: needs.length }
+        }
+
+        if (what === 'roadmap') {
+          if (requirements.length === 0) return failure('Add requirements first, so there are gaps to plan for.')
+          const { skills } = buildDashboard(store.readCareerRows(), today())
+          const weeklyHours = (Number(aiStore.getSettings()['dailyMinutes'] ?? 60) * 6) / 60
+          const plan = roadmapFromGaps(title, analyseGap(requirements, skills).items, weeklyHours)
+          if (plan.items.length === 0) return failure('Every requirement is already met, so there is nothing to plan.')
+          const hours = plan.items.reduce((sum, item) => sum + item.effortHours, 0)
+          aiStore.addProposal('addRoadmap', `Add roadmap: ${plan.title}`, plan, [
+            { label: 'Roadmap', value: plan.title },
+            { label: 'Topics', value: plan.items.map((item) => `Week ${item.week}: ${item.title}`).join('; ') },
+            { label: 'Estimated effort', value: `${hours} hours` },
+            { label: 'From', value: 'Skills library' }
+          ])
+          return { ok: true, value: 1 }
+        }
+        return failure('Unknown suggestion type.')
+      }),
 
     getGapAnalysis: (roleId: unknown): Result<{ analysis: GapAnalysis; report: GapReport | null }> =>
       sync(({ store, aiStore }) => {

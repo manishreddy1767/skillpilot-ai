@@ -178,6 +178,69 @@ describe('gap analysis', () => {
   })
 })
 
+describe('suggestions from the skills library', () => {
+  const role = (store: ReturnType<typeof setup>['store']) => store.saveRecord('targetRole', null, { title: 'Data Analyst', notes: '' })!
+
+  it("proposes a library role's requirements, offline, leaving out ones already listed", () => {
+    const { h, store, aiStore, fake } = setup()
+    h.saveSettings(allSettings(h, { aiProvider: 'off' }))
+    const target = role(store)
+    store.saveRecord('roleRequirement', null, { skillName: 'MS Excel', requiredLevel: '3', importance: '3' }, target.id)
+    const result = h.suggestFromLibrary(target.id, 'data-analyst', 'requirements')
+    expect(result.ok).toBe(true)
+    const summaries = aiStore.listProposals().map((proposal) => proposal.summary)
+    expect(summaries).toContain('Add requirement: SQL')
+    expect(summaries).toContain('Add requirement: Power BI')
+    expect(summaries).not.toContain('Add requirement: Excel')
+    expect(result.ok && result.value).toBe(summaries.length)
+    expect(store.listRecords('roleRequirement', target.id)).toHaveLength(1)
+    expect(fake.complete).not.toHaveBeenCalled()
+  })
+
+  it('saves a requirement only once accepted', () => {
+    const { h, store, aiStore } = setup()
+    const target = role(store)
+    h.suggestFromLibrary(target.id, 'data-analyst', 'requirements')
+    const sql = aiStore.listProposals().find((proposal) => proposal.summary === 'Add requirement: SQL')!
+    expect(h.acceptProposal(sql.id).ok).toBe(true)
+    expect(store.listRecords('roleRequirement', target.id).map((item) => item.values['skillName'])).toEqual(['SQL'])
+  })
+
+  it('proposes a roadmap for the gaps, which becomes a real roadmap when accepted', () => {
+    const { h, store, aiStore } = setup()
+    const target = role(store)
+    store.saveRecord('roleRequirement', null, { skillName: 'SQL', requiredLevel: '3', importance: '3' }, target.id)
+    store.saveRecord('roleRequirement', null, { skillName: 'Power BI', requiredLevel: '2', importance: '2' }, target.id)
+    expect(h.suggestFromLibrary(target.id, null, 'roadmap')).toEqual({ ok: true, value: 1 })
+    const [proposal] = aiStore.listProposals()
+    expect(proposal!.summary).toBe('Add roadmap: Data Analyst plan')
+    expect(h.acceptProposal(proposal!.id).ok).toBe(true)
+    const [roadmap] = store.listRecords('roadmap')
+    expect(store.listRecords('roadmapItem', roadmap!.id).map((item) => item.values['title'])).toEqual([
+      'SQL: reach level 3',
+      'Power BI: reach level 2'
+    ])
+  })
+
+  it('explains when there is nothing to plan', () => {
+    const { h, store } = setup()
+    const target = role(store)
+    expect(h.suggestFromLibrary(target.id, null, 'roadmap')).toMatchObject({ ok: false, message: expect.stringContaining('Add requirements first') })
+    store.saveRecord('skill', null, { name: 'SQL', claimedLevel: '3', status: 'using' })
+    expect(h.suggestFromLibrary(target.id, 'nope', 'requirements')).toMatchObject({ ok: false, message: expect.stringContaining('Choose a role') })
+  })
+
+  it.each([
+    [0, 'data-analyst', 'requirements'],
+    [999, 'data-analyst', 'requirements'],
+    [1, 'data-analyst', 'everything']
+  ])('refuses role %s, %s, %s', (roleId, libraryId, what) => {
+    const { h, store } = setup()
+    role(store)
+    expect(h.suggestFromLibrary(roleId, libraryId, what).ok).toBe(false)
+  })
+})
+
 describe('project ideas', () => {
   it('needs the local AI to be on', async () => {
     const { h } = setup()
