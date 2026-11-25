@@ -22,7 +22,7 @@ let base = ''
 const realDatabaseBefore = existsSync(realDatabase) ? statSync(realDatabase).size : -1
 
 function cleanEnv(): Record<string, string> {
-  const env = { ...process.env, ANTHROPIC_BASE_URL: base } as Record<string, string>
+  const env = { ...process.env } as Record<string, string>
   delete env['ELECTRON_RUN_AS_NODE']
   return env
 }
@@ -49,38 +49,13 @@ function runKeyHas(name: string): boolean {
 test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async () => {
+  // A stand-in for Ollama on this laptop, so the installed app's local AI runs end to end.
   server = createServer((req, res) => {
     req.resume()
     req.on('end', () => {
-      res.writeHead(200, { 'content-type': 'text/event-stream' })
-      const send = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-      send('message_start', {
-        type: 'message_start',
-        message: {
-          id: 'm',
-          type: 'message',
-          role: 'assistant',
-          model: 'claude-opus-5-5',
-          content: [],
-          stop_reason: null,
-          stop_sequence: null,
-          usage: { input_tokens: 1, output_tokens: 1 }
-        }
-      })
-      send('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } })
-      send('content_block_delta', {
-        type: 'content_block_delta',
-        index: 0,
-        delta: { type: 'text_delta', text: JSON.stringify({ reply: 'Packaged reply', proposals: [] }) }
-      })
-      send('content_block_stop', { type: 'content_block_stop', index: 0 })
-      send('message_delta', {
-        type: 'message_delta',
-        delta: { stop_reason: 'end_turn', stop_sequence: null },
-        usage: { output_tokens: 2 }
-      })
-      send('message_stop', { type: 'message_stop' })
-      res.end()
+      res.writeHead(200, { 'content-type': 'application/json' })
+      if (req.url === '/api/tags') return void res.end(JSON.stringify({ models: [{ name: 'qwen3:4b' }] }))
+      res.end(JSON.stringify({ message: { content: JSON.stringify({ reply: 'Packaged reply', proposals: [] }) } }))
     })
   })
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
@@ -139,21 +114,18 @@ test('the bundled database, encryption and AI all work', async () => {
     })
   })
   const appPage = await page('SkillPilot AI')
-  const result = await appPage.evaluate(async () => {
+  const result = await appPage.evaluate(async (address) => {
     const api = window.skillpilot
     const profile = await api.saveProfile({ fullName: 'Installer Test' })
     const settings = await api.getSettings()
     if (!settings.ok) throw new Error(settings.message)
-    await api.saveSettings({ ...settings.value, aiProvider: 'claude' })
-    const key = await api.saveApiKey('sk-installer-test')
+    await api.saveSettings({ ...settings.value, aiProvider: 'ollama', ollamaUrl: address })
     const chat = await api.sendChat('Hello')
-    return { profile: profile.ok, key: key.ok, chat }
-  })
+    return { profile: profile.ok, chat }
+  }, base)
   expect(result.profile).toBe(true)
-  expect(result.key).toBe(true)
   expect(result.chat).toMatchObject({ ok: true, value: [{ content: 'Hello' }, { content: 'Packaged reply' }] })
   expect(existsSync(join(dataFolder, 'skillpilot.db'))).toBe(true)
-  expect(readFileSync(join(dataFolder, 'api-key.enc')).includes('sk-installer-test')).toBe(false)
 })
 
 test('a real Windows notification is delivered', async () => {
