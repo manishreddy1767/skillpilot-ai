@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addsUnclaimedSkill, buildResume, bulletsFrom, keywordCoverage, parseResumeData, resumeText, type ResumeSource } from './resume'
+import { addsUnclaimedSkill, applySuggestion, buildResume, bulletsFrom, keywordCoverage, parseResumeData, resumeText, type ResumeSource } from './resume'
 
 const source: ResumeSource = {
   profile: {
@@ -146,5 +146,30 @@ describe('parseResumeData', () => {
     ['a number where text belongs', { ...buildResume(source), name: 5 }]
   ])('refuses %s', (_label, value) => {
     expect(parseResumeData(value)).toBeNull()
+  })
+})
+
+describe('applySuggestion', () => {
+  const resume = buildResume(source)
+
+  it('changes only the line suggested', () => {
+    const changed = applySuggestion(resume, {
+      id: 'experience-0-1',
+      section: 'experience',
+      entry: 0,
+      bullet: 1,
+      original: 'Built a React dashboard with CSS grid',
+      reworded: 'Built a responsive React dashboard using CSS grid'
+    })
+    expect(changed.experience[0]!.bullets).toEqual([
+      'Wrote Python scripts for reports',
+      'Built a responsive React dashboard using CSS grid',
+      'Helped the support team'
+    ])
+    expect(resume.experience[0]!.bullets[1]).toBe('Built a React dashboard with CSS grid')
+  })
+
+  it('changes the summary', () => {
+    expect(applySuggestion(resume, { id: 'summary', section: 'summary', entry: 0, bullet: 0, original: '', reworded: 'New' }).summary).toBe('New')
   })
 })

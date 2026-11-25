@@ -253,3 +253,25 @@ export function parseResumeData(value: unknown): ResumeData | null {
     keywordsOk
   return ok ? (value as ResumeData) : null
 }
+
+/** A rewording the local AI suggests for one line. Nothing changes until you accept it. */
+export interface ResumeSuggestion {
+  id: string
+  section: 'summary' | 'experience' | 'projects'
+  /** Which role or project, and which point in it. Both 0 for the summary. */
+  entry: number
+  bullet: number
+  original: string
+  reworded: string
+}
+
+/** Puts an accepted suggestion into a resume, returning a new resume. */
+export function applySuggestion(data: ResumeData, suggestion: ResumeSuggestion): ResumeData {
+  if (suggestion.section === 'summary') return { ...data, summary: suggestion.reworded }
+  const list = data[suggestion.section].map((item, index) =>
+    index === suggestion.entry
+      ? { ...item, bullets: item.bullets.map((bullet, at) => (at === suggestion.bullet ? suggestion.reworded : bullet)) }
+      : item
+  )
+  return { ...data, [suggestion.section]: list }
+}
