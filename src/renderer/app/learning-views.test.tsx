@@ -86,7 +86,7 @@ describe('TasksView', () => {
 
   it('asks the AI for tasks and shows failures', async () => {
     withLearning()
-    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'claude', model: 'm', hasKey: true, blocked: '' } })
+    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'ollama', model: 'm', localModels: ['m'], blocked: '' } })
     api().suggestTasks.mockResolvedValue({ ok: false, message: 'Rate limited.' })
     render(<TasksView />)
     fireEvent.click(await screen.findByRole('button', { name: 'Suggest tasks for today' }))
@@ -97,7 +97,7 @@ describe('TasksView', () => {
     withLearning()
     api().getAiStatus.mockResolvedValue({
       ok: true,
-      value: { provider: 'off', model: '', hasKey: false, blocked: 'AI is off. Choose a provider in Settings.' }
+      value: { provider: 'off', model: '', localModels: [], blocked: 'AI is off. Choose a provider in Settings.' }
     })
     render(<TasksView />)
     await screen.findByText('AI is off. Choose a provider in Settings.')

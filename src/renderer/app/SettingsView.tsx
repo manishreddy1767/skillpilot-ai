@@ -21,71 +21,36 @@ const groups: { title: string; fields: FieldDef[] }[] = [
   { title: 'Widget and startup', fields: widgetSettingFields }
 ]
 
-function ApiKeySection({ onChange }: { onChange: () => void }) {
+/** Whether the local model can run, what is installed, and the promise that nothing leaves the laptop. */
+function LocalAiSection({ refresh }: { refresh: number }) {
   const [status, setStatus] = useState<AiStatus | null>(null)
-  const [key, setKey] = useState('')
-  const [message, setMessage] = useState('')
 
-  const load = (): void => {
+  useEffect(() => {
     void window.skillpilot.getAiStatus().then((result) => {
       if (result.ok) setStatus(result.value)
     })
-  }
-  useEffect(load, [])
-
-  const save = async (event: FormEvent): Promise<void> => {
-    event.preventDefault()
-    const result = await window.skillpilot.saveApiKey(key)
-    setMessage(result.ok ? '' : result.message)
-    if (result.ok) {
-      setKey('')
-      load()
-      onChange()
-    }
-  }
-
-  const remove = async (): Promise<void> => {
-    await window.skillpilot.removeApiKey()
-    load()
-    onChange()
-  }
+  }, [refresh])
 
   return (
     <section>
-      <h2>Anthropic API key</h2>
+      <h2>Local AI</h2>
       <p className="lead">
-        Encrypted by Windows and kept on this laptop. It is never shown again, and API use is billed to your Anthropic
-        account.
+        SkillPilot's AI runs only on this laptop, using Ollama. Nothing about you is sent anywhere: the app blocks every
+        connection to the internet.
       </p>
-      {status?.hasKey ? (
-        <div className="actions tight">
+      {status ? (
+        <>
           <p role="status">
-            <span aria-hidden="true">✓</span> A key is saved
+            {status.blocked ? status.blocked : `Ready, using ${status.model}.`}
           </p>
-          <button type="button" onClick={() => void remove()}>
-            Remove key
-          </button>
-        </div>
-      ) : (
-        <form onSubmit={(event) => void save(event)}>
-          <div className="field wide-input">
-            <label htmlFor="api-key">API key</label>
-            <input
-              id="api-key"
-              type="password"
-              autoComplete="off"
-              value={key}
-              onChange={(event) => setKey(event.target.value)}
-            />
-          </div>
-          <div className="actions tight">
-            <button type="submit" className="primary" disabled={!key.trim()}>
-              Save key
-            </button>
-            {message ? <p role="alert">{message}</p> : null}
-          </div>
-        </form>
-      )}
+          {status.localModels ? (
+            <p className="lead">
+              Installed models: {status.localModels.length ? status.localModels.join(', ') : 'none yet'}. To add one, run
+              "ollama pull" with its name in a terminal.
+            </p>
+          ) : null}
+        </>
+      ) : null}
     </section>
   )
 }
@@ -103,8 +68,7 @@ function SentLog() {
     <section>
       <h2>What was sent</h2>
       <p className="lead">
-        The exact text of your last 30 AI requests. Your name, email, phone, location, employers, and schools are left
-        out, unless you typed them into a message or free-text field.
+        The exact text of your last 30 requests to the local AI. They stay on this laptop, like everything else.
       </p>
       {log.length === 0 ? <p className="lead">Nothing has been sent.</p> : null}
       {log.map((entry) => (
@@ -124,6 +88,7 @@ export function SettingsView() {
   const [values, setValues] = useState<Settings | null>(null)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null)
+  const [saved, setSaved] = useState(0)
   const form = useFocusFirstError(errors)
 
   useEffect(() => {
@@ -141,6 +106,7 @@ export function SettingsView() {
       setValues(result.value)
       setErrors({})
       setStatus({ ok: true, text: 'Saved' })
+      setSaved((count) => count + 1)
     } else {
       setErrors(result.errors ?? {})
       setStatus({ ok: false, text: result.message })
@@ -182,7 +148,7 @@ export function SettingsView() {
           {status && !status.ok ? <p role="alert">{status.text}</p> : null}
         </div>
       </form>
-      <ApiKeySection onChange={() => undefined} />
+      <LocalAiSection refresh={saved} />
       <SentLog />
       <DataSection />
     </div>

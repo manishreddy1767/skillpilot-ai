@@ -10,7 +10,7 @@ const api = () => vi.mocked(window.skillpilot)
 const outcome = (value: VoiceOutcome) => api().listen.mockResolvedValueOnce({ ok: true, value })
 const mic = () => screen.getByRole('button', { name: 'Speak a message or command' })
 const ready = () =>
-  api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'claude', model: 'm', hasKey: true, blocked: '' } })
+  api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'ollama', model: 'm', localModels: ['m'], blocked: '' } })
 
 /** Captures the status listener a component registers, so tests can play the main process. */
 function statusFeed() {

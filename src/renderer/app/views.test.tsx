@@ -302,7 +302,7 @@ describe('GoalsView', () => {
 
 describe('ProjectsView ideas', () => {
   it('asks the AI for project ideas and shows failures', async () => {
-    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'claude', model: 'm', hasKey: true, blocked: '' } })
+    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'ollama', model: 'm', localModels: ['m'], blocked: '' } })
     api().suggestProjects.mockResolvedValue({ ok: false, message: 'Rate limited.' })
     render(<ProjectsView />)
     await waitFor(() =>
@@ -313,7 +313,7 @@ describe('ProjectsView ideas', () => {
   })
 
   it('disables ideas when AI is unavailable', async () => {
-    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'off', model: '', hasKey: false, blocked: 'AI is off.' } })
+    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'off', model: '', localModels: [], blocked: 'AI is off.' } })
     render(<ProjectsView />)
     expect(await screen.findByText('AI is off.')).toBeTruthy()
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Suggest projects for my gaps' }).disabled).toBe(true)

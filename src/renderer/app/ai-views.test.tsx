@@ -12,7 +12,7 @@ const click = (name: string) => fireEvent.click(screen.getByRole('button', { nam
 const ready = () =>
   api().getAiStatus.mockResolvedValue({
     ok: true,
-    value: { provider: 'claude', model: 'm', hasKey: true, blocked: '' }
+    value: { provider: 'ollama', model: 'm', localModels: ['m'], blocked: '' }
   })
 const proposal = { id: 3, kind: 'addSkill' as const, summary: 'Add skill: Go', details: [{ label: 'Why', value: 'Useful' }] }
 const message = (id: number, role: 'user' | 'assistant', content: string) => ({ id, role, content, createdAt: 'now' })
@@ -74,7 +74,7 @@ describe('AssistantView', () => {
   it('explains when AI is unavailable and blocks sending', async () => {
     api().getAiStatus.mockResolvedValue({
       ok: true,
-      value: { provider: 'off', model: '', hasKey: false, blocked: 'AI is off. Choose a provider in Settings.' }
+      value: { provider: 'off', model: '', localModels: [], blocked: 'AI is off. Choose a provider in Settings.' }
     })
     render(<AssistantView />)
     expect(await screen.findByText('AI is off. Choose a provider in Settings.')).toBeTruthy()
@@ -151,10 +151,10 @@ describe('RolesView', () => {
   it('disables AI actions when unavailable, and says why', async () => {
     api().getAiStatus.mockResolvedValue({
       ok: true,
-      value: { provider: 'claude', model: 'm', hasKey: false, blocked: 'Add your Anthropic API key in Settings.' }
+      value: { provider: 'ollama', model: 'm', localModels: null, blocked: 'Ollama is not running.' }
     })
     await open()
-    expect(await screen.findByText('Add your Anthropic API key in Settings.')).toBeTruthy()
+    expect(await screen.findByText('Ollama is not running.')).toBeTruthy()
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Create roadmap' }).disabled).toBe(true)
   })
 
@@ -213,11 +213,13 @@ describe('SettingsView', () => {
 
   it('saves changed settings', async () => {
     load()
-    await waitFor(() => expect(screen.getByLabelText<HTMLSelectElement>('AI provider').value).toBe('off'))
-    fireEvent.change(screen.getByLabelText('AI provider'), { target: { value: 'claude' } })
+    await waitFor(() => expect(screen.getByLabelText<HTMLSelectElement>('Local AI').value).toBe('ollama'))
+    const choices = [...screen.getByLabelText<HTMLSelectElement>('Local AI').options].map((option) => option.value)
+    expect(choices).toEqual(['ollama', 'off'])
+    fireEvent.change(screen.getByLabelText('Local AI'), { target: { value: 'off' } })
     click('Save settings')
-    expect((await screen.findByRole('status', { name: '' })).textContent).toBe('Saved')
-    expect(api().saveSettings.mock.calls[0]?.[0]).toMatchObject({ aiProvider: 'claude' })
+    expect(await screen.findByText('Saved')).toBeTruthy()
+    expect(api().saveSettings.mock.calls[0]?.[0]).toMatchObject({ aiProvider: 'off' })
   })
 
   it('shows field errors', async () => {
@@ -227,45 +229,46 @@ describe('SettingsView', () => {
       message: 'Please fix the highlighted fields.',
       errors: { ollamaUrl: 'The address must be on this laptop' }
     })
-    await screen.findByLabelText('AI provider')
+    await screen.findByLabelText('Local AI')
     await waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Save settings' }).disabled).toBe(false))
     click('Save settings')
     expect(await screen.findByText('The address must be on this laptop')).toBeTruthy()
   })
 
-  it('saves a key without ever displaying it', async () => {
+  it('has no place for a cloud API key, and promises everything stays local', async () => {
     load()
-    const input = await screen.findByLabelText<HTMLInputElement>('API key')
-    expect(input.type).toBe('password')
-    fireEvent.change(input, { target: { value: 'sk-secret' } })
-    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'claude', model: 'm', hasKey: true, blocked: '' } })
-    click('Save key')
-    expect(await screen.findByText('A key is saved')).toBeTruthy()
-    expect(api().saveApiKey).toHaveBeenCalledWith('sk-secret')
-    expect(document.body.textContent).not.toContain('sk-secret')
+    expect(await screen.findByRole('heading', { name: 'Local AI' })).toBeTruthy()
+    expect(screen.queryByLabelText('API key')).toBeNull()
+    expect(document.body.textContent).toContain('blocks every connection to the internet')
+    expect(document.body.textContent).not.toMatch(/anthropic|claude/i)
   })
 
-  it('removes a key', async () => {
-    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'claude', model: 'm', hasKey: true, blocked: '' } })
+  it('shows the model in use and the models installed', async () => {
+    api().getAiStatus.mockResolvedValue({
+      ok: true,
+      value: { provider: 'ollama', model: 'qwen3:4b', blocked: '', localModels: ['gemma3:4b', 'qwen3:4b'] }
+    })
     load()
-    fireEvent.click(await screen.findByRole('button', { name: 'Remove key' }))
-    await waitFor(() => expect(api().removeApiKey).toHaveBeenCalledOnce())
+    expect(await screen.findByText('Ready, using qwen3:4b.')).toBeTruthy()
+    expect(screen.getByText(/Installed models: gemma3:4b, qwen3:4b/)).toBeTruthy()
   })
 
-  it('shows a rejected key', async () => {
+  it('explains when Ollama is not running', async () => {
+    api().getAiStatus.mockResolvedValue({
+      ok: true,
+      value: { provider: 'ollama', model: 'qwen3:4b', blocked: 'Ollama is not running.', localModels: null }
+    })
     load()
-    api().saveApiKey.mockResolvedValue({ ok: false, message: 'That does not look like an API key.' })
-    fireEvent.change(await screen.findByLabelText('API key'), { target: { value: 'bad' } })
-    click('Save key')
-    expect((await screen.findByRole('alert')).textContent).toContain('does not look like')
+    expect(await screen.findByText('Ollama is not running.')).toBeTruthy()
+    expect(screen.queryByText(/Installed models/)).toBeNull()
   })
 
   it('shows exactly what was sent', async () => {
     api().getAiLog.mockResolvedValue({
       ok: true,
       value: [
-        { id: 1, feature: 'Assistant', provider: 'claude', model: 'm', sent: 'The exact text', ok: true, inputTokens: 3, outputTokens: 2, createdAt: 'today' },
-        { id: 2, feature: 'Daily tasks', provider: 'claude', model: 'm', sent: 'x', ok: false, inputTokens: 0, outputTokens: 0, createdAt: 'today' }
+        { id: 1, feature: 'Assistant', provider: 'ollama', model: 'm', sent: 'The exact text', ok: true, inputTokens: 3, outputTokens: 2, createdAt: 'today' },
+        { id: 2, feature: 'Daily tasks', provider: 'ollama', model: 'm', sent: 'x', ok: false, inputTokens: 0, outputTokens: 0, createdAt: 'today' }
       ]
     })
     load()
