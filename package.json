@@ -21,7 +21,6 @@
     "test:installer": "npm run dist && playwright test -c playwright.installer.config.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.6.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
