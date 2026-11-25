@@ -206,3 +206,50 @@ export function addsUnclaimedSkill(original: string, reworded: string, yourSkill
   const allowed = new Set([...yourSkills.map((name) => canonicalSkillName(name)), ...skillsInText(original).map(({ skill }) => skill.name)])
   return skillsInText(reworded).find(({ skill }) => !allowed.has(skill.name))?.skill.name ?? null
 }
+
+const MAX_FIELD = 2_000
+
+const isText = (value: unknown): value is string => typeof value === 'string' && value.length <= MAX_FIELD
+const isTextList = (value: unknown, most = 60): value is string[] =>
+  Array.isArray(value) && value.length <= most && value.every(isText)
+const isEntry = (value: unknown): value is ResumeEntry => {
+  if (!value || typeof value !== 'object') return false
+  const item = value as Record<string, unknown>
+  return (
+    isText(item['heading']) &&
+    isText(item['subheading']) &&
+    isText(item['dates']) &&
+    isTextList(item['bullets'], 20) &&
+    (item['link'] === undefined || (isText(item['link']) && /^https?:\/\/\S+$/i.test(item['link'])))
+  )
+}
+
+/** A resume sent back from the screen, checked to be the right shape and size. Null if it is not. */
+export function parseResumeData(value: unknown): ResumeData | null {
+  if (!value || typeof value !== 'object') return null
+  const data = value as Record<string, unknown>
+  const entries = (key: string): boolean => Array.isArray(data[key]) && (data[key] as unknown[]).length <= 30 && (data[key] as unknown[]).every(isEntry)
+  const skills =
+    Array.isArray(data['skills']) &&
+    data['skills'].length <= 6 &&
+    data['skills'].every((group) => group && typeof group === 'object' && isText((group as Record<string, unknown>)['group']) && isTextList((group as Record<string, unknown>)['items'], 40))
+  const keywords = data['keywords']
+  const keywordsOk =
+    keywords === null ||
+    (typeof keywords === 'object' &&
+      isTextList((keywords as Record<string, unknown>)['matched'], 200) &&
+      isTextList((keywords as Record<string, unknown>)['missing'], 200) &&
+      typeof (keywords as Record<string, unknown>)['coverage'] === 'number')
+  const ok =
+    isText(data['name']) &&
+    isText(data['headline']) &&
+    isTextList(data['contact'], 6) &&
+    isText(data['summary']) &&
+    skills &&
+    entries('experience') &&
+    entries('projects') &&
+    entries('education') &&
+    isTextList(data['certifications'], 30) &&
+    keywordsOk
+  return ok ? (value as ResumeData) : null
+}

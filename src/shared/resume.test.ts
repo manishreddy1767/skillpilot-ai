@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addsUnclaimedSkill, buildResume, bulletsFrom, keywordCoverage, resumeText, type ResumeSource } from './resume'
+import { addsUnclaimedSkill, buildResume, bulletsFrom, keywordCoverage, parseResumeData, resumeText, type ResumeSource } from './resume'
 
 const source: ResumeSource = {
   profile: {
@@ -127,5 +127,24 @@ describe('addsUnclaimedSkill', () => {
 
   it('catches a skill you never claimed', () => {
     expect(addsUnclaimedSkill('Built a dashboard', 'Built a dashboard in React with Kubernetes', yours)).toBe('Kubernetes')
+  })
+})
+
+describe('parseResumeData', () => {
+  it('accepts a resume the builder made', () => {
+    const resume = buildResume(source, job)
+    expect(parseResumeData(JSON.parse(JSON.stringify(resume)))).toEqual(resume)
+  })
+
+  it.each([
+    ['nothing', null],
+    ['a string', 'resume'],
+    ['a missing section', { ...buildResume(source), projects: undefined }],
+    ['a script link', { ...buildResume(source), projects: [{ heading: 'x', subheading: '', dates: '', bullets: [], link: 'javascript:alert(1)' }] }],
+    ['a huge field', { ...buildResume(source), summary: 'x'.repeat(5000) }],
+    ['too many points', { ...buildResume(source), experience: [{ heading: 'x', subheading: '', dates: '', bullets: Array(50).fill('y') }] }],
+    ['a number where text belongs', { ...buildResume(source), name: 5 }]
+  ])('refuses %s', (_label, value) => {
+    expect(parseResumeData(value)).toBeNull()
   })
 })
