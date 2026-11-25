@@ -11,6 +11,7 @@ import {
   ipcMain,
   powerMonitor,
   screen,
+  session,
   shell,
   type IpcMainEvent,
   type IpcMainInvokeEvent
@@ -20,6 +21,7 @@ import { Channel, type VoiceStatus } from '../shared/ipc'
 import { FIXED_PHRASES, SPOKEN_SECTION_NAMES } from '../shared/voice-commands'
 import { MIC_BADGE_RATIO, defaultSettings, type Settings } from '../shared/settings'
 import { createAiHandlers } from './ai-handlers'
+import { OFFLINE_SWITCHES, blockedReporter, hostOf, isAllowedRequest, lockedFetch } from './network-lock'
 import { createDataHandlers } from './data-handlers'
 import { createPortabilityHandlers } from './portability-handlers'
 import { localDate } from './db/backup'
@@ -58,6 +60,23 @@ const toPair = ({ x, y }: Point): [number, number] => [x, y]
 function start(): void {
   const dataPath = app.getPath('userData')
   const errorLogPath = join(dataPath, 'logs', 'errors.log')
+
+  // Nothing leaves this laptop. Pages may only load the app's own files and local addresses, and the
+  // main process may only fetch from this laptop (Ollama). Tests read the blocked list.
+  const blockedLog: string[] = []
+  ;(globalThis as { __skillpilotBlocked?: string[] }).__skillpilotBlocked = blockedLog
+  const reportBlocked = blockedReporter((message) => writeErrorLog(errorLogPath, new Error(message)))
+  const onBlocked = (url: string): void => {
+    blockedLog.push(hostOf(url))
+    reportBlocked(url)
+  }
+  globalThis.fetch = lockedFetch(globalThis.fetch.bind(globalThis), onBlocked)
+  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+    const allowed = isAllowedRequest(details.url)
+    if (!allowed) onBlocked(details.url)
+    callback({ cancel: !allowed })
+  })
+  session.defaultSession.setSpellCheckerEnabled(false)
   const positionPath = join(dataPath, 'widget-position.json')
 
   const data = openCareerData({
@@ -619,6 +638,8 @@ if (!app.requestSingleInstanceLock()) {
   installErrorLog(join(app.getPath('userData'), 'logs', 'errors.log'), (title, message) =>
     dialog.showErrorBox(title, message)
   )
+  // Offline from the very start: Chromium's own background connections are switched off.
+  for (const name of OFFLINE_SWITCHES) app.commandLine.appendSwitch(name)
   // Windows ties notifications to this id, which matches the installer.
   app.setAppUserModelId('com.skillpilot.ai')
   // Windows are hidden rather than closed, so the app runs until Quit is chosen.
