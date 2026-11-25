@@ -86,6 +86,7 @@ export const Channel = {
   EraseAll: 'data:erase',
   GetHistory: 'history:get',
   SuggestProjects: 'ai:suggest-projects',
+  SuggestFromLibrary: 'library:suggest',
   Listen: 'voice:listen',
   WidgetListen: 'voice:widget-listen',
   StopListening: 'voice:stop',
@@ -153,6 +154,8 @@ export interface SkillPilotApi {
   eraseAll(confirmation: string): Promise<Result<boolean>>
   getHistory(): Promise<Result<History>>
   suggestProjects(): Promise<Result<number>>
+  /** Suggestions from the offline skills library: a role's requirements, or a roadmap for its gaps. */
+  suggestFromLibrary(roleId: number, libraryRoleId: string, what: 'requirements' | 'roadmap'): Promise<Result<number>>
   /** Listens for one spoken request with Windows' offline speech engine, and carries it out. */
   listen(): Promise<Result<VoiceOutcome>>
   /** The widget's microphone: starts listening, or stops if already listening. */

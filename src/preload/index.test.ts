@@ -76,6 +76,7 @@ describe('preload bridge', () => {
       'eraseAll',
       'getHistory',
       'suggestProjects',
+      'suggestFromLibrary',
       'listen',
       'widgetListen',
       'stopListening',
@@ -128,6 +129,8 @@ describe('preload bridge', () => {
     expect(invoke).toHaveBeenLastCalledWith(Channel.SendChat, 'hi')
     await api.acceptProposal(2)
     expect(invoke).toHaveBeenLastCalledWith(Channel.AcceptProposal, 2)
+    await api.suggestFromLibrary(3, 'data-analyst', 'roadmap')
+    expect(invoke).toHaveBeenLastCalledWith(Channel.SuggestFromLibrary, 3, 'data-analyst', 'roadmap')
     await api.listen()
     expect(invoke).toHaveBeenLastCalledWith(Channel.Listen)
     await api.stopListening()

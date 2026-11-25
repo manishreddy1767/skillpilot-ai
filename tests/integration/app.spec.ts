@@ -134,6 +134,7 @@ test.describe('security', () => {
       'sendChat',
       'setLink',
       'stopListening',
+      'suggestFromLibrary',
       'suggestProjects',
       'suggestTasks',
       'widgetListen'

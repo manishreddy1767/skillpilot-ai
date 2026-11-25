@@ -54,6 +54,7 @@ const api: SkillPilotApi = {
   eraseAll: (confirmation) => ipcRenderer.invoke(Channel.EraseAll, confirmation),
   getHistory: () => ipcRenderer.invoke(Channel.GetHistory),
   suggestProjects: () => ipcRenderer.invoke(Channel.SuggestProjects),
+  suggestFromLibrary: (roleId, libraryRoleId, what) => ipcRenderer.invoke(Channel.SuggestFromLibrary, roleId, libraryRoleId, what),
   listen: () => ipcRenderer.invoke(Channel.Listen),
   widgetListen: () => ipcRenderer.send(Channel.WidgetListen),
   stopListening: () => ipcRenderer.invoke(Channel.StopListening),

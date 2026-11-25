@@ -297,6 +297,7 @@ function start(): void {
   ipcMain.handle(Channel.GenerateRoadmap, fromApp(aiHandlers.generateRoadmap))
   ipcMain.handle(Channel.SuggestTasks, fromApp(aiHandlers.suggestTasks))
   ipcMain.handle(Channel.SuggestProjects, fromApp(aiHandlers.suggestProjects))
+  ipcMain.handle(Channel.SuggestFromLibrary, fromApp(aiHandlers.suggestFromLibrary))
   ipcMain.handle(Channel.ListProposals, fromApp(aiHandlers.listProposals))
   ipcMain.handle(Channel.AcceptProposal, fromApp(aiHandlers.acceptProposal))
   ipcMain.handle(Channel.RejectProposal, fromApp(aiHandlers.rejectProposal))
