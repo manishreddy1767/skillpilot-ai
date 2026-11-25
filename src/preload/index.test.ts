@@ -77,6 +77,12 @@ describe('preload bridge', () => {
       'getHistory',
       'suggestProjects',
       'suggestFromLibrary',
+      'matchJob',
+      'rankJobs',
+      'importJobPage',
+      'searchJobs',
+      'openJobLink',
+      'suggestJobSkills',
       'listen',
       'widgetListen',
       'stopListening',
@@ -131,6 +137,10 @@ describe('preload bridge', () => {
     expect(invoke).toHaveBeenLastCalledWith(Channel.AcceptProposal, 2)
     await api.suggestFromLibrary(3, 'data-analyst', 'roadmap')
     expect(invoke).toHaveBeenLastCalledWith(Channel.SuggestFromLibrary, 3, 'data-analyst', 'roadmap')
+    await api.searchJobs('naukri', 'React', 'Pune')
+    expect(invoke).toHaveBeenLastCalledWith(Channel.SearchJobs, 'naukri', 'React', 'Pune')
+    await api.matchJob(4)
+    expect(invoke).toHaveBeenLastCalledWith(Channel.MatchJob, 4)
     await api.listen()
     expect(invoke).toHaveBeenLastCalledWith(Channel.Listen)
     await api.stopListening()

@@ -7,15 +7,9 @@ import { buildDashboard } from '../../shared/progress'
 import type { CareerStore } from '../db/career-store'
 import { parseJobPage } from './job-page'
 
-export interface RankedJob {
-  id: number
-  title: string
-  company: string
-  status: string
-  score: number
-  missing: string[]
-  entryLevel: boolean
-}
+import type { RankedJob } from '../../shared/ipc'
+
+export type { RankedJob }
 
 export interface JobDeps {
   getStores(): { store: CareerStore; aiStore: AiStore } | null

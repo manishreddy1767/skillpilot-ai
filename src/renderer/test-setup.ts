@@ -95,6 +95,17 @@ beforeEach(() => {
     eraseAll: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
     suggestProjects: vi.fn(() => Promise.resolve({ ok: true as const, value: 0 })),
     suggestFromLibrary: vi.fn(() => Promise.resolve({ ok: true as const, value: 0 })),
+    matchJob: vi.fn(() =>
+      Promise.resolve({
+        ok: true as const,
+        value: { score: 0, skills: [], missing: [], experience: null, entryLevel: false, role: null }
+      })
+    ),
+    rankJobs: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
+    importJobPage: vi.fn(() => Promise.resolve({ ok: true as const, value: null })),
+    searchJobs: vi.fn(() => Promise.resolve({ ok: true as const, value: '' })),
+    openJobLink: vi.fn(() => Promise.resolve({ ok: true as const, value: '' })),
+    suggestJobSkills: vi.fn(() => Promise.resolve({ ok: true as const, value: 0 })),
     listen: vi.fn(() => Promise.resolve({ ok: true as const, value: { heard: '', reply: '' } })),
     widgetListen: vi.fn(),
     stopListening: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),

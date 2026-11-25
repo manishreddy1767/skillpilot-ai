@@ -2,6 +2,7 @@ import type { AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from './a
 import type { FieldValues, Link, LinkKind, OverviewData, RecordKind, Result, StoredRecord } from './career'
 import type { GapAnalysis } from './gap'
 import type { History } from './history'
+import type { JobMatch, JobSite } from './job-match'
 import type { Learning } from './learning'
 import type { Dashboard } from './progress'
 import type { Settings } from './settings'
@@ -32,6 +33,16 @@ export interface BackupInfo {
   kind: 'daily' | 'before upgrade' | 'before change'
   savedAt: string
   sizeKb: number
+}
+
+export interface RankedJob {
+  id: number
+  title: string
+  company: string
+  status: string
+  score: number
+  missing: string[]
+  entryLevel: boolean
 }
 
 export interface RoleReadiness {
@@ -87,6 +98,12 @@ export const Channel = {
   GetHistory: 'history:get',
   SuggestProjects: 'ai:suggest-projects',
   SuggestFromLibrary: 'library:suggest',
+  MatchJob: 'jobs:match',
+  RankJobs: 'jobs:rank',
+  ImportJobPage: 'jobs:import-page',
+  SearchJobs: 'jobs:search',
+  OpenJobLink: 'jobs:open-link',
+  SuggestJobSkills: 'jobs:suggest-skills',
   Listen: 'voice:listen',
   WidgetListen: 'voice:widget-listen',
   StopListening: 'voice:stop',
@@ -156,6 +173,17 @@ export interface SkillPilotApi {
   suggestProjects(): Promise<Result<number>>
   /** Suggestions from the offline skills library: a role's requirements, or a roadmap for its gaps. */
   suggestFromLibrary(roleId: number, libraryRoleId: string, what: 'requirements' | 'roadmap'): Promise<Result<number>>
+  /** How well your skills fit a saved job, worked out offline. */
+  matchJob(jobId: number): Promise<Result<JobMatch>>
+  /** Open jobs, best match first. */
+  rankJobs(): Promise<Result<RankedJob[]>>
+  /** Reads a job page saved from a browser and saves it as a job. Null when cancelled. */
+  importJobPage(): Promise<Result<number | null>>
+  /** Opens a job search on a job site in Chrome. Returns a note if Chrome is missing. */
+  searchJobs(site: JobSite, keywords: string, location: string): Promise<Result<string>>
+  openJobLink(jobId: number): Promise<Result<string>>
+  /** Suggests learning the skills a job asks for that you do not have. */
+  suggestJobSkills(jobId: number): Promise<Result<number>>
   /** Listens for one spoken request with Windows' offline speech engine, and carries it out. */
   listen(): Promise<Result<VoiceOutcome>>
   /** The widget's microphone: starts listening, or stops if already listening. */

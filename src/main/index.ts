@@ -39,6 +39,7 @@ import { createTray } from './tray'
 import { APP_WINDOW_SIZE, createAppWindow } from './windows/app-window'
 import { OVERVIEW_SIZE, createOverviewWindow } from './windows/overview'
 import { createWidgetWindow } from './windows/widget'
+import { createJobHandlers } from './jobs/job-handlers'
 import { createDesktopActions, type DesktopActions } from './voice/desktop-actions'
 import { SpeechHost } from './voice/speech-host'
 import { START_APPS_SCRIPT, StartApps } from './voice/start-apps'
@@ -454,6 +455,29 @@ function start(): void {
     broadcast,
     logError
   })
+
+  // Jobs: matched offline. Searches and job links open in Chrome; SkillPilot fetches nothing itself.
+  const jobs = createJobHandlers({
+    getStores: () => (data.store && data.aiStore ? { store: data.store, aiStore: data.aiStore } : null),
+    chooseJobFile: async () => {
+      const options = {
+        title: 'Choose a saved job page',
+        properties: ['openFile' as const],
+        filters: [{ name: 'Saved web pages and text', extensions: ['html', 'htm', 'mhtml', 'mht', 'txt'] }]
+      }
+      const result = appWindow ? await dialog.showOpenDialog(appWindow, options) : await dialog.showOpenDialog(options)
+      return result.canceled ? null : (result.filePaths[0] ?? null)
+    },
+    openInBrowser: (url) => desktop.openUrl(url, 'chrome'),
+    today: () => localDate(new Date()),
+    logError
+  })
+  ipcMain.handle(Channel.MatchJob, fromApp(jobs.matchJob))
+  ipcMain.handle(Channel.RankJobs, fromApp(jobs.rankJobs))
+  ipcMain.handle(Channel.ImportJobPage, fromApp(jobs.importJobPage))
+  ipcMain.handle(Channel.SearchJobs, fromApp(jobs.searchJobs))
+  ipcMain.handle(Channel.OpenJobLink, fromApp(jobs.openJobLink))
+  ipcMain.handle(Channel.SuggestJobSkills, fromApp(jobs.suggestJobSkills))
 
   ipcMain.handle(Channel.Listen, fromApp(() => voice.listen()))
   ipcMain.handle(Channel.StopListening, (event) => {
