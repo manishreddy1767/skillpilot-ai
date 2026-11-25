@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { AiStore } from '../ai/ai-store'
+import { ResumeStore } from '../resume/resume-store'
 import { dailyBackup, preMigrationBackup } from './backup'
 import { CareerStore } from './career-store'
 import { migrate, migrations } from './migrations'
@@ -14,6 +15,7 @@ export interface CareerData {
   store: CareerStore | null
   aiStore: AiStore | null
   transfer: DataTransfer | null
+  resumes: ResumeStore | null
   close(): void
 }
 
@@ -57,6 +59,7 @@ export function openCareerData({
       store: new CareerStore(opened),
       aiStore: new AiStore(opened),
       transfer: new DataTransfer(opened, backups),
+      resumes: new ResumeStore(opened),
       close: () => {
         clearInterval(timer)
         opened.close()
@@ -71,6 +74,6 @@ export function openCareerData({
     }
     logError(error)
     alertError(error)
-    return { store: null, aiStore: null, transfer: null, close: () => undefined }
+    return { store: null, aiStore: null, transfer: null, resumes: null, close: () => undefined }
   }
 }
