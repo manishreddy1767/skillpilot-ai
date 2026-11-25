@@ -24,7 +24,13 @@ export class AiStore {
   getSettings(): Settings {
     const rows = this.db.prepare('SELECT key, value FROM setting').all() as { key: string; value: string }[]
     const known = new Set(settingFields.map((field) => field.key))
-    const saved = rows.filter((row) => known.has(row.key)).map((row) => [row.key, row.value])
+    const choices = new Map(
+      settingFields.flatMap((field) => (field.options ? [[field.key, new Set(field.options.map((o) => o.value))]] : []))
+    )
+    // A value no longer offered, such as the removed cloud AI, falls back to the default.
+    const saved = rows
+      .filter((row) => known.has(row.key) && (choices.get(row.key)?.has(row.value) ?? true))
+      .map((row) => [row.key, row.value])
     return { ...defaultSettings, ...Object.fromEntries(saved) }
   }
 
