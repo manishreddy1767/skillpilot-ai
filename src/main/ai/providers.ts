@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { isLocalAddress } from '../../shared/settings'
 import type { JsonSchema } from './json-schema'
 
@@ -29,84 +28,22 @@ export class AiError extends Error {
   }
 }
 
-const MAX_OUTPUT_TOKENS = 32000
-const FALLBACK_BETA = 'server-side-fallback-2026-07-01'
-/** Haiku has no server-side fallback. */
-const hasFallback = (model: string): boolean => !model.startsWith('claude-haiku')
+/** Small local models can take a while on a laptop, especially the first request after loading. */
+export const LOCAL_TIMEOUT_MS = 5 * 60_000
 
 function parseJson(text: string): unknown {
   try {
     return JSON.parse(text)
   } catch {
-    throw new AiError('The AI gave a reply that could not be read. Please try again.')
+    throw new AiError('The local AI gave a reply that could not be read. Please try again.')
   }
 }
 
-function explainClaudeError(error: unknown): AiError {
-  if (error instanceof AiError) return error
-  if (error instanceof Anthropic.AuthenticationError) {
-    return new AiError('Anthropic rejected the API key. Check it in Settings.')
-  }
-  if (error instanceof Anthropic.PermissionDeniedError) {
-    return new AiError('This API key does not have access to that model. Try another in Settings.')
-  }
-  if (error instanceof Anthropic.NotFoundError) {
-    return new AiError('That model is not available. Choose another in Settings.')
-  }
-  if (error instanceof Anthropic.RateLimitError) {
-    return new AiError('Too many requests right now. Please wait a moment and try again.')
-  }
-  if (error instanceof Anthropic.BadRequestError) {
-    return new AiError(`Anthropic could not process that request: ${error.message}`)
-  }
-  if (error instanceof Anthropic.APIConnectionError) {
-    return new AiError('Could not reach Anthropic. Check your internet connection.')
-  }
-  if (error instanceof Anthropic.APIError) {
-    return new AiError(`Anthropic reported a problem (${error.status ?? 'unknown'}). Please try again.`)
-  }
-  return new AiError('The AI request failed. Please try again.')
-}
-
-export function createClaudeProvider(apiKey: string, model: string): AiProvider {
-  // An explicit key, so a key or token in the environment is never used by accident.
-  const client = new Anthropic({ apiKey, authToken: null })
-
-  return {
-    name: 'claude',
-    model,
-    complete: async ({ system, messages, schema, effort }) => {
-      try {
-        const stream = client.beta.messages.stream({
-          model,
-          max_tokens: MAX_OUTPUT_TOKENS,
-          system,
-          messages,
-          output_config: { effort, format: { type: 'json_schema', schema: schema as Record<string, unknown> } },
-          ...(hasFallback(model) ? { betas: [FALLBACK_BETA], fallbacks: 'default' as const } : {})
-        })
-        const message = await stream.finalMessage()
-
-        if (message.stop_reason === 'refusal') {
-          throw new AiError('The AI declined this request. Try rephrasing it.')
-        }
-        if (message.stop_reason === 'max_tokens') {
-          throw new AiError('The reply was too long and was cut off. Try asking for less.')
-        }
-        const text = message.content.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('')
-        return {
-          json: parseJson(text),
-          inputTokens: message.usage.input_tokens,
-          outputTokens: message.usage.output_tokens
-        }
-      } catch (error) {
-        throw explainClaudeError(error)
-      }
-    }
-  }
-}
-
-export function createOllamaProvider(address: string, model: string): AiProvider {
+/**
+ * The only AI SkillPilot uses: a model running in Ollama on this laptop. The address must be local,
+ * so nothing about you ever leaves the computer.
+ */
+export function createOllamaProvider(address: string, model: string, timeoutMs = LOCAL_TIMEOUT_MS): AiProvider {
   return {
     name: 'ollama',
     model,
@@ -119,15 +56,25 @@ export function createOllamaProvider(address: string, model: string): AiProvider
         response = await fetch(new URL('/api/chat', address), {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
+          signal: AbortSignal.timeout(timeoutMs),
           body: JSON.stringify({
             model,
             stream: false,
+            // Structured replies, and no separate "thinking" pass, which small models take minutes over.
             format: schema,
+            think: false,
+            options: { temperature: 0.3, num_ctx: 8192 },
             messages: [{ role: 'system', content: system }, ...messages]
           })
         })
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.name === 'TimeoutError') {
+          throw new AiError('The local AI took too long to answer. Try a smaller model in Settings, or try again.')
+        }
         throw new AiError('Could not reach Ollama. Check that it is running on this laptop.')
+      }
+      if (response.status === 404) {
+        throw new AiError(`The model "${model}" is not installed in Ollama. Choose an installed one in Settings.`)
       }
       if (!response.ok) {
         throw new AiError(`Ollama reported a problem (${response.status}). Check the model name in Settings.`)
@@ -143,5 +90,18 @@ export function createOllamaProvider(address: string, model: string): AiProvider
         outputTokens: body.eval_count ?? 0
       }
     }
+  }
+}
+
+/** The models installed in Ollama, or null when Ollama is not running. */
+export async function listLocalModels(address: string): Promise<string[] | null> {
+  if (!isLocalAddress(address)) return null
+  try {
+    const response = await fetch(new URL('/api/tags', address), { signal: AbortSignal.timeout(3_000) })
+    if (!response.ok) return null
+    const body = (await response.json()) as { models?: { name?: unknown }[] }
+    return (body.models ?? []).flatMap((model) => (typeof model.name === 'string' ? [model.name] : [])).sort()
+  } catch {
+    return null
   }
 }
