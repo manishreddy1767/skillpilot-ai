@@ -17,6 +17,8 @@ export interface FieldDef {
   /** The allowed range for a number field. */
   min?: number
   max?: number
+  /** A longer limit for text that is often long, such as a pasted job description. */
+  maxLength?: number
 }
 
 export const recordKinds = [
@@ -33,7 +35,8 @@ export const recordKinds = [
   'roleRequirement',
   'roadmap',
   'roadmapItem',
-  'task'
+  'task',
+  'job'
 ] as const
 export type RecordKind = (typeof recordKinds)[number]
 
@@ -343,6 +346,47 @@ export const recordFields: Record<RecordKind, FieldDef[]> = {
       ]
     }
   ]
+,
+  job: [
+    { key: 'title', column: 'title', label: 'Job title', type: 'text', required: true },
+    { key: 'company', column: 'company', label: 'Company', type: 'text' },
+    { key: 'location', column: 'location', label: 'Location', type: 'text' },
+    {
+      key: 'source',
+      column: 'source',
+      label: 'Found on',
+      type: 'select',
+      initial: 'linkedin',
+      options: [
+        { value: 'linkedin', label: 'LinkedIn' },
+        { value: 'naukri', label: 'Naukri' },
+        { value: 'indeed', label: 'Indeed' },
+        { value: 'foundit', label: 'Foundit' },
+        { value: 'company', label: 'Company website' },
+        { value: 'referral', label: 'Referral' },
+        { value: 'other', label: 'Other' }
+      ]
+    },
+    { key: 'url', column: 'url', label: 'Job link', type: 'url' },
+    {
+      key: 'status',
+      column: 'status',
+      label: 'Status',
+      type: 'select',
+      initial: 'saved',
+      options: [
+        { value: 'saved', label: 'Saved' },
+        { value: 'applied', label: 'Applied' },
+        { value: 'interview', label: 'Interviewing' },
+        { value: 'offer', label: 'Offer' },
+        { value: 'rejected', label: 'Not selected' },
+        { value: 'closed', label: 'Closed' }
+      ]
+    },
+    { key: 'appliedOn', column: 'applied_on', label: 'Applied on', type: 'date' },
+    { key: 'description', column: 'description', label: 'Job description', type: 'long', maxLength: 20000 },
+    { key: 'notes', column: 'notes', label: 'Notes', type: 'long' }
+  ]
 }
 
 export const MAX_TEXT_LENGTH = 200
@@ -368,7 +412,7 @@ function isRealDate(value: string): boolean {
 
 function fieldError(field: FieldDef, value: string): string | null {
   if (!value) return field.required ? `${field.label} is required` : null
-  const limit = field.type === 'long' ? MAX_LONG_LENGTH : MAX_TEXT_LENGTH
+  const limit = field.maxLength ?? (field.type === 'long' ? MAX_LONG_LENGTH : MAX_TEXT_LENGTH)
   if (value.length > limit) return `${field.label} must be ${limit} characters or fewer`
   if (field.type === 'month' && !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
     return `${field.label} must be a month, like 2026-03`
