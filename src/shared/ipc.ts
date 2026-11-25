@@ -62,8 +62,6 @@ export const Channel = {
   GetSettings: 'settings:get',
   SaveSettings: 'settings:save',
   GetAiStatus: 'ai:status',
-  SaveApiKey: 'ai:save-key',
-  RemoveApiKey: 'ai:remove-key',
   GetChat: 'chat:get',
   SendChat: 'chat:send',
   ClearChat: 'chat:clear',
@@ -131,8 +129,6 @@ export interface SkillPilotApi {
   getSettings(): Promise<Result<Settings>>
   saveSettings(values: Settings): Promise<Result<Settings>>
   getAiStatus(): Promise<Result<AiStatus>>
-  saveApiKey(key: string): Promise<Result<boolean>>
-  removeApiKey(): Promise<Result<boolean>>
   getChat(): Promise<Result<ChatMessage[]>>
   sendChat(message: string): Promise<Result<ChatMessage[]>>
   clearChat(): Promise<Result<boolean>>

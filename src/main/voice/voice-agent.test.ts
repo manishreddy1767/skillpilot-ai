@@ -178,7 +178,7 @@ describe('respond', () => {
     const off = setup({ aiBlocked: () => 'AI is off.' })
     const outcome = await respond({ text: 'tell me a joke', confidence: 0.8, source: 'dictation' }, off.deps)
     expect(outcome.ask).toBeUndefined()
-    expect(outcome.reply).toContain('the AI assistant is off')
+    expect(outcome.reply).toContain('the local AI is not ready')
     expect(outcome.reply).toContain('open Chrome')
   })
 

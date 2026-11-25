@@ -52,8 +52,6 @@ describe('preload bridge', () => {
       'getSettings',
       'saveSettings',
       'getAiStatus',
-      'saveApiKey',
-      'removeApiKey',
       'getChat',
       'sendChat',
       'clearChat',
@@ -126,8 +124,6 @@ describe('preload bridge', () => {
     expect(invoke).toHaveBeenLastCalledWith(Channel.SetLink, 'goalSkill', 2, 4, true, 3)
     await api.getDashboard()
     expect(invoke).toHaveBeenLastCalledWith(Channel.GetDashboard)
-    await api.saveApiKey('k')
-    expect(invoke).toHaveBeenLastCalledWith(Channel.SaveApiKey, 'k')
     await api.sendChat('hi')
     expect(invoke).toHaveBeenLastCalledWith(Channel.SendChat, 'hi')
     await api.acceptProposal(2)

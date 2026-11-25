@@ -16,7 +16,7 @@ export interface AgentDeps {
   /** Whether spoken requests act at once. When not, they are only typed out. */
   actNow(): boolean
   /** Why the AI assistant cannot answer, or empty when it can. */
-  aiBlocked(): string
+  aiBlocked(): string | Promise<string>
   logError(error: unknown): void
 }
 
@@ -120,9 +120,9 @@ export async function respond(heard: Heard, deps: AgentDeps): Promise<VoiceOutco
         }
 
       case 'ask': {
-        const blocked = deps.aiBlocked()
+        const blocked = await deps.aiBlocked()
         if (blocked) {
-          return { heard: text, draft: text, reply: `I can't answer that yet, because the AI assistant is off. ${EXAMPLES}` }
+          return { heard: text, draft: text, reply: `I can't answer that yet, because the local AI is not ready. ${EXAMPLES}` }
         }
         return { heard: text, ask: text, reply: 'Let me ask the assistant.' }
       }

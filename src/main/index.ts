@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   BrowserWindow,
@@ -10,7 +10,6 @@ import {
   systemPreferences,
   ipcMain,
   powerMonitor,
-  safeStorage,
   screen,
   shell,
   type IpcMainEvent,
@@ -20,7 +19,6 @@ import { openVocabulary, type StartApp } from '../shared/desktop-commands'
 import { Channel, type VoiceStatus } from '../shared/ipc'
 import { FIXED_PHRASES, SPOKEN_SECTION_NAMES } from '../shared/voice-commands'
 import { MIC_BADGE_RATIO, defaultSettings, type Settings } from '../shared/settings'
-import { KeyStore } from './ai/key-store'
 import { createAiHandlers } from './ai-handlers'
 import { createDataHandlers } from './data-handlers'
 import { createPortabilityHandlers } from './portability-handlers'
@@ -253,15 +251,12 @@ function start(): void {
   ipcMain.handle(Channel.SetLink, fromApp(handlers.setLink))
   ipcMain.handle(Channel.GetDashboard, fromApp(handlers.getDashboard))
 
-  const keys = new KeyStore(join(dataPath, 'api-key.enc'), {
-    isAvailable: () => safeStorage.isAsyncEncryptionAvailable(),
-    encrypt: (text) => safeStorage.encryptStringAsync(text),
-    decrypt: async (encrypted) => (await safeStorage.decryptStringAsync(encrypted)).result
-  })
+  // SkillPilot is local only now. A cloud API key saved by an older version is deleted.
+  const oldKeyFile = join(dataPath, 'api-key.enc')
+  rmSync(oldKeyFile, { force: true })
 
   const aiHandlers = createAiHandlers({
     getStores: () => (data.store && data.aiStore ? { store: data.store, aiStore: data.aiStore } : null),
-    keys,
     notifyOverview: changed,
     logError: (error) => writeErrorLog(errorLogPath, error),
     today: () => localDate(new Date()),
@@ -271,8 +266,6 @@ function start(): void {
   ipcMain.handle(Channel.GetSettings, fromApp(aiHandlers.getSettings))
   ipcMain.handle(Channel.SaveSettings, fromApp(aiHandlers.saveSettings))
   ipcMain.handle(Channel.GetAiStatus, fromApp(aiHandlers.getAiStatus))
-  ipcMain.handle(Channel.SaveApiKey, fromApp(aiHandlers.saveApiKey))
-  ipcMain.handle(Channel.RemoveApiKey, fromApp(aiHandlers.removeApiKey))
   ipcMain.handle(Channel.GetChat, fromApp(aiHandlers.getChat))
   ipcMain.handle(Channel.SendChat, fromApp(aiHandlers.sendChat))
   ipcMain.handle(Channel.ClearChat, fromApp(aiHandlers.clearChat))
@@ -306,7 +299,7 @@ function start(): void {
       // Lets the reply reach the page before it reloads with the new data.
       setTimeout(() => appWindow?.webContents.reload(), 300)
     },
-    removeKey: () => keys.remove(),
+    removeKey: () => rmSync(oldKeyFile, { force: true }),
     logError: (error) => writeErrorLog(errorLogPath, error),
     today: () => localDate(new Date())
   })
@@ -420,8 +413,8 @@ function start(): void {
         today: () => localDate(new Date()),
         now: () => new Date(),
         actNow: () => data.aiStore?.getSettings()['voiceActNow'] !== 'off',
-        aiBlocked: () => {
-          const status = aiHandlers.getAiStatus()
+        aiBlocked: async () => {
+          const status = await aiHandlers.getAiStatus()
           return status.ok ? status.value.blocked : status.message
         },
         logError

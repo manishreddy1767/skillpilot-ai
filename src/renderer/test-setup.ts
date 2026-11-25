@@ -47,10 +47,11 @@ beforeEach(() => {
     getSettings: vi.fn(() => Promise.resolve({ ok: true as const, value: {} })),
     saveSettings: vi.fn((values) => Promise.resolve({ ok: true as const, value: values })),
     getAiStatus: vi.fn(() =>
-      Promise.resolve({ ok: true as const, value: { provider: 'off', model: '', hasKey: false, blocked: '' } })
+      Promise.resolve({
+        ok: true as const,
+        value: { provider: 'ollama', model: 'qwen3:4b', blocked: '', localModels: ['qwen3:4b'] }
+      })
     ),
-    saveApiKey: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
-    removeApiKey: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
     getChat: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
     sendChat: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
     clearChat: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
