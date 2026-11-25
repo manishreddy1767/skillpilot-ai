@@ -30,6 +30,23 @@ describe('analyseGap', () => {
     expect(analyseGap([req(' react ')], [skill('React', 3, 3)]).items[0]?.status).toBe('met')
   })
 
+  it('matches other names for the same skill, such as ReactJS for React', () => {
+    const { items } = analyseGap(
+      [
+        { skillName: 'React', requiredLevel: 2, importance: 3 },
+        { skillName: 'Kubernetes', requiredLevel: 2, importance: 1 }
+      ],
+      [
+        { name: 'ReactJS', claimed: 3, demonstrated: 2 },
+        { name: 'k8s', claimed: 1, demonstrated: 0 }
+      ]
+    )
+    expect(items.map(({ skillName, status }) => [skillName, status])).toEqual([
+      ['Kubernetes', 'improve'],
+      ['React', 'met']
+    ])
+  })
+
   it('weights readiness by importance', () => {
     const { readiness } = analyseGap(
       [req('Essential', 3, 3), req('Nice', 3, 1)],

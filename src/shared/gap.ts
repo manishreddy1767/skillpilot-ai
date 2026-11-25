@@ -1,4 +1,5 @@
 import { skillCredit } from './progress'
+import { canonicalSkillName } from './skills-library'
 
 export type GapStatus = 'met' | 'improve' | 'missing'
 
@@ -34,8 +35,9 @@ export function analyseGap(requirements: Requirement[], skills: SkillLevel[]): G
   if (requirements.length === 0) return { readiness: null, items: [] }
 
   const items = requirements.map((requirement): GapItem => {
-    const wanted = requirement.skillName.trim().toLowerCase()
-    const skill = skills.find((item) => item.name.trim().toLowerCase() === wanted)
+    // Usual names, so a skill saved as "ReactJS" counts for a "React" requirement.
+    const wanted = canonicalSkillName(requirement.skillName).toLowerCase()
+    const skill = skills.find((item) => canonicalSkillName(item.name).toLowerCase() === wanted)
     const claimed = skill?.claimed ?? 0
     const demonstrated = skill?.demonstrated ?? 0
     const status: GapStatus =
