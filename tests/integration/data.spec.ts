@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { APP, Harness, OVERVIEW, WIDGET, dataFolder } from './app-harness'
@@ -42,7 +42,6 @@ test('export, erase, and import bring everything back', async () => {
   h = await Harness.launch()
   const page = await openApp()
   await seed(page)
-  await page.evaluate(() => window.skillpilot.saveApiKey('sk-not-exported'))
   await answerDialogs(exportFile)
   await settings(page)
   await page.getByRole('button', { name: 'Export my data' }).click()
@@ -50,7 +49,6 @@ test('export, erase, and import bring everything back', async () => {
 
   const text = readFileSync(exportFile, 'utf8')
   expect(text).toContain('Keep me')
-  expect(text).not.toContain('sk-not-exported')
 
   await page.getByLabel('Confirmation').fill('ERASE')
   await page.getByRole('button', { name: 'Erase everything' }).click()
@@ -69,13 +67,12 @@ test('export, erase, and import bring everything back', async () => {
   await expect(after.getByText('Achieved Done goal')).toBeVisible()
 })
 
-test('erasing removes the API key too', async () => {
-  h = await Harness.launch()
-  const page = await openApp()
-  await page.evaluate(() => window.skillpilot.saveApiKey('sk-to-erase'))
-  expect(existsSync(join(dataFolder, 'api-key.enc'))).toBe(true)
-  await page.evaluate(() => window.skillpilot.eraseAll('ERASE'))
-  expect(existsSync(join(dataFolder, 'api-key.enc'))).toBe(false)
+test('a cloud API key left by an older version is deleted at startup', async () => {
+  const keyFile = join(dataFolder, 'api-key.enc')
+  mkdirSync(dataFolder, { recursive: true })
+  writeFileSync(keyFile, 'old encrypted key')
+  h = await Harness.launch({ keepData: true })
+  expect(existsSync(keyFile)).toBe(false)
 })
 
 test('a damaged file is refused and nothing changes', async () => {
@@ -116,6 +113,21 @@ test('a backup can be restored from the app', async () => {
   await expect((await h.page(OVERVIEW)).getByText('Keep me')).toBeAttached()
   // The app window reloads after a restore. Closing mid-reload can stall the test's shutdown.
   await expect((await h.page(APP)).getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+})
+
+test('a window gone right after replacing data raises no "object has been destroyed" error', async () => {
+  const errorLog = join(dataFolder, 'logs', 'errors.log')
+  const before = existsSync(errorLog) ? readFileSync(errorLog, 'utf8').length : 0
+  h = await Harness.launch()
+  const page = await openApp()
+  await page.evaluate(() => window.skillpilot.eraseAll('ERASE'))
+  // The app window goes away within the moment before it would reload, as it does when quitting.
+  await h.app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows().find((window) => window.getTitle() === 'SkillPilot AI')?.destroy()
+  })
+  await new Promise((done) => setTimeout(done, 800))
+  const added = existsSync(errorLog) ? readFileSync(errorLog, 'utf8').slice(before) : ''
+  expect(added).not.toContain('Object has been destroyed')
 })
 
 test('other windows cannot export, import, restore, or erase', async () => {
