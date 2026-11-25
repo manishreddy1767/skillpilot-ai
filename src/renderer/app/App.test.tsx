@@ -15,6 +15,7 @@ describe('App', () => {
     ['Skills', 'Skills'],
     ['Goals', 'Goals'],
     ['Projects', 'Projects'],
+    ['Jobs', 'Jobs'],
     ['Profile', 'Profile'],
     ['Assistant', 'Assistant'],
     ['Target roles', 'Target roles'],

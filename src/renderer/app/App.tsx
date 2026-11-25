@@ -4,6 +4,7 @@ import { AssistantView } from './AssistantView'
 import { DashboardView } from './DashboardView'
 import { LinkPicker } from './LinkPicker'
 import { GoalsView } from './GoalsView'
+import { JobsView } from './JobsView'
 import { ProfileForm } from './ProfileForm'
 import { ProjectsView } from './ProjectsView'
 import { RecordEditor } from './RecordEditor'
@@ -24,6 +25,7 @@ const sections: { id: Section; label: string }[] = [
   { id: 'skills', label: 'Skills' },
   { id: 'goals', label: 'Goals' },
   { id: 'projects', label: 'Projects' },
+  { id: 'jobs', label: 'Jobs' },
   { id: 'roles', label: 'Target roles' },
   { id: 'roadmaps', label: 'Roadmaps' },
   { id: 'profile', label: 'Profile' },
@@ -48,6 +50,8 @@ function Screen({ section, onNavigate, pendingAsk, onPendingAskTaken }: ScreenPr
       return <TasksView />
     case 'assistant':
       return <AssistantView onNavigate={onNavigate} pendingAsk={pendingAsk} onPendingAskTaken={onPendingAskTaken} />
+    case 'jobs':
+      return <JobsView />
     case 'roles':
       return <RolesView />
     case 'roadmaps':
