@@ -309,6 +309,31 @@ export const migrations: string[] = [
       SELECT 1 FROM task WHERE title = new.title AND status = 'open' AND due_date = next.day
     );
   END;
+  `,
+  `
+  -- Jobs saved by hand from any job site, and the resumes tailored to them. Nothing is fetched online.
+  CREATE TABLE job (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+    company TEXT NOT NULL DEFAULT '',
+    location TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT 'linkedin'
+      CHECK (source IN ('linkedin', 'naukri', 'indeed', 'foundit', 'company', 'referral', 'other')),
+    url TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'saved'
+      CHECK (status IN ('saved', 'applied', 'interview', 'offer', 'rejected', 'closed')),
+    applied_on TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TABLE resume (
+    id INTEGER PRIMARY KEY,
+    job_id INTEGER REFERENCES job (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  );
   `
 ]
 

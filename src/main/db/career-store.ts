@@ -29,7 +29,8 @@ const tables: Record<RecordKind, { table: string; orderBy: string; parent?: stri
   roleRequirement: { table: 'role_requirement', orderBy: 'importance DESC, id', parent: 'role_id' },
   roadmap: { table: 'roadmap', orderBy: 'id DESC' },
   roadmapItem: { table: 'roadmap_item', orderBy: 'week, id', parent: 'roadmap_id' },
-  task: { table: 'task', orderBy: "status = 'done', due_date = '', due_date, id" }
+  task: { table: 'task', orderBy: "status = 'done', due_date = '', due_date, id" },
+  job: { table: 'job', orderBy: "status IN ('rejected', 'closed'), id DESC" }
 }
 
 const links: Record<LinkKind, { table: string; parent: string; child: string; level?: string }> = {

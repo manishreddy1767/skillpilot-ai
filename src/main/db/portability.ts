@@ -32,7 +32,9 @@ export const EXPORT_TABLES = [
   'ai_request',
   'task',
   'notification_log',
-  'progress_snapshot'
+  'progress_snapshot',
+  'job',
+  'resume'
 ] as const
 
 /** Tables whose triggers stamp today's date on insert, so the original date is put back afterwards. */
