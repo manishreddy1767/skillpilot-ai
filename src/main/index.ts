@@ -112,6 +112,9 @@ function start(): void {
   const widget = createWidgetWindow(placement.target(), widgetSize)
   const overview = createOverviewWindow()
   let appWindow: BrowserWindow | null = null
+  // Timers that touch windows, cleared when quitting so none runs after a window is gone.
+  let reloadTimer: NodeJS.Timeout | null = null
+  let releaseTimer: NodeJS.Timeout | null = null
   let quitting = false
   let clickThrough = process.argv.includes('--click-through') || startupSettings['clickThrough'] === 'on'
   let fadeTimer: NodeJS.Timeout | null = null
@@ -316,7 +319,12 @@ function start(): void {
       if (data.aiStore) applySettings(data.aiStore.getSettings())
       if (!overview.isDestroyed()) overview.webContents.send(Channel.OverviewChanged)
       // Lets the reply reach the page before it reloads with the new data.
-      setTimeout(() => appWindow?.webContents.reload(), 300)
+      // Reloaded a moment later, and only if the window still exists: it may close meanwhile.
+      if (reloadTimer) clearTimeout(reloadTimer)
+      reloadTimer = setTimeout(() => {
+        reloadTimer = null
+        if (!quitting && appWindow && !appWindow.isDestroyed()) appWindow.webContents.reload()
+      }, 300)
     },
     removeKey: () => rmSync(oldKeyFile, { force: true }),
     logError: (error) => writeErrorLog(errorLogPath, error),
@@ -453,7 +461,6 @@ function start(): void {
   })
 
   /** The widget's microphone. Replies show in the hover panel, which stays open until a moment after. */
-  let releaseTimer: NodeJS.Timeout | null = null
   ipcMain.on(
     Channel.WidgetListen,
     from(widget, async () => {
@@ -466,6 +473,8 @@ function start(): void {
       panelTalking = true
       hover.hold()
       const result = await voice.listen()
+      // Quitting may have started while it listened, and the windows may be gone.
+      if (quitting || widget.isDestroyed()) return
       if (result.ok) {
         const { heard, reply, navigate, ask, minimize } = result.value
         const note = heard ? `Heard "${heard}". ${reply}` : reply
@@ -482,7 +491,11 @@ function start(): void {
       if (panelTalking) releaseTimer = setTimeout(endPanelTalk, 5_000)
     })
   )
-  app.once('before-quit', () => speech.dispose())
+  app.once('before-quit', () => {
+    speech.dispose()
+    if (releaseTimer) clearTimeout(releaseTimer)
+    if (reloadTimer) clearTimeout(reloadTimer)
+  })
   // The one change the hover panel may make: ticking off a task.
   ipcMain.handle(Channel.CompleteTask, (event, id: unknown) => {
     const fromPanel = !overview.isDestroyed() && event.sender === overview.webContents
