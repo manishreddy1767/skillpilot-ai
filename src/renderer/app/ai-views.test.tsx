@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { defaultSettings } from '../../shared/settings'
 import { AssistantView } from './AssistantView'
@@ -146,6 +146,39 @@ describe('RolesView', () => {
     expect(await screen.findByRole('progressbar', { name: 'Frontend Dev readiness' })).toBeTruthy()
     expect(screen.getByRole('cell', { name: 'CSS' })).toBeTruthy()
     expect(screen.getByText('Missing')).toBeTruthy()
+  })
+
+  it('picks the closest library role by title, and suggests its requirements without AI', async () => {
+    api().getAiStatus.mockResolvedValue({
+      ok: true,
+      value: { provider: 'ollama', model: 'm', localModels: null, blocked: 'Ollama is not running.' }
+    })
+    await open()
+    const choice = await screen.findByLabelText<HTMLSelectElement>('Closest library role')
+    expect(choice.value).toBe('frontend-developer')
+    expect(choice.options.length).toBeGreaterThan(20)
+    click('Suggest requirements')
+    await waitFor(() => expect(api().suggestFromLibrary).toHaveBeenCalledWith(5, 'frontend-developer', 'requirements'))
+    fireEvent.change(choice, { target: { value: 'full-stack-developer' } })
+    click('Suggest requirements')
+    await waitFor(() => expect(api().suggestFromLibrary).toHaveBeenLastCalledWith(5, 'full-stack-developer', 'requirements'))
+  })
+
+  it('plans a roadmap for the gaps once there are requirements', async () => {
+    await open()
+    expect((await screen.findByRole<HTMLButtonElement>('button', { name: 'Plan a roadmap for my gaps' })).disabled).toBe(true)
+    cleanup()
+    api().getGapAnalysis.mockResolvedValue({
+      ok: true,
+      value: {
+        report: null,
+        analysis: { readiness: 0, items: [{ skillName: 'CSS', requiredLevel: 3, importance: 3, status: 'missing', claimed: 0, demonstrated: 0 }] }
+      }
+    })
+    await open()
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Plan a roadmap for my gaps' }).disabled).toBe(false))
+    click('Plan a roadmap for my gaps')
+    await waitFor(() => expect(api().suggestFromLibrary).toHaveBeenCalledWith(5, 'frontend-developer', 'roadmap'))
   })
 
   it('disables AI actions when unavailable, and says why', async () => {

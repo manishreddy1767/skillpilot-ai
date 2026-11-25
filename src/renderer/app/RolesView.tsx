@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { GapReport } from '../../shared/ai'
 import type { GapAnalysis, GapStatus } from '../../shared/gap'
+import { LIBRARY_ROLES, findRole } from '../../shared/skills-library'
 import { Meter } from './charts'
 import { ProposalList } from './ProposalList'
 import { RecordEditor } from './RecordEditor'
@@ -18,6 +19,7 @@ function RoleDetails({ roleId, title }: { roleId: number; title: string }) {
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
   const [refresh, setRefresh] = useState(0)
+  const [libraryId, setLibraryId] = useState(() => findRole(title)?.id ?? '')
   const blocked = useAiBlocked()
 
   const load = useCallback((): void => {
@@ -86,9 +88,43 @@ function RoleDetails({ roleId, title }: { roleId: number; title: string }) {
         kind="roleRequirement"
         parentId={roleId}
         addLabel="Add requirement"
-        emptyText="List the skills this role needs, or ask the AI to draft them."
+        emptyText="List the skills this role needs, or get them from the skills library below."
         onChange={() => setRefresh((value) => value + 1)}
       />
+
+      <h3>Skills library</h3>
+      <p className="lead">
+        SkillPilot's own knowledge of what roles need. Works offline, with no AI, and nothing is saved until you accept it.
+      </p>
+      <div className="actions tight">
+        <div className="field">
+          <label htmlFor={`library-role-${roleId}`}>Closest library role</label>
+          <select id={`library-role-${roleId}`} value={libraryId} onChange={(event) => setLibraryId(event.target.value)}>
+            <option value="">Choose a role</option>
+            {LIBRARY_ROLES.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.title}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          disabled={!libraryId || Boolean(busy)}
+          onClick={() =>
+            void run('library', () => window.skillpilot.suggestFromLibrary(roleId, libraryId, 'requirements'))
+          }
+        >
+          Suggest requirements
+        </button>
+        <button
+          type="button"
+          disabled={!analysis?.items.length || Boolean(busy)}
+          onClick={() => void run('library', () => window.skillpilot.suggestFromLibrary(roleId, libraryId, 'roadmap'))}
+        >
+          Plan a roadmap for my gaps
+        </button>
+      </div>
 
       <h3>AI help</h3>
       {blocked ? <p className="lead">{blocked}</p> : null}
