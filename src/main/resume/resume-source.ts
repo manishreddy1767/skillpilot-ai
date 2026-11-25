@@ -12,9 +12,9 @@ export function readResumeSource(store: CareerStore, today: string): ResumeSourc
   return {
     profile: store.getProfile(),
     skills: skills.map(({ name, category, claimed, demonstrated }) => ({ name, category, claimed, demonstrated })),
-    work: store.listRecords('work').map((record) => ({ ...record.values, skills: linked('workSkill', record.id) })),
+    work: store.listRecords('work').map((record) => ({ values: record.values, skills: linked('workSkill', record.id) })),
     education: store.listRecords('education').map((record) => record.values),
     certifications: store.listRecords('certification').map((record) => record.values),
-    projects: store.listRecords('project').map((record) => ({ ...record.values, skills: linked('projectSkill', record.id) }))
+    projects: store.listRecords('project').map((record) => ({ values: record.values, skills: linked('projectSkill', record.id) }))
   }
 }

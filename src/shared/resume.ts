@@ -5,10 +5,16 @@ import { canonicalSkillName, findSkill, skillsInText } from './skills-library'
 export interface ResumeSource {
   profile: FieldValues
   skills: { name: string; category: string; claimed: number; demonstrated: number }[]
-  work: (FieldValues & { skills?: string[] })[]
+  work: LinkedRecord[]
   education: FieldValues[]
   certifications: FieldValues[]
-  projects: (FieldValues & { skills?: string[] })[]
+  projects: LinkedRecord[]
+}
+
+/** A role or project, with the names of the skills linked to it. */
+export interface LinkedRecord {
+  values: FieldValues
+  skills: string[]
 }
 
 export interface ResumeEntry {
@@ -110,21 +116,21 @@ export function buildResume(source: ResumeSource, target?: TailorTarget): Resume
   const orderBullets = (bullets: string[]): string[] =>
     (target ? [...bullets].sort((a, b) => relevance(b, wanted) - relevance(a, wanted)) : bullets).slice(0, MAX_BULLETS)
 
-  const experience = source.work.map((job) => ({
+  const experience = source.work.map(({ values: job }) => ({
     heading: job['role'] ?? '',
     subheading: job['company'] ?? '',
     dates: dates(job['startDate'], job['endDate']),
     bullets: orderBullets(bulletsFrom(job['description']))
   }))
 
-  const projectText = (project: ResumeSource['projects'][number]): string =>
-    [project['name'], project['technologies'], project['description'], ...(project.skills ?? [])].join(' ')
+  const projectText = ({ values: project, skills: linked }: LinkedRecord): string =>
+    [project['name'], project['technologies'], project['description'], ...linked].join(' ')
   const projects = [...source.projects]
     .map((project, index) => ({ project, index, score: target ? relevance(projectText(project), wanted) : 0 }))
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, MAX_PROJECTS)
-    .map(({ project }) => {
-      const technologies = project['technologies'] || (project.skills ?? []).join(', ')
+    .map(({ project: { values: project, skills: linked } }) => {
+      const technologies = project['technologies'] || linked.join(', ')
       return {
         heading: project['name'] ?? '',
         subheading: technologies ?? '',
