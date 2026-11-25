@@ -1,18 +1,14 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import type { AddressInfo } from 'node:net'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CareerStore } from '../db/career-store'
 import { migrate } from '../db/migrations'
 import { AiService, applyProposal } from './ai-service'
 import { AiStore } from './ai-store'
 import { buildCareerContext } from './context'
 import { integer, list, matchesSchema, object, oneOf, text } from './json-schema'
-import { KeyStore } from './key-store'
-import { AiError, createClaudeProvider, createOllamaProvider, type AiProvider } from './providers'
+import { AiError, createOllamaProvider, listLocalModels, type AiProvider } from './providers'
 
 const open: DatabaseSync[] = []
 const servers: Server[] = []
@@ -49,43 +45,9 @@ async function serve(handler: (req: IncomingMessage, body: string, res: ServerRe
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}`
 }
 
-/** The server-sent events a real streamed Messages response is made of. */
-function claudeStream(res: ServerResponse, textOut: string, stopReason = 'end_turn'): void {
-  res.writeHead(200, { 'content-type': 'text/event-stream' })
-  const send = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-  send('message_start', {
-    type: 'message_start',
-    message: {
-      id: 'msg_1',
-      type: 'message',
-      role: 'assistant',
-      model: 'claude-opus-5-5',
-      content: [],
-      stop_reason: null,
-      stop_sequence: null,
-      usage: { input_tokens: 120, output_tokens: 1 }
-    }
-  })
-  send('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } })
-  send('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: textOut } })
-  send('content_block_stop', { type: 'content_block_stop', index: 0 })
-  send('message_delta', {
-    type: 'message_delta',
-    delta: { stop_reason: stopReason, stop_sequence: null },
-    usage: { output_tokens: 40 }
-  })
-  send('message_stop', { type: 'message_stop' })
-  res.end()
-}
-
 const request = { system: 'sys', messages: [{ role: 'user' as const, content: 'hi' }], schema: object({ a: text }), effort: 'low' as const }
 
-beforeEach(() => {
-  vi.stubEnv('ANTHROPIC_BASE_URL', '')
-})
-
 afterEach(async () => {
-  vi.unstubAllEnvs()
   for (const db of open.splice(0)) if (db.isOpen) db.close()
   await Promise.all(servers.splice(0).map((s) => new Promise((done) => s.close(done))))
 })
@@ -178,75 +140,6 @@ describe('buildCareerContext learning', () => {
   })
 })
 
-describe('Claude provider, over the real SDK', () => {
-  it('sends a structured request with the key and returns the parsed reply', async () => {
-    let seen: { headers: IncomingMessage['headers']; body: Record<string, unknown>; url?: string | undefined } | null = null
-    const url = await serve((req, body, res) => {
-      seen = { headers: req.headers, body: JSON.parse(body) as Record<string, unknown>, url: req.url }
-      claudeStream(res, '{"a":"answer"}')
-    })
-    vi.stubEnv('ANTHROPIC_BASE_URL', url)
-
-    const result = await createClaudeProvider('sk-test', 'claude-opus-5-5').complete(request)
-
-    expect(result).toEqual({ json: { a: 'answer' }, inputTokens: 120, outputTokens: 40 })
-    expect(seen!.url).toContain('/v1/messages')
-    expect(seen!.headers['authorization']).toBe('Bearer sk-test')
-    expect(seen!.headers['anthropic-beta']).toContain('server-side-fallback-2026-07-01')
-    expect(seen!.body).toMatchObject({
-      model: 'claude-opus-5-5',
-      stream: true,
-      system: 'sys',
-      fallbacks: 'default',
-      output_config: { effort: 'low', format: { type: 'json_schema' } }
-    })
-    expect(seen!.body).not.toHaveProperty('temperature')
-    expect(seen!.body).not.toHaveProperty('thinking')
-  })
-
-  it('does not ask for fallbacks on Haiku, which has none', async () => {
-    let body: Record<string, unknown> = {}
-    const url = await serve((_req, raw, res) => {
-      body = JSON.parse(raw) as Record<string, unknown>
-      claudeStream(res, '{"a":"x"}')
-    })
-    vi.stubEnv('ANTHROPIC_BASE_URL', url)
-    await createClaudeProvider('sk-test', 'claude-haiku-5-5').complete(request)
-    expect(body).not.toHaveProperty('fallbacks')
-  })
-
-  it.each([
-    [401, 'rejected the API key'],
-    [403, 'does not have access'],
-    [404, 'not available'],
-    [429, 'Too many requests'],
-    [400, 'could not process']
-  ])('explains a %i response', async (status, message) => {
-    const url = await serve((_req, _body, res) => {
-      res.writeHead(status, { 'content-type': 'application/json' })
-      res.end(JSON.stringify({ type: 'error', error: { type: 'x', message: 'nope' } }))
-    })
-    vi.stubEnv('ANTHROPIC_BASE_URL', url)
-    await expect(createClaudeProvider('sk-test', 'claude-opus-5-5').complete(request)).rejects.toThrow(message)
-  })
-
-  it('explains a refusal and a cut-off reply', async () => {
-    let stop = 'refusal'
-    const url = await serve((_req, _body, res) => claudeStream(res, '', stop))
-    vi.stubEnv('ANTHROPIC_BASE_URL', url)
-    const provider = createClaudeProvider('sk-test', 'claude-opus-5-5')
-    await expect(provider.complete(request)).rejects.toThrow('declined')
-    stop = 'max_tokens'
-    await expect(provider.complete(request)).rejects.toThrow('cut off')
-  })
-
-  it('explains an unreadable reply', async () => {
-    const url = await serve((_req, _body, res) => claudeStream(res, 'not json'))
-    vi.stubEnv('ANTHROPIC_BASE_URL', url)
-    await expect(createClaudeProvider('sk-test', 'claude-opus-5-5').complete(request)).rejects.toThrow('could not be read')
-  })
-})
-
 describe('Ollama provider', () => {
   it('sends the schema locally and reads the reply', async () => {
     let body: Record<string, unknown> = {}
@@ -256,7 +149,7 @@ describe('Ollama provider', () => {
     })
     const result = await createOllamaProvider(url, 'llama3.2').complete(request)
     expect(result).toEqual({ json: { a: 'local' }, inputTokens: 7, outputTokens: 3 })
-    expect(body).toMatchObject({ model: 'llama3.2', stream: false, format: { type: 'object' } })
+    expect(body).toMatchObject({ model: 'llama3.2', stream: false, think: false, format: { type: 'object' } })
     expect((body['messages'] as { role: string }[])[0]?.role).toBe('system')
   })
 
@@ -268,52 +161,39 @@ describe('Ollama provider', () => {
     await expect(createOllamaProvider('http://127.0.0.1:9', 'x').complete(request)).rejects.toThrow('Could not reach Ollama')
   })
 
-  it('explains an error response', async () => {
+  it('explains a model that is not installed, and other errors', async () => {
+    let status = 404
     const url = await serve((_req, _body, res) => {
-      res.writeHead(404)
+      res.writeHead(status)
       res.end('{}')
     })
+    await expect(createOllamaProvider(url, 'mistral').complete(request)).rejects.toThrow('"mistral" is not installed')
+    status = 500
     await expect(createOllamaProvider(url, 'x').complete(request)).rejects.toThrow('Check the model name')
+  })
+
+  it('explains a reply that is too slow', async () => {
+    const url = await serve(() => undefined)
+    await expect(createOllamaProvider(url, 'x', 50).complete(request)).rejects.toThrow('took too long')
+  })
+
+  it('explains an unreadable reply', async () => {
+    const url = await serve((_req, _body, res) => res.end(JSON.stringify({ message: { content: 'not json' } })))
+    await expect(createOllamaProvider(url, 'x').complete(request)).rejects.toThrow('could not be read')
   })
 })
 
-describe('KeyStore', () => {
-  let folder: string
-  const encryptor = {
-    isAvailable: async () => true,
-    encrypt: async (value: string) => Buffer.from(value.split('').reverse().join('')),
-    decrypt: async (data: Buffer) => data.toString().split('').reverse().join('')
-  }
-
-  beforeEach(() => {
-    folder = mkdtempSync(join(tmpdir(), 'skillpilot-key-'))
-  })
-  afterEach(() => rmSync(folder, { recursive: true, force: true }))
-
-  it('saves, reads and removes a key, never in plain text', async () => {
-    const path = join(folder, 'nested', 'key.enc')
-    const keys = new KeyStore(path, encryptor)
-    expect(keys.hasKey()).toBe(false)
-    await keys.save('sk-secret')
-    expect(readFileSync(path, 'utf8')).not.toContain('sk-secret')
-    await expect(keys.read()).resolves.toBe('sk-secret')
-    keys.remove()
-    expect(existsSync(path)).toBe(false)
-    await expect(keys.read()).resolves.toBeNull()
+describe('listLocalModels', () => {
+  it('lists the installed models, sorted', async () => {
+    const url = await serve((_req, _body, res) =>
+      res.end(JSON.stringify({ models: [{ name: 'qwen3:4b' }, { name: 'gemma3:4b' }, { other: 1 }] }))
+    )
+    await expect(listLocalModels(url)).resolves.toEqual(['gemma3:4b', 'qwen3:4b'])
   })
 
-  it('refuses to save if encryption is unavailable', async () => {
-    const path = join(folder, 'key.enc')
-    const keys = new KeyStore(path, { ...encryptor, isAvailable: async () => false })
-    await expect(keys.save('sk-secret')).rejects.toThrow('not saved')
-    expect(existsSync(path)).toBe(false)
-  })
-
-  it('treats a key that cannot be decrypted as no key', async () => {
-    const path = join(folder, 'key.enc')
-    writeFileSync(path, 'x')
-    const keys = new KeyStore(path, { ...encryptor, decrypt: () => Promise.reject(new Error('no')) })
-    await expect(keys.read()).resolves.toBeNull()
+  it('is null when Ollama is not running, or the address is not local', async () => {
+    await expect(listLocalModels('http://127.0.0.1:9')).resolves.toBeNull()
+    await expect(listLocalModels('https://example.com')).resolves.toBeNull()
   })
 })
 
@@ -549,10 +429,17 @@ describe('applyProposal', () => {
 describe('AiStore', () => {
   it('returns defaults, saves known settings, and ignores unknown ones', () => {
     const { aiStore, db } = stores()
+    expect(aiStore.getSettings()['aiProvider']).toBe('ollama')
+    aiStore.saveSettings({ aiProvider: 'off', hacked: 'yes' })
     expect(aiStore.getSettings()['aiProvider']).toBe('off')
-    aiStore.saveSettings({ aiProvider: 'claude', hacked: 'yes' })
-    expect(aiStore.getSettings()['aiProvider']).toBe('claude')
     expect(db.prepare("SELECT count(*) AS n FROM setting WHERE key = 'hacked'").get()).toEqual({ n: 0 })
+  })
+
+  it('falls back to the default for a value no longer offered, such as the removed cloud AI', () => {
+    const { aiStore, db } = stores()
+    db.prepare("INSERT INTO setting (key, value) VALUES ('aiProvider', 'claude'), ('claudeModel', 'x')").run()
+    expect(aiStore.getSettings()['aiProvider']).toBe('ollama')
+    expect(aiStore.getSettings()['claudeModel']).toBeUndefined()
   })
 
   it('resolves a proposal only once', () => {

@@ -5,49 +5,39 @@ import { buildDashboard } from '../shared/progress'
 import { isLocalAddress, settingFields, type Settings } from '../shared/settings'
 import { AiService, applyProposal } from './ai/ai-service'
 import type { AiStore } from './ai/ai-store'
-import type { KeyStore } from './ai/key-store'
-import { AiError, createClaudeProvider, createOllamaProvider, type AiProvider } from './ai/providers'
+import { AiError, createOllamaProvider, listLocalModels, type AiProvider } from './ai/providers'
 import type { CareerStore } from './db/career-store'
 
 export interface AiHandlerDeps {
   getStores(): { store: CareerStore; aiStore: AiStore } | null
-  keys: KeyStore
   notifyOverview(): void
   logError(error: unknown): void
   today(): string
   /** Puts changed settings into effect. */
   applySettings(settings: Settings): void
-  /** Replaceable so tests can stand in for a real provider. */
-  makeClaude?: typeof createClaudeProvider
+  /** Replaceable so tests can stand in for the local model. */
+  makeProvider?: typeof createOllamaProvider
 }
 
 const UNAVAILABLE = 'Your data could not be opened. Restart the app, and see the error log if it continues.'
 const MAX_MESSAGE_LENGTH = 4000
-const MAX_KEY_LENGTH = 500
 
 const failure = (message: string): { ok: false; message: string } => ({ ok: false, message })
 const isId = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) > 0
 
 export function createAiHandlers(deps: AiHandlerDeps) {
-  const { getStores, keys, notifyOverview, logError, today, applySettings } = deps
-  const makeClaude = deps.makeClaude ?? createClaudeProvider
+  const { getStores, notifyOverview, logError, today, applySettings } = deps
+  const makeProvider = deps.makeProvider ?? createOllamaProvider
 
-  const whyBlocked = (settings: Settings): string => {
-    if (settings['aiProvider'] === 'off') return 'AI is off. Choose a provider in Settings.'
-    if (settings['aiProvider'] === 'claude' && !keys.hasKey()) return 'Add your Anthropic API key in Settings.'
-    return ''
-  }
+  const whyBlocked = (settings: Settings): string =>
+    settings['aiProvider'] === 'ollama' ? '' : 'The local AI is off. Turn it on in Settings.'
 
+  /** Only ever the local model, at a local address. */
   const provider = async (aiStore: AiStore): Promise<AiProvider> => {
     const settings = aiStore.getSettings()
     const blocked = whyBlocked(settings)
     if (blocked) throw new AiError(blocked)
-    if (settings['aiProvider'] === 'ollama') {
-      return createOllamaProvider(settings['ollamaUrl'] ?? '', settings['ollamaModel'] ?? '')
-    }
-    const key = await keys.read()
-    if (!key) throw new AiError('The saved API key could not be read. Please add it again in Settings.')
-    return makeClaude(key, settings['claudeModel'] ?? '')
+    return makeProvider(settings['ollamaUrl'] ?? '', settings['ollamaModel'] ?? '')
   }
 
   const sync = <T>(work: (stores: { store: CareerStore; aiStore: AiStore }) => Result<T>): Result<T> => {
@@ -89,33 +79,18 @@ export function createAiHandlers(deps: AiHandlerDeps) {
         return { ok: true, value }
       }),
 
-    getAiStatus: (): Result<AiStatus> =>
-      sync(({ aiStore }) => {
-        const settings = aiStore.getSettings()
-        const provider = settings['aiProvider'] ?? 'off'
-        const model = provider === 'ollama' ? settings['ollamaModel'] : settings['claudeModel']
-        return {
-          ok: true,
-          value: { provider, model: model ?? '', hasKey: keys.hasKey(), blocked: whyBlocked(settings) }
-        }
-      }),
-
-    saveApiKey: async (input: unknown): Promise<Result<boolean>> => {
-      const key = typeof input === 'string' ? input.trim() : ''
-      if (!key || key.length > MAX_KEY_LENGTH || /\s/.test(key)) return failure('That does not look like an API key.')
-      try {
-        await keys.save(key)
-        return { ok: true, value: true }
-      } catch (error) {
-        // Logged without the key: the error comes from the encryptor, never from the value.
-        logError(error)
-        return failure('The key could not be saved securely, so it was not stored.')
+    getAiStatus: async (): Promise<Result<AiStatus>> => {
+      const stores = getStores()
+      if (!stores) return failure(UNAVAILABLE)
+      const settings = stores.aiStore.getSettings()
+      const localModels = await listLocalModels(settings['ollamaUrl'] ?? '')
+      const model = settings['ollamaModel'] ?? ''
+      let blocked = whyBlocked(settings)
+      if (!blocked && localModels === null) blocked = 'Ollama is not running. Start Ollama on this laptop to use the local AI.'
+      if (!blocked && localModels && !localModels.includes(model) && !localModels.includes(`${model}:latest`)) {
+        blocked = `The model "${model}" is not installed in Ollama. Choose one of: ${localModels.join(', ') || 'none installed'}.`
       }
-    },
-
-    removeApiKey: (): Result<boolean> => {
-      keys.remove()
-      return { ok: true, value: true }
+      return { ok: true, value: { provider: settings['aiProvider'] ?? 'off', model, blocked, localModels } }
     },
 
     getChat: (): Result<ChatMessage[]> => sync(({ aiStore }) => ({ ok: true, value: aiStore.listChat() })),
