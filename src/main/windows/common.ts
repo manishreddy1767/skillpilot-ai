@@ -5,7 +5,9 @@ export const secureWebPreferences: WebPreferences = {
   preload: join(__dirname, '../preload/index.js'),
   sandbox: true,
   contextIsolation: true,
-  nodeIntegration: false
+  nodeIntegration: false,
+  // The spell checker downloads dictionaries from the internet, so it is off.
+  spellcheck: false
 }
 
 export function loadPage(window: BrowserWindow, page: 'widget' | 'overview' | 'app'): void {

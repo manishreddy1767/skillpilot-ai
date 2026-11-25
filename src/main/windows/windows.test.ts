@@ -56,6 +56,10 @@ describe('secure web preferences', () => {
       nodeIntegration: false
     })
   })
+
+  it('turns off the spell checker, which would download dictionaries', () => {
+    expect(secureWebPreferences.spellcheck).toBe(false)
+  })
 })
 
 describe('loadPage', () => {
