@@ -1,4 +1,5 @@
 import { resolveOpen, searchUrl, type StartApp } from '../../shared/desktop-commands'
+import { JOB_SITES, jobSearchUrl } from '../../shared/job-match'
 import { carryOut, isDataIntent, type VoiceApi } from '../../shared/voice-actions'
 import { parseVoiceCommand } from '../../shared/voice-commands'
 import type { VoiceOutcome } from '../../shared/ipc'
@@ -92,6 +93,13 @@ export async function respond(heard: Heard, deps: AgentDeps): Promise<VoiceOutco
             return { heard: text, reply: 'Opening Windows settings.' }
         }
         break
+      }
+
+      case 'jobSearch': {
+        const note = await deps.desktop.openUrl(jobSearchUrl(intent.site, intent.keywords, intent.location), 'chrome')
+        const where = intent.location ? ` in ${intent.location}` : ''
+        const site = JOB_SITES.find((item) => item.id === intent.site)?.label ?? intent.site
+        return { heard: text, reply: `Searching ${site} for ${intent.keywords} jobs${where}.${note}` }
       }
 
       case 'search': {

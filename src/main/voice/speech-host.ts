@@ -124,6 +124,7 @@ function Get-Engine($language) {
     $all.Add((Phrase @('mark', 'tick off', 'complete', 'i finished') $true @('as done', 'done', 'as complete')))
     $all.Add((Phrase @('search for', 'search', 'google', 'look up') $true @('on youtube', 'on google', 'in chrome', 'in edge')))
     $all.Add((Phrase @('play') $true @('on youtube')))
+    $all.Add((Phrase @('search linkedin for', 'search naukri for', 'search indeed for', 'search foundit for', 'find', 'find me') $true @('jobs', 'jobs on linkedin', 'jobs on naukri', 'jobs on indeed')))
     foreach ($phrase in @($script:vocabulary.phrases | Where-Object { $_ })) { $all.Add($phrase) }
     $builder = New-Object System.Speech.Recognition.GrammarBuilder($all)
     $builder.Culture = $script:culture

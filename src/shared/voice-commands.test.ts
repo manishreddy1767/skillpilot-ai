@@ -126,6 +126,22 @@ describe('desktop commands', () => {
     expect(parse(`open ${name}`).kind).toBe('navigate')
   })
 
+  it.each([
+    ['search naukri for react developer jobs in pune', { site: 'naukri', keywords: 'react developer', location: 'pune' }],
+    ['search linkedin for data analyst', { site: 'linkedin', keywords: 'data analyst', location: '' }],
+    ['find data analyst jobs on indeed', { site: 'indeed', keywords: 'data analyst', location: '' }],
+    ['find me java developer jobs in bengaluru', { site: 'linkedin', keywords: 'java developer', location: 'bengaluru' }],
+    ['search for python jobs near hyderabad on naukri', { site: 'naukri', keywords: 'python', location: 'hyderabad' }],
+    ['look for fresher openings on foundit', { site: 'foundit', keywords: 'fresher', location: '' }]
+  ])('"%s" searches a job site', (text, search) => {
+    expect(parse(text)).toEqual({ kind: 'jobSearch', ...search })
+  })
+
+  it('leaves ordinary searches alone', () => {
+    expect(parse('search for react hooks')).toMatchObject({ kind: 'search', site: 'google' })
+    expect(parse('open my jobs')).toMatchObject({ kind: 'navigate', section: 'jobs' })
+  })
+
   it('still opens SkillPilot sections before anything outside', () => {
     expect(parse('open settings')).toMatchObject({ kind: 'navigate', section: 'settings' })
     expect(parse('open my tasks')).toMatchObject({ kind: 'navigate', section: 'tasks' })

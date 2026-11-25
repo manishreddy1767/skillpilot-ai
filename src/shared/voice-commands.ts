@@ -1,4 +1,5 @@
 import type { Browser } from './desktop-commands'
+import type { JobSite } from './job-match'
 import { addDays } from './learning'
 
 /** The screens a spoken command can open. */
@@ -9,6 +10,7 @@ export type SectionId =
   | 'skills'
   | 'goals'
   | 'projects'
+  | 'jobs'
   | 'roles'
   | 'roadmaps'
   | 'profile'
@@ -28,6 +30,8 @@ export type VoiceIntent =
   /** Open an app, website, or folder outside SkillPilot. */
   | { kind: 'open'; target: string; browser?: Browser }
   | { kind: 'search'; query: string; site: 'google' | 'youtube'; browser?: Browser }
+  /** A job search on a job site, opened in Chrome. */
+  | { kind: 'jobSearch'; site: JobSite; keywords: string; location: string }
   | { kind: 'volume'; change: 'up' | 'down' | 'mute' }
   | { kind: 'lock' }
   | { kind: 'time' }
@@ -41,6 +45,7 @@ const SPOKEN_SECTIONS: [string[], SectionId, string][] = [
   [['skills', 'skill', 'my skills'], 'skills', 'Skills'],
   [['goals', 'goal', 'my goals'], 'goals', 'Goals'],
   [['projects', 'project', 'my projects'], 'projects', 'Projects'],
+  [['jobs', 'my jobs', 'job search', 'saved jobs', 'job applications', 'applications'], 'jobs', 'Jobs'],
   [['target roles', 'roles', 'target role'], 'roles', 'Target roles'],
   [['roadmaps', 'roadmap', 'road maps', 'road map'], 'roadmaps', 'Roadmaps'],
   [['profile', 'my profile'], 'profile', 'Profile'],
@@ -131,6 +136,34 @@ export function splitBrowser(phrase: string): { rest: string; browser?: Browser 
   return { rest: match[1]!.trim(), browser: match[2] as Browser }
 }
 
+const JOB_SITE_NAMES: Record<string, JobSite> = { linkedin: 'linkedin', 'linked in': 'linkedin', naukri: 'naukri', 'naukri dot com': 'naukri', indeed: 'indeed', foundit: 'foundit', 'found it': 'foundit', monster: 'foundit' }
+const SITE_WORDS = Object.keys(JOB_SITE_NAMES).join('|')
+
+/**
+ * Job searches such as "search naukri for react developer jobs in pune" or "find data analyst jobs on
+ * linkedin". Without a site named, LinkedIn is used.
+ */
+export function parseJobSearch(text: string): VoiceIntent | null {
+  const named = text.match(new RegExp(`^(?:search|find|look for)(?: on)? (${SITE_WORDS}) for (.+)$`))
+  const plain = text.match(new RegExp(`^(?:search(?: for)?|find(?: me)?|look for|show me) (.+?) (?:jobs?|openings|vacancies|job openings)(?: (?:in|at|near) (.+?))?(?: on (${SITE_WORDS}))?$`))
+  if (!named && !plain) return null
+  let site: JobSite = 'linkedin'
+  let rest = ''
+  let location = ''
+  if (named) {
+    site = JOB_SITE_NAMES[named[1]!]!
+    const parts = named[2]!.match(/^(.+?)(?: (?:jobs?|openings|vacancies))?(?: (?:in|at|near) (.+))?$/)
+    rest = parts?.[1] ?? named[2]!
+    location = parts?.[2] ?? ''
+  } else if (plain) {
+    rest = plain[1]!
+    location = plain[2] ?? ''
+    if (plain[3]) site = JOB_SITE_NAMES[plain[3]]!
+  }
+  const keywords = rest.replace(/^(?:a |an |some )/, '').trim()
+  return keywords ? { kind: 'jobSearch', site, keywords, location: location.trim() } : null
+}
+
 const capitalise = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1)
 
 /** Turns recognised speech into one action. Anything unrecognised is passed on as a question. */
@@ -158,6 +191,9 @@ export function parseVoiceCommand(spoken: string, today: string): VoiceIntent {
     return { kind: 'volume', change }
   }
   if (/^lock (?:my |the )?(?:computer|pc|laptop|screen|system)$/.test(text)) return { kind: 'lock' }
+
+  const jobs = parseJobSearch(text)
+  if (jobs) return jobs
 
   const search =
     text.match(/^(?:search|google|look up)(?: for)?\s+(.+)$/) ?? text.match(/^(play|watch)\s+(.+)$/)

@@ -127,6 +127,14 @@ describe('respond', () => {
     expect(desktop.openUrl).toHaveBeenLastCalledWith('https://www.youtube.com/results?search_query=lofi', 'chrome')
   })
 
+  it('opens a job search in Chrome', async () => {
+    const { deps, desktop } = setup()
+    await expect(respond(command('search naukri for react developer jobs in pune'), deps)).resolves.toMatchObject({
+      reply: 'Searching Naukri for react developer jobs in pune.'
+    })
+    expect(desktop.openUrl).toHaveBeenCalledWith('https://www.naukri.com/react-developer-jobs-in-pune?k=react%20developer&l=pune', 'chrome')
+  })
+
   it('opens folders and Windows settings', async () => {
     const { deps, desktop } = setup()
     await expect(respond(command('open downloads'), deps)).resolves.toMatchObject({ reply: 'Opening your Downloads folder.' })
