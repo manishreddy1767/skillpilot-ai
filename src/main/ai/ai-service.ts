@@ -1,6 +1,7 @@
 import type { ChatMessage, GapReport, ProposalKind } from '../../shared/ai'
 import { recordFields, validateFields, type FieldValues } from '../../shared/career'
 import { analyseGap } from '../../shared/gap'
+import { addsUnclaimedSkill, type ResumeData, type ResumeSuggestion } from '../../shared/resume'
 import { buildDashboard } from '../../shared/progress'
 import type { CareerStore } from '../db/career-store'
 import type { AiStore } from './ai-store'
@@ -50,6 +51,15 @@ const roadmapSchema = object({
 const projectsSchema = object({
   projects: list(object({ name: text, description: text, technologies: text, skills: list(text) }))
 })
+
+const polishSchema = object({
+  summary: text,
+  experience: list(object({ entry: integer, bullets: list(text) })),
+  projects: list(object({ entry: integer, bullets: list(text) }))
+})
+
+/** Longest a reworded line may be, so the model cannot pad a resume. */
+const MAX_REWORDED = 300
 
 const tasksSchema = object({
   tasks: list(object({ title: text, kind: oneOf('learning', 'practice', 'project', 'other'), minutes: integer }))
@@ -318,6 +328,53 @@ Each should be achievable by one person. skills lists the skill names the projec
       ])
     }
     return Math.min(projects.length, 3)
+  }
+
+  /**
+   * Suggests clearer wording for a resume's summary and points, for one job. Every suggestion is
+   * checked: a line that adds a skill you have not claimed, or grows too long, is dropped. Nothing
+   * changes until you accept a suggestion.
+   */
+  async polishResume(resume: ResumeData, job: { title: string; description: string } | null, yourSkills: string[]): Promise<ResumeSuggestion[]> {
+    const lines = {
+      summary: resume.summary,
+      experience: resume.experience.map((item, entry) => ({ entry, role: `${item.heading} at ${item.subheading}`, bullets: item.bullets })),
+      projects: resume.projects.map((item, entry) => ({ entry, project: item.heading, bullets: item.bullets }))
+    }
+    const target = job ? `the job "${job.title}". Its description:
+${job.description.slice(0, 4000)}` : 'a general application'
+    const reply = await this.ask<{
+      summary: string
+      experience: { entry: number; bullets: string[] }[]
+      projects: { entry: number; bullets: string[] }[]
+    }>('Resume wording', polishSchema, 'medium', [
+      {
+        role: 'user',
+        content: `Reword my resume lines for ${target}
+
+Rules: keep every fact true. Do not add any skill, tool, number, employer, or achievement that is not already in that line. Start points with a strong verb. Keep each point under 25 words. Keep the same number of points for each entry, in the same order, and use the same entry numbers.
+
+My lines:
+${JSON.stringify(lines, null, 1)}`
+      }
+    ])
+
+    const suggestions: ResumeSuggestion[] = []
+    const offer = (section: ResumeSuggestion['section'], entry: number, bullet: number, original: string, reworded: string): void => {
+      const clean = reworded.trim()
+      if (!clean || clean === original.trim() || clean.length > MAX_REWORDED) return
+      if (addsUnclaimedSkill(original, clean, yourSkills)) return
+      suggestions.push({ id: `${section}-${entry}-${bullet}`, section, entry, bullet, original, reworded: clean })
+    }
+    if (resume.summary) offer('summary', 0, 0, resume.summary, reply.summary)
+    for (const section of ['experience', 'projects'] as const) {
+      for (const item of reply[section]) {
+        const original = resume[section][item.entry]
+        if (!original) continue
+        item.bullets.slice(0, original.bullets.length).forEach((bullet, index) => offer(section, item.entry, index, original.bullets[index]!, bullet))
+      }
+    }
+    return suggestions
   }
 
   async suggestTasks(availableMinutes: number): Promise<number> {

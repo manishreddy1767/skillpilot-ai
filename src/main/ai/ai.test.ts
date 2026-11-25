@@ -302,6 +302,56 @@ describe('AiService', () => {
   })
 })
 
+describe('resume wording', () => {
+  const resume = {
+    name: 'Asha',
+    headline: 'Developer',
+    contact: [],
+    summary: 'Developer who builds web apps.',
+    skills: [],
+    experience: [{ heading: 'Intern', subheading: 'Initech', dates: '', bullets: ['Made a dashboard', 'Fixed bugs'] }],
+    projects: [{ heading: 'Site', subheading: 'React', dates: '', bullets: ['Personal site'] }],
+    education: [],
+    certifications: [],
+    keywords: null
+  }
+
+  it('suggests honest rewordings, line by line', async () => {
+    const { ai, complete } = service({
+      summary: 'Frontend developer who builds fast web apps.',
+      experience: [{ entry: 0, bullets: ['Built an analytics dashboard in React', 'Fixed bugs'] }],
+      projects: [{ entry: 0, bullets: ['Designed and shipped a personal React site'] }]
+    })
+    const suggestions = await ai.polishResume(resume, { title: 'React Developer', description: 'React, CSS' }, ['React'])
+    expect(suggestions).toEqual([
+      { id: 'summary-0-0', section: 'summary', entry: 0, bullet: 0, original: 'Developer who builds web apps.', reworded: 'Frontend developer who builds fast web apps.' },
+      { id: 'experience-0-0', section: 'experience', entry: 0, bullet: 0, original: 'Made a dashboard', reworded: 'Built an analytics dashboard in React' },
+      { id: 'projects-0-0', section: 'projects', entry: 0, bullet: 0, original: 'Personal site', reworded: 'Designed and shipped a personal React site' }
+    ])
+    const sent = JSON.stringify(complete.mock.calls[0])
+    expect(sent).toContain('Do not add any skill')
+    expect(sent).toContain('React Developer')
+  })
+
+  it('drops wording that claims a skill you do not have, or runs too long', async () => {
+    const { ai } = service({
+      summary: 'Developer skilled in Kubernetes and Docker.',
+      experience: [{ entry: 0, bullets: ['Made a dashboard using Kubernetes', 'x'.repeat(400)] }],
+      projects: []
+    })
+    expect(await ai.polishResume(resume, null, ['React'])).toEqual([])
+  })
+
+  it('ignores entries and points that do not exist', async () => {
+    const { ai } = service({
+      summary: '',
+      experience: [{ entry: 5, bullets: ['Ghost'] }, { entry: 0, bullets: ['Made a dashboard', 'Fixed bugs', 'Invented an extra point'] }],
+      projects: []
+    })
+    expect(await ai.polishResume(resume, null, [])).toEqual([])
+  })
+})
+
 describe('project ideas', () => {
   it('targets missing skills, proposes up to three, and notes skills not yet listed', async () => {
     const { ai, complete, store, aiStore } = service({
