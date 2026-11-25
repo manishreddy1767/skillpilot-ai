@@ -54,14 +54,12 @@ export class Harness {
   static async launch({
     keepPosition = false,
     keepData = false,
-    quietErrors = false,
-    aiBase = ''
+    quietErrors = false
   } = {}): Promise<Harness> {
     if (!keepPosition) rmSync(positionFile, { force: true })
     if (!keepData) clearSavedData()
     const env = cleanEnv()
     if (quietErrors) env['SKILLPILOT_QUIET_ERRORS'] = '1'
-    if (aiBase) env['ANTHROPIC_BASE_URL'] = aiBase
     const app = await _electron.launch({ args: [harness], cwd: root, env })
     const harnessApp = new Harness(app)
     await expect.poll(() => harnessApp.windowCount()).toBe(2)
@@ -85,14 +83,21 @@ export class Harness {
   }
 
   async page(title: string): Promise<Page> {
+    // The page found is returned as is: looking again could miss it while it reloads, when its title is briefly empty.
+    let found: Page | null = null
     await expect
       .poll(async () => {
-        for (const page of this.app.windows()) if ((await page.title()) === title) return true
+        for (const page of this.app.windows()) {
+          if ((await page.title().catch(() => '')) === title) {
+            found = page
+            return true
+          }
+        }
         return false
       })
       .toBe(true)
-    for (const page of this.app.windows()) if ((await page.title()) === title) return page
-    throw new Error(`No page titled ${title}`)
+    if (!found) throw new Error(`No page titled ${title}`)
+    return found
   }
 
   state(title: string): Promise<WindowState | null> {
