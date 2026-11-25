@@ -14,11 +14,6 @@ export const DEFAULT_WIDGET_SIZE = 64
 /** The widget's microphone sits at its bottom-right, this share of the widget's size across. */
 export const MIC_BADGE_RATIO = 0.38
 
-export const claudeModels = [
-  { value: 'claude-opus-5-5', label: 'Claude Opus 5.5 (most capable)' },
-  { value: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 (balanced)' },
-  { value: 'claude-haiku-5-5', label: 'Claude Haiku 5.5 (cheapest)' }
-]
 
 const toggle = (key: string, label: string, initial = 'on'): FieldDef => ({
   key,
@@ -33,22 +28,13 @@ export const aiSettingFields: FieldDef[] = [
   {
     key: 'aiProvider',
     column: 'aiProvider',
-    label: 'AI provider',
+    label: 'Local AI',
     type: 'select',
-    initial: 'off',
+    initial: 'ollama',
     options: [
-      { value: 'off', label: 'Off' },
-      { value: 'claude', label: 'Claude (Anthropic API)' },
-      { value: 'ollama', label: 'Ollama (local, on this laptop)' }
+      { value: 'ollama', label: 'On, using Ollama on this laptop' },
+      { value: 'off', label: 'Off' }
     ]
-  },
-  {
-    key: 'claudeModel',
-    column: 'claudeModel',
-    label: 'Claude model',
-    type: 'select',
-    initial: 'claude-opus-5-5',
-    options: claudeModels
   },
   {
     key: 'ollamaUrl',
@@ -57,7 +43,7 @@ export const aiSettingFields: FieldDef[] = [
     type: 'url',
     initial: 'http://localhost:11434'
   },
-  { key: 'ollamaModel', column: 'ollamaModel', label: 'Ollama model', type: 'text', initial: 'llama3.2' }
+  { key: 'ollamaModel', column: 'ollamaModel', label: 'Model', type: 'text', initial: 'qwen3:4b' }
 ]
 
 export const learningSettingFields: FieldDef[] = [

@@ -34,9 +34,10 @@ export interface GapReport {
 export interface AiStatus {
   provider: string
   model: string
-  hasKey: boolean
   /** Why AI cannot run right now. Empty when it can. */
   blocked: string
+  /** Models installed in Ollama, or null when Ollama is not running. */
+  localModels: string[] | null
 }
 
 export interface AiLogEntry {
