@@ -1,49 +1,19 @@
 import { createServer, type Server } from 'node:http'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import type { AddressInfo } from 'node:net'
-import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { APP, Harness, OVERVIEW, WIDGET, dataFolder, databaseFile } from './app-harness'
-
-const KEY = 'sk-ant-integration-test-key'
+import { APP, Harness, OVERVIEW, WIDGET } from './app-harness'
 
 let h: Harness
 let server: Server
 let base: string
-let requests: { headers: Record<string, unknown>; body: { system: string; messages: { content: string }[] } }[]
+let requests: { url: string; headers: Record<string, unknown>; body: { system?: string; messages: { role: string; content: string }[] } }[]
 let replies: unknown[]
 
-/** Speaks the real streaming format, so the real SDK runs from end to end. */
-function respond(res: import('node:http').ServerResponse, reply: unknown): void {
-  res.writeHead(200, { 'content-type': 'text/event-stream' })
-  const send = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-  send('message_start', {
-    type: 'message_start',
-    message: {
-      id: 'msg_1',
-      type: 'message',
-      role: 'assistant',
-      model: 'claude-opus-5-5',
-      content: [],
-      stop_reason: null,
-      stop_sequence: null,
-      usage: { input_tokens: 100, output_tokens: 1 }
-    }
-  })
-  send('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } })
-  send('content_block_delta', {
-    type: 'content_block_delta',
-    index: 0,
-    delta: { type: 'text_delta', text: JSON.stringify(reply) }
-  })
-  send('content_block_stop', { type: 'content_block_stop', index: 0 })
-  send('message_delta', {
-    type: 'message_delta',
-    delta: { stop_reason: 'end_turn', stop_sequence: null },
-    usage: { output_tokens: 20 }
-  })
-  send('message_stop', { type: 'message_stop' })
-  res.end()
+/** A stand-in for Ollama on this laptop, speaking its API, so the real local provider runs end to end. */
+function respond(res: import('node:http').ServerResponse, url: string, reply: unknown): void {
+  res.writeHead(200, { 'content-type': 'application/json' })
+  if (url === '/api/tags') return void res.end(JSON.stringify({ models: [{ name: 'qwen3:4b' }] }))
+  res.end(JSON.stringify({ message: { role: 'assistant', content: JSON.stringify(reply) }, prompt_eval_count: 100, eval_count: 20 }))
 }
 
 test.beforeEach(async () => {
@@ -53,8 +23,8 @@ test.beforeEach(async () => {
     let body = ''
     req.on('data', (chunk) => (body += chunk))
     req.on('end', () => {
-      requests.push({ headers: req.headers, body: JSON.parse(body) })
-      respond(res, replies.shift())
+      if (req.url === '/api/chat') requests.push({ url: req.url, headers: req.headers, body: JSON.parse(body) })
+      respond(res, req.url ?? '', req.url === '/api/chat' ? replies.shift() : null)
     })
   })
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
@@ -74,24 +44,33 @@ async function openApp(): Promise<Page> {
 
 const go = (page: Page, section: string) => page.getByRole('button', { name: section, exact: true }).click()
 
-async function enableClaude(page: Page): Promise<void> {
+/** Points the app at the stand-in Ollama, through Settings as a person would. */
+async function useLocalAi(page: Page): Promise<void> {
   await go(page, 'Settings')
-  await page.getByLabel('AI provider').selectOption('claude')
+  await page.getByLabel('Local AI').selectOption('ollama')
+  await page.getByLabel('Ollama address').fill(base)
+  await page.getByLabel('Model').fill('qwen3:4b')
   await page.getByRole('button', { name: 'Save settings' }).click()
   await expect(page.getByText('Saved', { exact: true })).toBeVisible()
-  await page.getByLabel('API key').fill(KEY)
-  await page.getByRole('button', { name: 'Save key' }).click()
-  await expect(page.getByText('A key is saved')).toBeVisible()
+  await expect(page.getByText('Ready, using qwen3:4b.')).toBeVisible()
+}
+
+async function turnAiOff(page: Page): Promise<void> {
+  await go(page, 'Settings')
+  await page.getByLabel('Local AI').selectOption('off')
+  await page.getByRole('button', { name: 'Save settings' }).click()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
 }
 
 const seed = (page: Page, work: (api: Window['skillpilot']) => Promise<unknown>) =>
   page.evaluate(`(${work.toString()})(window.skillpilot)`)
 
-test('everything except AI works with no key, and sends nothing', async () => {
-  h = await Harness.launch({ aiBase: base })
+test('everything except AI works with the local AI off, and asks nothing', async () => {
+  h = await Harness.launch()
   const page = await openApp()
+  await turnAiOff(page)
   await go(page, 'Assistant')
-  await expect(page.getByText('AI is off. Choose a provider in Settings.')).toBeVisible()
+  await expect(page.getByText('The local AI is off. Turn it on in Settings.')).toBeVisible()
   await go(page, 'Target roles')
   await page.getByRole('button', { name: 'Add target role' }).click()
   await page.getByLabel('Target role', { exact: false }).first().fill('Frontend Dev')
@@ -107,9 +86,9 @@ test('everything except AI works with no key, and sends nothing', async () => {
 })
 
 test('chat works end to end, and a suggestion is saved only once accepted', async () => {
-  h = await Harness.launch({ aiBase: base })
+  h = await Harness.launch()
   const page = await openApp()
-  await enableClaude(page)
+  await useLocalAi(page)
   replies.push({
     reply: 'Learn Docker next.',
     proposals: [{ kind: 'addSkill', title: 'Docker', note: 'Needed for deployment', minutes: 0, level: 0 }]
@@ -131,9 +110,9 @@ test('chat works end to end, and a suggestion is saved only once accepted', asyn
 })
 
 test('a rejected suggestion is not saved', async () => {
-  h = await Harness.launch({ aiBase: base })
+  h = await Harness.launch()
   const page = await openApp()
-  await enableClaude(page)
+  await useLocalAi(page)
   replies.push({ reply: 'Ok', proposals: [{ kind: 'addGoal', title: 'Unwanted', note: '', minutes: 0, level: 0 }] })
   await go(page, 'Assistant')
   await page.getByLabel('Your message').fill('Hi')
@@ -144,8 +123,8 @@ test('a rejected suggestion is not saved', async () => {
   await expect(page.getByText('Unwanted')).toHaveCount(0)
 })
 
-test('private details are not sent, and the log shows exactly what was', async () => {
-  h = await Harness.launch({ aiBase: base })
+test('the local model gets only career details, and the log shows exactly what it got', async () => {
+  h = await Harness.launch()
   const page = await openApp()
   await seed(page, async (api) => {
     await api.saveProfile({
@@ -157,7 +136,7 @@ test('private details are not sent, and the log shows exactly what was', async (
     })
     await api.saveRecord('work', null, { company: 'Private Corp', role: 'Analyst' })
   })
-  await enableClaude(page)
+  await useLocalAi(page)
   replies.push({ reply: 'Noted', proposals: [] })
   await go(page, 'Assistant')
   await page.getByLabel('Your message').fill('Hello')
@@ -175,62 +154,47 @@ test('private details are not sent, and the log shows exactly what was', async (
   await expect(page.locator('pre').first()).toContainText('Hello')
 })
 
-test('the key is encrypted on disk and reaches only the provider', async () => {
-  h = await Harness.launch({ aiBase: base })
+test('requests go only to the local model, with no credentials of any kind', async () => {
+  h = await Harness.launch()
   const page = await openApp()
-  await enableClaude(page)
+  await useLocalAi(page)
   replies.push({ reply: 'Ok', proposals: [] })
   await go(page, 'Assistant')
   await page.getByLabel('Your message').fill('Hi')
   await page.getByRole('button', { name: 'Send' }).click()
   await expect(page.getByText('Ok', { exact: true })).toBeVisible()
-
-  expect(String(requests[0]!.headers['authorization'])).toContain(KEY)
-  await h.close()
-
-  const keyFile = join(dataFolder, 'api-key.enc')
-  expect(existsSync(keyFile)).toBe(true)
-  expect(readFileSync(keyFile).includes(KEY)).toBe(false)
-  for (const name of ['', '-wal']) {
-    const path = databaseFile + name
-    if (existsSync(path)) expect(readFileSync(path).includes(KEY)).toBe(false)
-  }
-  for (const name of readdirSync(join(dataFolder, 'backups'))) {
-    expect(readFileSync(join(dataFolder, 'backups', name)).includes(KEY)).toBe(false)
-  }
-
-  // Still works after a restart, so it really was decrypted from disk.
-  h = await Harness.launch({ aiBase: base, keepData: true })
-  const reopened = await openApp()
-  replies.push({ reply: 'Back again', proposals: [] })
-  await go(reopened, 'Assistant')
-  await reopened.getByLabel('Your message').fill('Hi')
-  await reopened.getByRole('button', { name: 'Send' }).click()
-  await expect(reopened.getByText('Back again')).toBeVisible()
-  expect(String(requests.at(-1)!.headers['authorization'])).toContain(KEY)
+  expect(requests).toHaveLength(1)
+  expect(requests[0]!.url).toBe('/api/chat')
+  expect(requests[0]!.headers['authorization']).toBeUndefined()
+  expect(requests[0]!.headers['x-api-key']).toBeUndefined()
+  expect(requests[0]!.body).toMatchObject({ model: 'qwen3:4b', stream: false, think: false })
 })
 
-test('a rejected key gives a clear message', async () => {
-  const rejecting = createServer((_req, res) => {
-    res.writeHead(401, { 'content-type': 'application/json' })
-    res.end(JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'bad' } }))
+test('a model that is not installed gives a clear message', async () => {
+  const missing = createServer((req, res) => {
+    if (req.url === '/api/tags') return void res.end(JSON.stringify({ models: [{ name: 'qwen3:4b' }] }))
+    res.writeHead(404)
+    res.end('{}')
   })
-  await new Promise<void>((done) => rejecting.listen(0, '127.0.0.1', done))
-  h = await Harness.launch({ aiBase: `http://127.0.0.1:${(rejecting.address() as AddressInfo).port}` })
+  await new Promise<void>((done) => missing.listen(0, '127.0.0.1', done))
+  h = await Harness.launch()
   const page = await openApp()
-  await enableClaude(page)
+  await go(page, 'Settings')
+  await page.getByLabel('Ollama address').fill(`http://127.0.0.1:${(missing.address() as AddressInfo).port}`)
+  await page.getByRole('button', { name: 'Save settings' }).click()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
   await go(page, 'Assistant')
   await page.getByLabel('Your message').fill('Hi')
   await page.getByRole('button', { name: 'Send' }).click()
-  await expect(page.getByRole('alert')).toContainText('rejected the API key')
-  await new Promise((done) => rejecting.close(done))
+  await expect(page.getByRole('alert')).toContainText('"qwen3:4b" is not installed')
+  await new Promise((done) => missing.close(done))
 })
 
 test('a target role goes from AI requirements to report to roadmap', async () => {
-  h = await Harness.launch({ aiBase: base })
+  h = await Harness.launch()
   const page = await openApp()
   await seed(page, (api) => api.saveRecord('targetRole', null, { title: 'Frontend Dev' }))
-  await enableClaude(page)
+  await useLocalAi(page)
   await go(page, 'Target roles')
   await page.getByRole('button', { name: 'Details for Frontend Dev' }).click()
 
@@ -242,7 +206,7 @@ test('a target role goes from AI requirements to report to roadmap', async () =>
   replies.push({ summary: 'CSS is your main gap.', priorities: ['Learn CSS layout'] })
   await page.getByRole('button', { name: 'Write gap report' }).click()
   await expect(page.getByText('CSS is your main gap.')).toBeVisible()
-  expect(requests.at(-1)!.body.messages[0]!.content).toContain('CSS: needs level 3')
+  expect(requests.at(-1)!.body.messages.at(-1)!.content).toContain('CSS: needs level 3')
 
   replies.push({
     title: 'Frontend path',
@@ -256,10 +220,10 @@ test('a target role goes from AI requirements to report to roadmap', async () =>
 })
 
 test('project ideas link to existing skills when accepted', async () => {
-  h = await Harness.launch({ aiBase: base })
+  h = await Harness.launch()
   const page = await openApp()
   await seed(page, (api) => api.saveRecord('skill', null, { name: 'React' }))
-  await enableClaude(page)
+  await useLocalAi(page)
   replies.push({
     projects: [{ name: 'Portfolio shop', description: 'A shop', technologies: 'React', skills: ['React', 'Docker'] }]
   })
@@ -272,10 +236,10 @@ test('project ideas link to existing skills when accepted', async () => {
 })
 
 test('the assistant can change an existing skill level, shown before and after', async () => {
-  h = await Harness.launch({ aiBase: base })
+  h = await Harness.launch()
   const page = await openApp()
   await seed(page, (api) => api.saveRecord('skill', null, { name: 'React', claimedLevel: '2' }))
-  await enableClaude(page)
+  await useLocalAi(page)
   replies.push({ reply: 'Nice work.', proposals: [{ kind: 'setSkillLevel', title: 'React', note: 'You built two apps', minutes: 0, level: 4 }] })
   await go(page, 'Assistant')
   await page.getByLabel('Your message').fill('I built two React apps')
@@ -287,7 +251,7 @@ test('the assistant can change an existing skill level, shown before and after',
 })
 
 test('roadmaps can be created and edited without AI', async () => {
-  h = await Harness.launch({ aiBase: base })
+  h = await Harness.launch()
   const page = await openApp()
   await go(page, 'Roadmaps')
   await page.getByRole('button', { name: 'Add roadmap' }).click()
@@ -302,16 +266,14 @@ test('roadmaps can be created and edited without AI', async () => {
   expect(requests).toHaveLength(0)
 })
 
-test('other windows cannot use AI, settings, or the key', async () => {
-  h = await Harness.launch({ aiBase: base })
+test('other windows cannot use AI or settings', async () => {
+  h = await Harness.launch()
   for (const title of [WIDGET, OVERVIEW]) {
     const results = await (await h.page(title)).evaluate(async () => {
       const api = window.skillpilot
       return [
         await api.getSettings(),
         await api.saveSettings({}),
-        await api.saveApiKey('sk-hacked'),
-        await api.removeApiKey(),
         await api.getAiStatus(),
         await api.sendChat('Hi'),
         await api.getChat(),
@@ -321,5 +283,4 @@ test('other windows cannot use AI, settings, or the key', async () => {
     })
     for (const result of results) expect(result).toEqual({ ok: false, message: 'Not allowed.' })
   }
-  expect(existsSync(join(dataFolder, 'api-key.enc'))).toBe(false)
 })
