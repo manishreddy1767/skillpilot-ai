@@ -1,4 +1,4 @@
-import type { AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from './ai'
+import type { AgentRun, AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from './ai'
 import type { FieldValues, Link, LinkKind, OverviewData, RecordKind, Result, StoredRecord } from './career'
 import type { GapAnalysis } from './gap'
 import type { History } from './history'
@@ -120,6 +120,7 @@ export const Channel = {
   DeleteResume: 'resume:delete',
   ExportResume: 'resume:export',
   PolishResume: 'resume:polish',
+  RunAgent: 'ai:agent',
   Listen: 'voice:listen',
   WidgetListen: 'voice:widget-listen',
   StopListening: 'voice:stop',
@@ -165,6 +166,8 @@ export interface SkillPilotApi {
   getAiStatus(): Promise<Result<AiStatus>>
   getChat(): Promise<Result<ChatMessage[]>>
   sendChat(message: string): Promise<Result<ChatMessage[]>>
+  /** The local AI works towards a goal in steps, suggesting changes for approval. */
+  runAgent(goal: string): Promise<Result<AgentRun>>
   clearChat(): Promise<Result<boolean>>
   getGapAnalysis(roleId: number): Promise<Result<{ analysis: GapAnalysis; report: GapReport | null }>>
   draftRequirements(roleId: number): Promise<Result<number>>
