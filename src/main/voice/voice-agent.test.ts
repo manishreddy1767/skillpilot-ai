@@ -150,7 +150,7 @@ describe('respond', () => {
       ['open indeed', 'https://in.indeed.com'],
       ['open internshala', 'https://internshala.com'],
       ['open foundit', 'https://www.foundit.in']
-    ]) {
+    ] as const) {
       await respond(command(said), deps)
       expect(desktop.openUrl).toHaveBeenLastCalledWith(url, undefined)
     }
