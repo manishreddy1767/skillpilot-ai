@@ -265,7 +265,7 @@ describe('the agent', () => {
 describe('resume wording', () => {
   it('asks the local model, and needs it to be on', async () => {
     const resume = { name: 'A', headline: '', contact: [], summary: 'Old', skills: [], experience: [], projects: [], education: [], certifications: [], keywords: null }
-    const s = setup({ summary: 'New and clearer', experience: [], projects: [] })
+    const s = setup({ rewrites: [{ line: 1, better: 'New and clearer' }] })
     expect(await s.h.polishResume(resume, null, [])).toMatchObject({ ok: true, value: [{ section: 'summary', reworded: 'New and clearer' }] })
     s.h.saveSettings(allSettings(s.h, { aiProvider: 'off' }))
     expect((await s.h.polishResume(resume, null, [])).ok).toBe(false)

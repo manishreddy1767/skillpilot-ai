@@ -316,11 +316,14 @@ describe('resume wording', () => {
     keywords: null
   }
 
-  it('suggests honest rewordings, line by line', async () => {
+  it('numbers every line, so even a small model rewrites each one, and maps answers back', async () => {
     const { ai, complete } = service({
-      summary: 'Frontend developer who builds fast web apps.',
-      experience: [{ entry: 0, bullets: ['Built an analytics dashboard in React', 'Fixed bugs'] }],
-      projects: [{ entry: 0, bullets: ['Designed and shipped a personal React site'] }]
+      rewrites: [
+        { line: 1, better: 'Frontend developer who builds fast web apps.' },
+        { line: 2, better: 'Built an analytics dashboard in React' },
+        { line: 3, better: 'Fixed bugs' },
+        { line: 4, better: 'Designed and shipped a personal React site' }
+      ]
     })
     const suggestions = await ai.polishResume(resume, { title: 'React Developer', description: 'React, CSS' }, ['React'])
     expect(suggestions).toEqual([
@@ -328,27 +331,43 @@ describe('resume wording', () => {
       { id: 'experience-0-0', section: 'experience', entry: 0, bullet: 0, original: 'Made a dashboard', reworded: 'Built an analytics dashboard in React' },
       { id: 'projects-0-0', section: 'projects', entry: 0, bullet: 0, original: 'Personal site', reworded: 'Designed and shipped a personal React site' }
     ])
-    const sent = JSON.stringify(complete.mock.calls[0])
-    expect(sent).toContain('Do not add any skill')
+    const sent = (complete.mock.calls[0] as unknown as [{ messages: { content: string }[] }])[0].messages.at(-1)!.content
+    expect(sent).toContain('1. (summary) Developer who builds web apps.')
+    expect(sent).toContain('2. Made a dashboard')
+    expect(sent).toContain('4. Personal site')
+    expect(sent).toContain('adds no new skills')
     expect(sent).toContain('React Developer')
   })
 
   it('drops wording that claims a skill you do not have, or runs too long', async () => {
     const { ai } = service({
-      summary: 'Developer skilled in Kubernetes and Docker.',
-      experience: [{ entry: 0, bullets: ['Made a dashboard using Kubernetes', 'x'.repeat(400)] }],
-      projects: []
+      rewrites: [
+        { line: 1, better: 'Developer skilled in Kubernetes and Docker.' },
+        { line: 2, better: 'Made a dashboard using Kubernetes' },
+        { line: 3, better: 'x'.repeat(400) }
+      ]
     })
     expect(await ai.polishResume(resume, null, ['React'])).toEqual([])
   })
 
-  it('ignores entries and points that do not exist', async () => {
+  it('ignores lines that do not exist, and a second answer for the same line', async () => {
     const { ai } = service({
-      summary: '',
-      experience: [{ entry: 5, bullets: ['Ghost'] }, { entry: 0, bullets: ['Made a dashboard', 'Fixed bugs', 'Invented an extra point'] }],
-      projects: []
+      rewrites: [
+        { line: 0, better: 'Ghost' },
+        { line: 9, better: 'Ghost' },
+        { line: 3, better: 'Resolved bugs' },
+        { line: 3, better: 'Squashed bugs' }
+      ]
     })
-    expect(await ai.polishResume(resume, null, [])).toEqual([])
+    expect(await ai.polishResume(resume, null, [])).toEqual([
+      { id: 'experience-0-1', section: 'experience', entry: 0, bullet: 1, original: 'Fixed bugs', reworded: 'Resolved bugs' }
+    ])
+  })
+
+  it('asks nothing when there is nothing to reword', async () => {
+    const { ai, complete } = service({ rewrites: [] })
+    expect(await ai.polishResume({ ...resume, summary: '', experience: [], projects: [] }, null, [])).toEqual([])
+    expect(complete).not.toHaveBeenCalled()
   })
 })
 
