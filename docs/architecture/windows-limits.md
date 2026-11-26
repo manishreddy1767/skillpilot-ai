@@ -50,3 +50,13 @@ The VS Code terminal can have `ELECTRON_RUN_AS_NODE=1` set, which makes Electron
 fail with `Cannot read properties of undefined (reading 'whenReady')`. This happened during research
 on this laptop, in a shell started from VS Code. The variable is not saved in the Windows user or
 machine environment. The dev script will clear it before launching.
+
+## Running on another computer
+
+| Need | Detail |
+|---|---|
+| Windows | Windows 10 or 11, 64-bit. The installer is per user and needs no administrator rights. |
+| Local AI | Optional. Install Ollama and run `ollama pull qwen3:4b`, about 2.5 GB. It runs well with 16 GB of RAM or a graphics card with 4 GB or more; on less it is slow. Everything else works without it. |
+| Voice | Windows' offline speech recogniser for English (United States or United Kingdom), and a microphone that is not muted in Windows. |
+| Browser | Optional. Job searches and "open … in Chrome" use Chrome when it is installed, and otherwise the default browser. |
+| Your data | Export it in Settings on one computer and import it on the other. Both must run the same version. |
