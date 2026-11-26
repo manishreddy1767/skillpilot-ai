@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FIXED_PHRASES, SPOKEN_SECTION_NAMES, matchTitle, normalise, parseVoiceCommand, splitDay } from './voice-commands'
+import { FIXED_PHRASES, SPOKEN_SECTION_NAMES, matchTitle, normalise, parseVoiceCommand, splitDay, splitTime } from './voice-commands'
 
 // A Sunday.
 const today = '2026-11-08'
@@ -9,6 +9,26 @@ describe('normalise', () => {
   it('lowercases, drops punctuation, and removes polite filler', () => {
     expect(normalise('  Please, OPEN the Tasks page! Thanks.')).toBe('open the tasks page')
     expect(normalise('Hey SkillPilot, add task X please')).toBe('add task x')
+  })
+})
+
+describe('splitTime', () => {
+  it.each([
+    ['call the mentor at 5 pm', 'call the mentor', '17:00'],
+    ['call the mentor at 5pm', 'call the mentor', '17:00'],
+    ['call the mentor at 5 30 pm', 'call the mentor', '17:30'],
+    ['call the mentor at 17 30', 'call the mentor', '17:30'],
+    ['revise sql at 9 am tomorrow', 'revise sql tomorrow', '09:00'],
+    ['call at 12 am', 'call', '00:00'],
+    ['call at 12 pm', 'call', '12:00'],
+    ['gym at 5', 'gym', '17:00'],
+    ['read at 9', 'read', '09:00']
+  ])('"%s" is "%s" at %s', (phrase, rest, time) => {
+    expect(splitTime(phrase)).toEqual({ rest, time })
+  })
+
+  it.each(['look at the resume', 'meet at 25', 'call at 13 pm', 'read chapter 5'])('leaves "%s" alone', (phrase) => {
+    expect(splitTime(phrase)).toEqual({ rest: phrase, time: '' })
   })
 })
 

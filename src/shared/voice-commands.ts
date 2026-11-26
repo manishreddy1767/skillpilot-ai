@@ -105,6 +105,25 @@ export function normalise(text: string): string {
     .trim()
 }
 
+/**
+ * Takes a reminder time such as "at 5 pm", "at 5:30", "at 17:30", or "at 9 am" out of a phrase, as HH:MM.
+ * The text has already lost its punctuation, so "5:30" arrives as "5 30". A bare "at 5" means the
+ * afternoon for 1 to 7, as people usually mean.
+ */
+export function splitTime(phrase: string): { rest: string; time: string } {
+  const match = phrase.match(/(?:^| )at (\d{1,2})(?:[ :](\d{2}))? ?(am|pm)?(?= |$)/)
+  if (!match) return { rest: phrase, time: '' }
+  let hour = Number(match[1])
+  const minute = Number(match[2] ?? '0')
+  const half = match[3]
+  if (hour > 23 || minute > 59 || (half && (hour < 1 || hour > 12))) return { rest: phrase, time: '' }
+  if (half === 'pm' && hour < 12) hour += 12
+  if (half === 'am' && hour === 12) hour = 0
+  if (!half && hour >= 1 && hour <= 7) hour += 12
+  const rest = `${phrase.slice(0, match.index)} ${phrase.slice(match.index! + match[0].length)}`.replace(/\s+/g, ' ').trim()
+  return { rest, time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` }
+}
+
 /** Splits a trailing "tomorrow", "on friday", "next monday" or "in 3 days" from a phrase. */
 export function splitDay(phrase: string, today: string): { rest: string; date: string } {
   const weekday = new Date(`${today}T00:00:00Z`).getUTCDay()
