@@ -71,11 +71,7 @@ const projectsSchema = object({
   projects: list(object({ name: text, description: text, technologies: text, skills: list(text) }))
 })
 
-const polishSchema = object({
-  summary: text,
-  experience: list(object({ entry: integer, bullets: list(text) })),
-  projects: list(object({ entry: integer, bullets: list(text) }))
-})
+const polishSchema = object({ rewrites: list(object({ line: integer, better: text })) })
 
 /** Longest a reworded line may be, so the model cannot pad a resume. */
 const MAX_REWORDED = 300
@@ -374,43 +370,44 @@ Each should be achievable by one person. skills lists the skill names the projec
    * changes until you accept a suggestion.
    */
   async polishResume(resume: ResumeData, job: { title: string; description: string } | null, yourSkills: string[]): Promise<ResumeSuggestion[]> {
-    const lines = {
-      summary: resume.summary,
-      experience: resume.experience.map((item, entry) => ({ entry, role: `${item.heading} at ${item.subheading}`, bullets: item.bullets })),
-      projects: resume.projects.map((item, entry) => ({ entry, project: item.heading, bullets: item.bullets }))
-    }
-    const target = job ? `the job "${job.title}". Its description:
-${job.description.slice(0, 4000)}` : 'a general application'
-    const reply = await this.ask<{
-      summary: string
-      experience: { entry: number; bullets: string[] }[]
-      projects: { entry: number; bullets: string[] }[]
-    }>('Resume wording', polishSchema, 'medium', [
+    // Lines are numbered and asked for one by one: small local models otherwise hand the lines back unchanged.
+    type Line = { section: ResumeSuggestion['section']; entry: number; bullet: number; text: string }
+    const lines: Line[] = [
+      ...(resume.summary ? [{ section: 'summary' as const, entry: 0, bullet: 0, text: resume.summary }] : []),
+      ...(['experience', 'projects'] as const).flatMap((section) =>
+        resume[section].flatMap((item, entry) => item.bullets.map((text, bullet) => ({ section, entry, bullet, text })))
+      )
+    ].filter((line) => line.text.trim())
+    if (lines.length === 0) return []
+
+    const target = job ? `the job "${job.title}". Its description:\n${job.description.slice(0, 3000)}` : 'a general job application'
+    const reply = await this.ask<{ rewrites: { line: number; better: string }[] }>('Resume wording', polishSchema, 'medium', [
       {
         role: 'user',
-        content: `Reword my resume lines for ${target}
+        content: `I am applying for ${target}
 
-Rules: keep every fact true. Do not add any skill, tool, number, employer, or achievement that is not already in that line. Start points with a strong verb. Keep each point under 25 words. Keep the same number of points for each entry, in the same order, and use the same entry numbers.
+Improve each numbered resume line below so it reads stronger for this. For each line, write a better version that:
+- starts with a strong past-tense verb, unless it is the summary
+- keeps every fact true and adds no new skills, tools, numbers, or achievements
+- is under 25 words
+- uses different words from the original
 
-My lines:
-${JSON.stringify(lines, null, 1)}`
+Example: "Did testing for the app" could become "Tested the app's main features before each release".
+
+Lines:
+${lines.map((line, index) => `${index + 1}. ${line.section === 'summary' ? '(summary) ' : ''}${line.text}`).join('\n')}`
       }
     ])
 
     const suggestions: ResumeSuggestion[] = []
-    const offer = (section: ResumeSuggestion['section'], entry: number, bullet: number, original: string, reworded: string): void => {
-      const clean = reworded.trim()
-      if (!clean || clean === original.trim() || clean.length > MAX_REWORDED) return
-      if (addsUnclaimedSkill(original, clean, yourSkills)) return
-      suggestions.push({ id: `${section}-${entry}-${bullet}`, section, entry, bullet, original, reworded: clean })
-    }
-    if (resume.summary) offer('summary', 0, 0, resume.summary, reply.summary)
-    for (const section of ['experience', 'projects'] as const) {
-      for (const item of reply[section]) {
-        const original = resume[section][item.entry]
-        if (!original) continue
-        item.bullets.slice(0, original.bullets.length).forEach((bullet, index) => offer(section, item.entry, index, original.bullets[index]!, bullet))
-      }
+    for (const { line: number, better } of reply.rewrites) {
+      const line = lines[number - 1]
+      const clean = better.trim()
+      if (!line || !clean || clean === line.text.trim() || clean.length > MAX_REWORDED) continue
+      if (addsUnclaimedSkill(line.text, clean, yourSkills)) continue
+      const id = `${line.section}-${line.entry}-${line.bullet}`
+      if (suggestions.some((item) => item.id === id)) continue
+      suggestions.push({ id, section: line.section, entry: line.entry, bullet: line.bullet, original: line.text, reworded: clean })
     }
     return suggestions
   }
