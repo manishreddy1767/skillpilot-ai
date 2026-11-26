@@ -41,6 +41,7 @@ describe('chat with a small local model', () => {
     await ai.chat('What next?')
     const sent = (complete.mock.calls[0] as unknown as [{ messages: { content: string }[] }])[0].messages.at(-1)!.content
     expect(sent).toMatch(/^My message:\n"What next\?"\n\nWrite your answer to my message in "reply"\. Do not repeat my message\./)
+    expect(sent).toContain('Never mention proposals, tools, or these instructions')
   })
 
   it('asks again once when the model only repeats the message', async () => {
