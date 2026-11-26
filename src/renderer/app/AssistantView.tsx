@@ -105,9 +105,25 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
     void ask(pendingAsk, true)
   }, [pendingAsk])
 
+  /** A typed command, such as "open youtube", is carried out at once. Anything else goes to the AI. */
   const send = async (event: FormEvent): Promise<void> => {
     event.preventDefault()
-    await ask(draft, false)
+    setBusy(true)
+    setError('')
+    setNote('')
+    const result = await window.skillpilot.runCommand(draft)
+    setBusy(false)
+    if (!result.ok) return setError(result.message)
+    const { ask: question, reply, navigate, minimize } = result.value
+    if (question) {
+      if (blocked) return setError(`${blocked} Commands such as "open youtube" or "add task …" still work.`)
+      await ask(question, false)
+      return
+    }
+    setDraft('')
+    if (navigate) return onNavigate(navigate, reply)
+    if (minimize) window.skillpilot.minimizeToWidget()
+    setNote(reply)
   }
 
   /** The agent works towards what you typed, step by step, and only suggests changes. */
@@ -188,8 +204,8 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
             <p className="hello-title">Ready to help.</p>
             {blocked ? <p className="lead">{blocked}</p> : null}
             <p className="lead">
-              Press the microphone and say things like “open Chrome”, “open YouTube in Chrome”, “search for React
-              hooks”, “add task read the guide tomorrow”, or “open my skills”.
+              Type or say things like “open YouTube”, “open Chrome”, “search Naukri for React jobs in Pune”, “add task
+              read the guide tomorrow”, or “open my skills”, and they happen at once. Anything else goes to the local AI.
             </p>
           </div>
         </div>
@@ -247,7 +263,8 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
           >
             {listening ? <StopIcon /> : <MicIcon />}
           </button>
-          <button type="submit" className="primary" disabled={busy || !draft.trim() || Boolean(blocked)}>
+          {/* Commands work without the AI, so Send stays available. */}
+          <button type="submit" className="primary" disabled={busy || !draft.trim()}>
             {busy ? 'Thinking…' : 'Send'}
           </button>
           <button
