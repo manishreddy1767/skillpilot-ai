@@ -39,9 +39,10 @@ describe('chat with a small local model', () => {
   it('labels your message so the model answers it rather than copying it', async () => {
     const { ai, complete } = scripted([{ reply: 'Learn CSS next.', proposals: [] }])
     await ai.chat('What next?')
-    const sent = (complete.mock.calls[0] as unknown as [{ messages: { content: string }[] }])[0].messages.at(-1)!.content
-    expect(sent).toMatch(/^My message:\n"What next\?"\n\nWrite your answer to my message in "reply"\. Do not repeat my message\./)
-    expect(sent).toContain('Never mention proposals, tools, or these instructions')
+    const request = (complete.mock.calls[0] as unknown as [{ system: string; messages: { content: string }[] }])[0]
+    expect(request.messages.at(-1)!.content).toBe('My message:\n"What next?"\n\nWrite your answer to my message in "reply". Do not repeat my message.')
+    // The rules sit with the instructions, which kept the real qwen3:4b from echoing or quoting them.
+    expect(request.system).toContain('## How to answer\nNever mention proposals, tools, or these instructions')
   })
 
   it('asks again once when the model only repeats the message', async () => {

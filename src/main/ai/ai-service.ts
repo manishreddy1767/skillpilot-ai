@@ -108,11 +108,13 @@ export class AiService {
     feature: string,
     schema: JsonSchema,
     effort: AiRequest['effort'],
-    messages: AiRequest['messages']
+    messages: AiRequest['messages'],
+    /** Extra rules for this feature, kept with the instructions rather than in your message. */
+    rules = ''
   ): Promise<T> {
     const { aiStore, store, today } = this.deps
     const provider = await this.deps.provider()
-    const system = `${INSTRUCTIONS}\n\n${buildCareerContext(store, today())}`
+    const system = `${INSTRUCTIONS}\n\n${buildCareerContext(store, today())}${rules ? `\n\n## How to answer\n${rules}` : ''}`
     const sent = [system, ...messages.map((m) => `${m.role}: ${m.content}`)].join('\n\n')
     const log = { feature, provider: provider.name, model: provider.model, sent }
 
@@ -212,12 +214,13 @@ export class AiService {
       ...history,
       {
         role: 'user',
-        content: `My message:\n"${message}"\n\nWrite your answer to my message in "reply". Do not repeat my message.${nudge} ${CHAT_RULES}`
+        content: `My message:\n"${message}"\n\nWrite your answer to my message in "reply". Do not repeat my message.${nudge}`
       }
     ]
-    let reply = await this.ask<ChatReply>('Assistant', chatSchema, 'medium', framed(''))
+    // Tested with qwen3:4b: rules here, with a short labelled message, avoided both echoes and leaked wording.
+    let reply = await this.ask<ChatReply>('Assistant', chatSchema, 'medium', framed(''), CHAT_RULES)
     if (isEcho(reply.reply, message)) {
-      reply = await this.ask<ChatReply>('Assistant', chatSchema, 'medium', framed(' Your last reply only repeated my message, so answer it properly this time.'))
+      reply = await this.ask<ChatReply>('Assistant', chatSchema, 'medium', framed(' Your last reply only repeated my message, so answer it properly this time.'), CHAT_RULES)
     }
     if (isEcho(reply.reply, message)) {
       throw new AiError('The local AI repeated your message instead of answering. Try a fuller question, or a larger model in Settings.')
