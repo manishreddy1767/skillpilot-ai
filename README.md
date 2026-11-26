@@ -5,12 +5,12 @@ robot widget. It tracks skills, goals, projects, and learning, matches you to jo
 resumes, and uses a local AI to suggest what to do next. **Nothing leaves your laptop**: the AI runs in
 Ollama on this computer, and the app blocks every outside connection.
 
-Status: version 2.0.0, with milestones M0 to M17 built. See the [quality report](docs/quality-report.md) for
+Status: version 2.1.0, with milestones M0 to M18 built. See the [quality report](docs/quality-report.md) for
 test results and what has not been tested yet. See the [roadmap](docs/roadmap.md).
 
 ## Install
 
-Run `npm run dist`, then run `releaseSkillPilot AI Setup 2.0.0.exe`. It is unsigned, so Windows shows a
+Run `npm run dist`, then run `releaseSkillPilot AI Setup 2.1.0.exe`. It is unsigned, so Windows shows a
 SmartScreen warning: choose **More info**, then **Run anyway**.
 
 AI runs locally with [Ollama](https://ollama.com). Install it, run `ollama pull qwen3:4b`, and SkillPilot
@@ -26,6 +26,9 @@ uses it automatically; Settings shows whether it is ready. Without it, everythin
   wording line by line, and export a PDF or text. It never claims skills you do not have.
 - **Agent:** give the local AI a goal, such as "get me ready for the React job at Acme", and it looks
   things up and suggests tasks, skills, and goals for you to approve.
+- **Ask anything:** type or say a request in your own words, spelling mistakes and all, such as
+  "can you pull up naukri" or "opne youtbe". Commands run at once; anything else is understood by the
+  local AI and carried out, with questions about the world searched on Google.
 - **Voice:** press the microphone on the widget or in the Assistant and speak.
 
 SkillPilot never signs in to or reads job sites itself; that would break their terms and risk your
