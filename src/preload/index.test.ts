@@ -55,6 +55,7 @@ describe('preload bridge', () => {
       'getChat',
       'sendChat',
       'runAgent',
+      'runCommand',
       'clearChat',
       'getGapAnalysis',
       'draftRequirements',
@@ -143,6 +144,8 @@ describe('preload bridge', () => {
     expect(invoke).toHaveBeenLastCalledWith(Channel.SendChat, 'hi')
     await api.runAgent('plan')
     expect(invoke).toHaveBeenLastCalledWith(Channel.RunAgent, 'plan')
+    await api.runCommand('open youtube')
+    expect(invoke).toHaveBeenLastCalledWith(Channel.RunCommand, 'open youtube')
     await api.acceptProposal(2)
     expect(invoke).toHaveBeenLastCalledWith(Channel.AcceptProposal, 2)
     await api.suggestFromLibrary(3, 'data-analyst', 'roadmap')

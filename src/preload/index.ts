@@ -33,6 +33,7 @@ const api: SkillPilotApi = {
   getChat: () => ipcRenderer.invoke(Channel.GetChat),
   sendChat: (message) => ipcRenderer.invoke(Channel.SendChat, message),
   runAgent: (goal) => ipcRenderer.invoke(Channel.RunAgent, goal),
+  runCommand: (text) => ipcRenderer.invoke(Channel.RunCommand, text),
   clearChat: () => ipcRenderer.invoke(Channel.ClearChat),
   getGapAnalysis: (roleId) => ipcRenderer.invoke(Channel.GetGapAnalysis, roleId),
   draftRequirements: (roleId) => ipcRenderer.invoke(Channel.DraftRequirements, roleId),
