@@ -138,6 +138,7 @@ test.describe('security', () => {
       'rejectProposal',
       'rescheduleRoadmap',
       'restoreBackup',
+      'runAgent',
       'saveProfile',
       'saveRecord',
       'saveResume',

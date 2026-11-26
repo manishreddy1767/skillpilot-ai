@@ -54,6 +54,7 @@ describe('preload bridge', () => {
       'getAiStatus',
       'getChat',
       'sendChat',
+      'runAgent',
       'clearChat',
       'getGapAnalysis',
       'draftRequirements',
@@ -140,6 +141,8 @@ describe('preload bridge', () => {
     expect(invoke).toHaveBeenLastCalledWith(Channel.GetDashboard)
     await api.sendChat('hi')
     expect(invoke).toHaveBeenLastCalledWith(Channel.SendChat, 'hi')
+    await api.runAgent('plan')
+    expect(invoke).toHaveBeenLastCalledWith(Channel.RunAgent, 'plan')
     await api.acceptProposal(2)
     expect(invoke).toHaveBeenLastCalledWith(Channel.AcceptProposal, 2)
     await api.suggestFromLibrary(3, 'data-analyst', 'roadmap')

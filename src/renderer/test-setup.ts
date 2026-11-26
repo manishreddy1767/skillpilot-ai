@@ -54,6 +54,7 @@ beforeEach(() => {
     ),
     getChat: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
     sendChat: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
+    runAgent: vi.fn(() => Promise.resolve({ ok: true as const, value: { answer: 'Done.', steps: [], suggested: 0, chat: [] } })),
     clearChat: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
     getGapAnalysis: vi.fn(() =>
       Promise.resolve({ ok: true as const, value: { analysis: { readiness: null, items: [] }, report: null } })
