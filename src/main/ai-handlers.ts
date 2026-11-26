@@ -1,4 +1,4 @@
-import type { AgentRun, AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from '../shared/ai'
+import type { AgentRun, AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal, Understood } from '../shared/ai'
 import { validateFields, type Result } from '../shared/career'
 import { analyseGap, type GapAnalysis } from '../shared/gap'
 import { requirementsFor, roadmapFromGaps } from '../shared/library-plans'
@@ -161,6 +161,18 @@ export function createAiHandlers(deps: AiHandlerDeps) {
         }
         return failure('Unknown suggestion type.')
       }),
+
+    /** What a request in your own words means, for the app to carry out. */
+    understandRequest: (input: unknown): Promise<Result<Understood>> => {
+      const message = typeof input === 'string' ? input.trim() : ''
+      if (!message) return Promise.resolve(failure('Type a message first.'))
+      if (message.length > MAX_MESSAGE_LENGTH) return Promise.resolve(failure('That message is too long.'))
+      return ai(async (service) => {
+        const understood = await service.understandRequest(message)
+        if (understood.action.startsWith('add_')) notifyOverview()
+        return understood
+      })
+    },
 
     /** The local AI works towards a goal with SkillPilot's tools, suggesting changes for approval. */
     runAgent: (input: unknown): Promise<Result<AgentRun>> => {

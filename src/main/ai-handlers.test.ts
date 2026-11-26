@@ -241,6 +241,21 @@ describe('suggestions from the skills library', () => {
   })
 })
 
+describe('understanding a request', () => {
+  it('asks the local model, and needs it on', async () => {
+    const s = setup({ action: 'open', target: 'naukri', site: 'none', location: '', answer: '' })
+    expect(await s.h.understandRequest('pull up naukri')).toMatchObject({ ok: true, value: { action: 'open', target: 'naukri' } })
+    s.h.saveSettings(allSettings(s.h, { aiProvider: 'off' }))
+    expect((await s.h.understandRequest('pull up naukri')).ok).toBe(false)
+  })
+
+  it.each(['', null, 'x'.repeat(4001)])('refuses %s', async (message) => {
+    const s = setup()
+    expect((await s.h.understandRequest(message)).ok).toBe(false)
+    expect(s.fake.complete).not.toHaveBeenCalled()
+  })
+})
+
 describe('the agent', () => {
   it('runs towards a goal and reports what it did', async () => {
     const s = setup({ thought: '', action: 'finish', input: '', answer: 'Nothing needed today.' })
