@@ -114,7 +114,7 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
     const result = await window.skillpilot.runCommand(draft)
     setBusy(false)
     if (!result.ok) return setError(result.message)
-    const { ask: question, reply, navigate, minimize } = result.value
+    const { ask: question, reply, navigate, minimize, answered, suggested } = result.value
     if (question) {
       if (blocked) return setError(`${blocked} Commands such as "open youtube" or "add task …" still work.`)
       await ask(question, false)
@@ -123,7 +123,19 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
     setDraft('')
     if (navigate) return onNavigate(navigate, reply)
     if (minimize) window.skillpilot.minimizeToWidget()
-    setNote(reply)
+    await showOutcome(reply, Boolean(answered), Boolean(suggested))
+  }
+
+  /** An answer appears in the conversation; a suggestion appears for approval; anything else as a note. */
+  const showOutcome = async (reply: string, answered: boolean, suggested: boolean, prefix = ''): Promise<void> => {
+    if (answered) {
+      const chat = await window.skillpilot.getChat()
+      if (chat.ok) setMessages(chat.value)
+      setNote(prefix.trim())
+      return
+    }
+    if (suggested) setRefresh((value) => value + 1)
+    setNote(`${prefix}${reply}`)
   }
 
   /** The agent works towards what you typed, step by step, and only suggests changes. */
@@ -166,7 +178,7 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
       setError(result.message)
       return
     }
-    const { heard, reply, navigate, minimize, draft: typed, ask: question } = result.value
+    const { heard, reply, navigate, minimize, draft: typed, ask: question, answered, suggested } = result.value
     if (!heard && !reply) return
     const said = heard ? `Heard "${heard}". ${reply}` : reply
     if (navigate) {
@@ -175,8 +187,12 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
     }
     if (minimize) window.skillpilot.minimizeToWidget()
     if (typed) setDraft(typed)
-    setNote(question ? `Heard "${heard}".` : said)
-    if (question) await ask(question, true)
+    if (question) {
+      setNote(`Heard "${heard}".`)
+      await ask(question, true)
+      return
+    }
+    await showOutcome(reply, Boolean(answered), Boolean(suggested), heard ? `Heard "${heard}". ` : '')
   }
 
   const clear = async (): Promise<void> => {
@@ -265,7 +281,7 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
           </button>
           {/* Commands work without the AI, so Send stays available. */}
           <button type="submit" className="primary" disabled={busy || !draft.trim()}>
-            {busy ? 'Thinking…' : 'Send'}
+            {busy ? 'Working…' : 'Send'}
           </button>
           <button
             type="button"
