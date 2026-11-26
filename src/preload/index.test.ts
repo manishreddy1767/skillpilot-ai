@@ -83,6 +83,13 @@ describe('preload bridge', () => {
       'searchJobs',
       'openJobLink',
       'suggestJobSkills',
+      'buildResume',
+      'saveResume',
+      'listResumes',
+      'getResume',
+      'deleteResume',
+      'exportResume',
+      'polishResume',
       'listen',
       'widgetListen',
       'stopListening',
@@ -141,6 +148,10 @@ describe('preload bridge', () => {
     expect(invoke).toHaveBeenLastCalledWith(Channel.SearchJobs, 'naukri', 'React', 'Pune')
     await api.matchJob(4)
     expect(invoke).toHaveBeenLastCalledWith(Channel.MatchJob, 4)
+    await api.buildResume(null)
+    expect(invoke).toHaveBeenLastCalledWith(Channel.BuildResume, null)
+    await api.exportResume({} as never, 'compact', 'pdf')
+    expect(invoke).toHaveBeenLastCalledWith(Channel.ExportResume, {}, 'compact', 'pdf')
     await api.listen()
     expect(invoke).toHaveBeenLastCalledWith(Channel.Listen)
     await api.stopListening()

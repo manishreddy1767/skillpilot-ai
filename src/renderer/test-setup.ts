@@ -106,6 +106,29 @@ beforeEach(() => {
     searchJobs: vi.fn(() => Promise.resolve({ ok: true as const, value: '' })),
     openJobLink: vi.fn(() => Promise.resolve({ ok: true as const, value: '' })),
     suggestJobSkills: vi.fn(() => Promise.resolve({ ok: true as const, value: 0 })),
+    buildResume: vi.fn(() =>
+      Promise.resolve({
+        ok: true as const,
+        value: {
+          name: 'Asha Rao',
+          headline: 'Developer',
+          contact: ['asha@example.com'],
+          summary: 'Developer skilled in React.',
+          skills: [{ group: 'Technical', items: ['React'] }],
+          experience: [],
+          projects: [],
+          education: [],
+          certifications: [],
+          keywords: null
+        }
+      })
+    ),
+    saveResume: vi.fn(() => Promise.resolve({ ok: true as const, value: 1 })),
+    listResumes: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
+    getResume: vi.fn(() => Promise.resolve({ ok: false as const, message: 'That resume no longer exists.' })),
+    deleteResume: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
+    exportResume: vi.fn(() => Promise.resolve({ ok: true as const, value: null })),
+    polishResume: vi.fn(() => Promise.resolve({ ok: true as const, value: [] })),
     listen: vi.fn(() => Promise.resolve({ ok: true as const, value: { heard: '', reply: '' } })),
     widgetListen: vi.fn(),
     stopListening: vi.fn(() => Promise.resolve({ ok: true as const, value: true })),
