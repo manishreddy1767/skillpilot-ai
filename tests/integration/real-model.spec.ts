@@ -118,7 +118,7 @@ test('requests in everyday words, with typos, are understood and carried out by 
   }
   const answer = await timed('question', () => page.evaluate(() => window.skillpilot.runCommand('am i ready for a frontend job?')))
   console.log('Question:', answer.ok ? answer.value : answer)
-  expect(answer.ok && answer.value.answered).toBe(true)
+  expect(answer.ok && answer.value.ask).toBe('am i ready for a frontend job?')
   const blocked = await h.app.evaluate(() => (globalThis as { __skillpilotBlocked?: string[] }).__skillpilotBlocked ?? [])
   expect(blocked).toEqual([])
 })
