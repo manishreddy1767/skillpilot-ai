@@ -154,7 +154,8 @@ async function act(intent: VoiceIntent, text: string, deps: AgentDeps): Promise<
         const result = await deps.interpret(text)
         if (!result.ok) return { heard: text, reply: result.message }
         const understood = result.value
-        if (understood.action === 'answer') return { heard: text, reply: understood.answer, answered: true }
+        // A question goes to the chat, which keeps history and can suggest changes.
+        if (understood.action === 'answer') return { heard: text, ask: text, reply: 'Let me ask the assistant.' }
         if (understood.action.startsWith('add_')) {
           return {
             heard: text,

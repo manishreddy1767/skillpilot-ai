@@ -28,8 +28,6 @@ export interface VoiceOutcome {
   ask?: string
   draft?: string
   minimize?: boolean
-  /** The local AI answered; the answer is in the chat. */
-  answered?: boolean
   /** The local AI suggested a change waiting for approval. */
   suggested?: boolean
 }

@@ -101,8 +101,8 @@ describe('requests in your own words, understood by the local AI', () => {
   })
 
   it('an answer is shown, and a change is only suggested', async () => {
-    const answer = setup({ interpret: () => Promise.resolve(understood({ action: 'answer', answer: 'Not yet.' })) as never })
-    expect(await runTypedCommand('am i ready?', answer.deps)).toEqual({ ok: true, value: { heard: 'am i ready?', reply: 'Not yet.', answered: true } })
+    const answer = setup({ interpret: () => Promise.resolve(understood({ action: 'answer' })) as never })
+    expect(await runTypedCommand('am i ready?', answer.deps)).toEqual({ ok: true, value: { heard: 'am i ready?', reply: 'Let me ask the assistant.', ask: 'am i ready?' } })
     const add = setup({ interpret: () => Promise.resolve(understood({ action: 'add_skill', target: 'Docker' })) as never })
     expect(await runTypedCommand('i want to learn docker', add.deps)).toMatchObject({ ok: true, value: { suggested: true } })
     expect(add.deps.data.saveRecord).not.toHaveBeenCalled()
