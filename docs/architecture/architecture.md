@@ -15,10 +15,10 @@ and AI guidance. There is no server, no accounts, and no public deployment.
 | UI | React + Vite (electron-vite) | Runs from local files inside Electron. No web server, no browser. |
 | Charts | Plain CSS and HTML | The charts are simple bars and meters, so no chart library is needed. |
 | Storage | SQLite through built-in `node:sqlite` | Local file, no native module to rebuild. See [ADR 0002](../decisions/0002-built-in-sqlite.md). |
-| AI | Off by default. Claude through `@anthropic-ai/sdk`, or a local Ollama model | See [AI and privacy](ai-and-privacy.md). |
-| Secrets | Electron `safeStorage` (Windows DPAPI) | The API key is encrypted on disk and never enters source control. |
+| AI | A local Ollama model only, on by default with `qwen3:4b` | Nothing leaves the laptop. See [AI and privacy](ai-and-privacy.md) and [ADR 0003](../decisions/0003-local-only-ai.md). |
+| Network | A lock on every request (`src/main/network-lock.ts`) | Only the app's own files and this laptop's addresses can be reached. There are no secrets to store. |
 | Packaging | electron-builder, NSIS installer | One installer with a Start Menu shortcut, which toasts need. |
-| Tests | Vitest, real-input PowerShell test | Logic and database tests, plus real mouse tests against the built app. |
+| Tests | Vitest, Playwright for Electron, real-input PowerShell test | Unit tests, the real app driven end to end, real mouse tests, and an opt-in test against the real local model. |
 
 ## Process model
 
