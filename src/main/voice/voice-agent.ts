@@ -1,7 +1,8 @@
 import { resolveOpen, searchUrl, type StartApp } from '../../shared/desktop-commands'
 import { JOB_SITES, jobSearchUrl } from '../../shared/job-match'
 import { carryOut, isDataIntent, type VoiceApi } from '../../shared/voice-actions'
-import { parseVoiceCommand } from '../../shared/voice-commands'
+import type { VoiceIntent } from '../../shared/voice-commands'
+import { understand } from './understand'
 import type { VoiceOutcome } from '../../shared/ipc'
 import type { DesktopActions } from './desktop-actions'
 import type { Heard } from './speech-host'
@@ -60,7 +61,13 @@ export async function respond(heard: Heard, deps: AgentDeps): Promise<VoiceOutco
   }
   if (!deps.actNow()) return { heard: text, draft: text, reply: `Heard "${text}". Check it, then press Send.` }
 
-  const intent = parseVoiceCommand(text, deps.today())
+  const { intent, readAs } = understand(text, await deps.apps(), deps.today())
+  const outcome = await act(intent, text, deps)
+  return readAs ? { ...outcome, reply: `I read that as "${readAs}". ${outcome.reply}` } : outcome
+}
+
+/** Carries out one understood request, and says what happened. */
+async function act(intent: VoiceIntent, text: string, deps: AgentDeps): Promise<VoiceOutcome> {
   try {
     if (isDataIntent(intent)) return { heard: text, reply: await carryOut(intent, deps.data, deps.today()) }
 
