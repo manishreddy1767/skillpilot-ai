@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { StoredRecord } from './career'
-import { carryOut, dayName, isDataIntent, localToday, type VoiceApi } from './voice-actions'
+import { carryOut, clock, dayName, isDataIntent, localToday, type VoiceApi } from './voice-actions'
 
 const today = '2026-11-08'
 const task = (id: number, title: string, extra: Record<string, string> = {}): StoredRecord => ({
@@ -47,6 +47,18 @@ describe('carryOut', () => {
       'Added the task "Read" for tomorrow.'
     )
     expect(api.saveRecord).toHaveBeenCalledWith('task', null, { title: 'Read', dueDate: '2026-11-09' })
+  })
+
+  it('saves a reminder time and says when it will remind you', async () => {
+    const api = fakeApi()
+    await expect(carryOut({ kind: 'addTask', title: 'Call the mentor', dueDate: '2026-11-09', remindAt: '17:00' }, api, today)).resolves.toBe(
+      'Added the task "Call the mentor" for tomorrow, with a reminder at 5:00 pm.'
+    )
+    expect(api.saveRecord).toHaveBeenCalledWith('task', null, { title: 'Call the mentor', dueDate: '2026-11-09', remindAt: '17:00' })
+  })
+
+  it('says times as people do', () => {
+    expect([clock('09:30'), clock('17:00'), clock('00:05'), clock('12:00')]).toEqual(['9:30 am', '5:00 pm', '12:05 am', '12:00 pm'])
   })
 
   it('reports a save that failed', async () => {

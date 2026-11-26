@@ -19,6 +19,13 @@ export function localToday(now = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
+/** A time such as 17:30 as people say it, such as 5:30 pm. */
+export function clock(time: string): string {
+  const [hours = 0, minutes = 0] = time.split(':').map(Number)
+  const half = hours >= 12 ? 'pm' : 'am'
+  return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${half}`
+}
+
 /** "today", "tomorrow", or the weekday and date. */
 export function dayName(date: string, today: string): string {
   if (date === today) return 'today'
@@ -45,8 +52,11 @@ const exists = async (api: VoiceApi, kind: 'skill' | 'goal', key: string, value:
 export async function carryOut(intent: DataIntent, api: VoiceApi, today: string): Promise<string> {
   switch (intent.kind) {
     case 'addTask': {
-      const result = await api.saveRecord('task', null, { title: intent.title, dueDate: intent.dueDate })
-      return result.ok ? `Added the task "${intent.title}" for ${dayName(intent.dueDate, today)}.` : result.message
+      const values = { title: intent.title, dueDate: intent.dueDate, ...(intent.remindAt ? { remindAt: intent.remindAt } : {}) }
+      const result = await api.saveRecord('task', null, values)
+      if (!result.ok) return result.message
+      const reminder = intent.remindAt ? `, with a reminder at ${clock(intent.remindAt)}` : ''
+      return `Added the task "${intent.title}" for ${dayName(intent.dueDate, today)}${reminder}.`
     }
 
     case 'addSkill': {
