@@ -44,6 +44,23 @@ resumes, voice commands, and progress.
 | Daily tasks and project ideas | Suggested to fit your time and close your gaps. |
 | Resume wording | Clearer wording for each line of a resume, for one job. |
 
+## Asking in your own words
+
+Typed and spoken requests go through three steps:
+
+1. **Commands** such as "open naukri", "search Naukri for React jobs in Pune", "i want to see react jobs
+   near pune", "add task …", or "volume up" are recognised at once, offline, with no AI.
+2. **Spelling mistakes** are corrected like a search engine's "did you mean": "opne naukari" is read as
+   "open naukri", and the reply says so. A message that already makes sense is never changed.
+3. **Anything else** goes to the local AI, which picks one action: open something, search Google or
+   YouTube, search a job site, go to a SkillPilot screen, add something (as a suggestion), or a question
+   for the chat. Questions about the world, such as the latest version of something or the weather,
+   become a Google search in your browser, because a small model's knowledge goes out of date.
+
+Every action the AI picks runs through the same checked commands, so it can only open Start menu apps
+and web addresses. Tested with the real `qwen3:4b`: everyday and misspelled requests were all handled,
+in about 4 seconds each.
+
 ## You approve every change
 
 The AI only ever suggests. Each suggestion waits in a review list showing what would change, and
