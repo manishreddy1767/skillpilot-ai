@@ -1,4 +1,4 @@
-import type { AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from '../shared/ai'
+import type { AgentRun, AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from '../shared/ai'
 import { validateFields, type Result } from '../shared/career'
 import { analyseGap, type GapAnalysis } from '../shared/gap'
 import { requirementsFor, roadmapFromGaps } from '../shared/library-plans'
@@ -161,6 +161,18 @@ export function createAiHandlers(deps: AiHandlerDeps) {
         }
         return failure('Unknown suggestion type.')
       }),
+
+    /** The local AI works towards a goal with SkillPilot's tools, suggesting changes for approval. */
+    runAgent: (input: unknown): Promise<Result<AgentRun>> => {
+      const goal = typeof input === 'string' ? input.trim() : ''
+      if (!goal) return Promise.resolve(failure('Say what you want help with first.'))
+      if (goal.length > MAX_MESSAGE_LENGTH) return Promise.resolve(failure('That goal is too long.'))
+      return ai(async (service) => {
+        const run = await service.runAgent(goal)
+        notifyOverview()
+        return run
+      })
+    },
 
     getGapAnalysis: (roleId: unknown): Result<{ analysis: GapAnalysis; report: GapReport | null }> =>
       sync(({ store, aiStore }) => {

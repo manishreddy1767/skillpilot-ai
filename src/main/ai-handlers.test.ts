@@ -241,6 +241,27 @@ describe('suggestions from the skills library', () => {
   })
 })
 
+describe('the agent', () => {
+  it('runs towards a goal and reports what it did', async () => {
+    const s = setup({ thought: '', action: 'finish', input: '', answer: 'Nothing needed today.' })
+    const result = await s.h.runAgent('  Plan my week  ')
+    expect(result).toMatchObject({ ok: true, value: { answer: 'Nothing needed today.', steps: [], suggested: 0 } })
+    expect(s.notifyOverview).toHaveBeenCalled()
+  })
+
+  it.each(['', '   ', null, 'x'.repeat(4001)])('refuses the goal %s', async (goal) => {
+    const s = setup()
+    expect((await s.h.runAgent(goal)).ok).toBe(false)
+    expect(s.fake.complete).not.toHaveBeenCalled()
+  })
+
+  it('needs the local AI to be on', async () => {
+    const s = setup()
+    s.h.saveSettings(allSettings(s.h, { aiProvider: 'off' }))
+    expect(await s.h.runAgent('Plan my week')).toMatchObject({ ok: false, message: expect.stringContaining('off') })
+  })
+})
+
 describe('resume wording', () => {
   it('asks the local model, and needs it to be on', async () => {
     const resume = { name: 'A', headline: '', contact: [], summary: 'Old', skills: [], experience: [], projects: [], education: [], certifications: [], keywords: null }
