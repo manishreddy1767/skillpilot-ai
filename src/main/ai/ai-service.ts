@@ -29,6 +29,24 @@ const chatSchema = object({
   )
 })
 
+const CHAT_RULES =
+  'Only include proposals when suggesting a concrete change, usually none. They need my confirmation before anything is saved. Use minutes for tasks and 0 otherwise. setSkillLevel changes my own level for an existing skill: title is the skill name and level is 0 to 5. markTopicDone marks an existing roadmap topic done: title is the topic. Use level 0 for other kinds.'
+
+/** At most this many suggestions from one chat reply, so a chatty model cannot flood the review list. */
+export const MAX_CHAT_PROPOSALS = 3
+
+const plainWords = (text: string): string =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+/** Whether a reply just repeats the message it should answer. */
+export function isEcho(reply: string, message: string): boolean {
+  const said = plainWords(reply)
+  return said === '' || said === plainWords(message)
+}
+
 const requirementsSchema = object({
   requirements: list(object({ skillName: text, requiredLevel: integer, importance: integer }))
 })
@@ -182,7 +200,7 @@ export class AiService {
   async chat(message: string): Promise<ChatMessage[]> {
     const { aiStore } = this.deps
     const history = aiStore.recentChat().map(({ role, content }) => ({ role, content }))
-    const reply = await this.ask<{
+    type ChatReply = {
       reply: string
       proposals: {
         kind: 'addSkill' | 'addGoal' | 'addTask' | 'setSkillLevel' | 'markTopicDone'
@@ -191,17 +209,26 @@ export class AiService {
         minutes: number
         level: number
       }[]
-    }>('Assistant', chatSchema, 'medium', [
+    }
+    // Small local models tend to copy an unlabelled message into the reply, so it is labelled.
+    const framed = (nudge: string): AiRequest['messages'] => [
       ...history,
       {
         role: 'user',
-        content: `${message}\n\n(Only include proposals when suggesting a concrete change. They need my confirmation before anything is saved. Use minutes for tasks and 0 otherwise. setSkillLevel changes my own level for an existing skill: title is the skill name and level is 0 to 5. markTopicDone marks an existing roadmap topic done: title is the topic. Use level 0 for other kinds.)`
+        content: `My message:\n"${message}"\n\nWrite your answer to my message in "reply". Do not repeat my message.${nudge} ${CHAT_RULES}`
       }
-    ])
+    ]
+    let reply = await this.ask<ChatReply>('Assistant', chatSchema, 'medium', framed(''))
+    if (isEcho(reply.reply, message)) {
+      reply = await this.ask<ChatReply>('Assistant', chatSchema, 'medium', framed(' Your last reply only repeated my message, so answer it properly this time.'))
+    }
+    if (isEcho(reply.reply, message)) {
+      throw new AiError('The local AI repeated your message instead of answering. Try a fuller question, or a larger model in Settings.')
+    }
 
     aiStore.addChatMessage('user', message)
     aiStore.addChatMessage('assistant', reply.reply)
-    for (const { kind, title, note, minutes, level } of reply.proposals) {
+    for (const { kind, title, note, minutes, level } of reply.proposals.slice(0, MAX_CHAT_PROPOSALS)) {
       if (kind === 'setSkillLevel') this.proposeLevelChange(title, level, note)
       if (kind === 'markTopicDone') this.proposeTopicDone(title)
       if (kind === 'addTask') this.proposeTask(title, 'learning', minutes || 30)
