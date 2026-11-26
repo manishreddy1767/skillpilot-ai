@@ -31,6 +31,21 @@ export interface GapReport {
   createdAt: string
 }
 
+/** One thing the agent did: the tool it chose, what it gave it, and what came back. */
+export interface AgentStep {
+  action: string
+  input: string
+  result: string
+}
+
+export interface AgentRun {
+  answer: string
+  steps: AgentStep[]
+  /** Suggestions it made, waiting for approval. */
+  suggested: number
+  chat: ChatMessage[]
+}
+
 export interface AiStatus {
   provider: string
   model: string
