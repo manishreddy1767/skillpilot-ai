@@ -1,12 +1,9 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { parseResumeData, type ResumeData } from '../../shared/resume'
 
-export interface SavedResume {
-  id: number
-  jobId: number | null
-  title: string
-  createdAt: string
-}
+import type { SavedResume } from '../../shared/ipc'
+
+export type { SavedResume }
 
 /** Versions kept for each job, so old drafts do not pile up. */
 export const VERSIONS_KEPT = 10

@@ -3,6 +3,8 @@ import type { FieldValues, Link, LinkKind, OverviewData, RecordKind, Result, Sto
 import type { GapAnalysis } from './gap'
 import type { History } from './history'
 import type { JobMatch, JobSite } from './job-match'
+import type { ResumeData, ResumeSuggestion } from './resume'
+import type { ResumeTemplate } from './resume-html'
 import type { Learning } from './learning'
 import type { Dashboard } from './progress'
 import type { Settings } from './settings'
@@ -33,6 +35,13 @@ export interface BackupInfo {
   kind: 'daily' | 'before upgrade' | 'before change'
   savedAt: string
   sizeKb: number
+}
+
+export interface SavedResume {
+  id: number
+  jobId: number | null
+  title: string
+  createdAt: string
 }
 
 export interface RankedJob {
@@ -104,6 +113,13 @@ export const Channel = {
   SearchJobs: 'jobs:search',
   OpenJobLink: 'jobs:open-link',
   SuggestJobSkills: 'jobs:suggest-skills',
+  BuildResume: 'resume:build',
+  SaveResume: 'resume:save',
+  ListResumes: 'resume:list',
+  GetResume: 'resume:get',
+  DeleteResume: 'resume:delete',
+  ExportResume: 'resume:export',
+  PolishResume: 'resume:polish',
   Listen: 'voice:listen',
   WidgetListen: 'voice:widget-listen',
   StopListening: 'voice:stop',
@@ -184,6 +200,16 @@ export interface SkillPilotApi {
   openJobLink(jobId: number): Promise<Result<string>>
   /** Suggests learning the skills a job asks for that you do not have. */
   suggestJobSkills(jobId: number): Promise<Result<number>>
+  /** A fresh resume from your data, tailored to a job, or general when jobId is null. */
+  buildResume(jobId: number | null): Promise<Result<ResumeData>>
+  saveResume(jobId: number | null, title: string, data: ResumeData): Promise<Result<number>>
+  listResumes(): Promise<Result<SavedResume[]>>
+  getResume(id: number): Promise<Result<ResumeData>>
+  deleteResume(id: number): Promise<Result<boolean>>
+  /** Saves a resume as a PDF or text file, wherever you choose. Null when cancelled. */
+  exportResume(data: ResumeData, template: ResumeTemplate, format: 'pdf' | 'txt'): Promise<Result<string | null>>
+  /** Clearer wording from the local AI, as suggestions to accept or reject. */
+  polishResume(jobId: number | null, data: ResumeData): Promise<Result<ResumeSuggestion[]>>
   /** Listens for one spoken request with Windows' offline speech engine, and carries it out. */
   listen(): Promise<Result<VoiceOutcome>>
   /** The widget's microphone: starts listening, or stops if already listening. */
