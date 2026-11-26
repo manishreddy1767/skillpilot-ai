@@ -49,6 +49,12 @@ function LocalAiSection({ refresh }: { refresh: number }) {
               "ollama pull" with its name in a terminal.
             </p>
           ) : null}
+          {status.localModels && !status.blocked ? (
+            <p className="lead">
+              The first request after starting can take up to a minute while the model loads. After that, most take a
+              few seconds.
+            </p>
+          ) : null}
         </>
       ) : null}
     </section>
