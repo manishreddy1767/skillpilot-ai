@@ -73,6 +73,17 @@ describe('resolveOpen', () => {
     })
   })
 
+  it.each([
+    ['naukri', 'https://www.naukri.com'],
+    ['naukri dot com', 'https://www.naukri.com'],
+    ['indeed', 'https://in.indeed.com'],
+    ['linkedin jobs', 'https://www.linkedin.com/jobs'],
+    ['glassdoor', 'https://www.glassdoor.co.in'],
+    ['geeks for geeks', 'https://www.geeksforgeeks.org']
+  ])('knows the site "%s"', (spoken, url) => {
+    expect(resolveOpen(spoken, apps)).toMatchObject({ type: 'site', url })
+  })
+
   it('opens folders and Windows settings', () => {
     expect(resolveOpen('downloads', apps)).toEqual({ type: 'folder', folder: 'downloads' })
     expect(resolveOpen('my documents', apps)).toEqual({ type: 'folder', folder: 'documents' })
