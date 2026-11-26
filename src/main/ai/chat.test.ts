@@ -70,3 +70,50 @@ describe('chat with a small local model', () => {
     expect(aiStore.listProposals()).toHaveLength(MAX_CHAT_PROPOSALS)
   })
 })
+
+describe('understanding a request in your own words', () => {
+  const understood = (over: object) => ({ action: 'open', target: '', site: 'none', location: '', answer: '', ...over })
+
+  it('returns an action for the app to carry out, changing nothing itself', async () => {
+    const { ai, aiStore } = scripted([understood({ action: 'open', target: '  naukri ' })])
+    await expect(ai.understandRequest('can you pull up naukri for me')).resolves.toMatchObject({ action: 'open', target: 'naukri' })
+    expect(aiStore.listChat()).toEqual([])
+    expect(aiStore.listProposals()).toEqual([])
+  })
+
+  it('keeps the rules with the instructions, and labels the message', async () => {
+    const { ai, complete } = scripted([understood({ action: 'go_to', target: 'resume' })])
+    await ai.understandRequest('take me to my resume')
+    const request = (complete.mock.calls[0] as unknown as [{ system: string; messages: { content: string }[] }])[0]
+    expect(request.messages.at(-1)!.content).toBe('My message:\n"take me to my resume"')
+    expect(request.system).toContain('Questions about the world')
+  })
+
+  it('turns adding things into suggestions to approve', async () => {
+    const { ai, aiStore } = scripted([
+      understood({ action: 'add_skill', target: 'Docker' }),
+      understood({ action: 'add_task', target: 'Revise SQL joins' }),
+      understood({ action: 'add_goal', target: 'Get a frontend job' })
+    ])
+    await ai.understandRequest('i want to learn docker')
+    await ai.understandRequest('add revising sql joins to my list')
+    await ai.understandRequest('i want to aim for a frontend job')
+    expect(aiStore.listProposals().map((p) => p.summary)).toEqual([
+      'Add skill: Docker',
+      'Add task: Revise SQL joins',
+      'Add goal: Get a frontend job'
+    ])
+  })
+
+  it('saves an answer to the chat', async () => {
+    const { ai, aiStore } = scripted([understood({ action: 'answer', answer: 'Not yet: prove React with a project first.' })])
+    await ai.understandRequest('am i ready for a frontend job?')
+    expect(aiStore.listChat().map((m) => m.content)).toEqual(['am i ready for a frontend job?', 'Not yet: prove React with a project first.'])
+  })
+
+  it('refuses an empty or echoed answer', async () => {
+    const { ai, aiStore } = scripted([understood({ action: 'answer', answer: 'am I ready?' })])
+    await expect(ai.understandRequest('am I ready?')).rejects.toThrow('did not answer properly')
+    expect(aiStore.listChat()).toEqual([])
+  })
+})
