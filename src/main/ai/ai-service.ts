@@ -1,4 +1,5 @@
-import type { ChatMessage, GapReport, ProposalKind } from '../../shared/ai'
+import type { AgentRun, AgentStep, ChatMessage, GapReport, ProposalKind } from '../../shared/ai'
+import { AGENT_TOOLS, runAgentTool, type AgentTool } from './agent-tools'
 import { recordFields, validateFields, type FieldValues } from '../../shared/career'
 import { analyseGap } from '../../shared/gap'
 import { addsUnclaimedSkill, type ResumeData, type ResumeSuggestion } from '../../shared/resume'
@@ -60,6 +61,16 @@ const polishSchema = object({
 
 /** Longest a reworded line may be, so the model cannot pad a resume. */
 const MAX_REWORDED = 300
+
+const agentStepSchema = object({
+  thought: text,
+  action: oneOf(...(Object.keys(AGENT_TOOLS) as AgentTool[])),
+  input: text,
+  answer: text
+})
+
+/** Most tools an agent run may use, so a confused model cannot loop forever. */
+export const AGENT_MAX_STEPS = 6
 
 const tasksSchema = object({
   tasks: list(object({ title: text, kind: oneOf('learning', 'practice', 'project', 'other'), minutes: integer }))
@@ -375,6 +386,57 @@ ${JSON.stringify(lines, null, 1)}`
       }
     }
     return suggestions
+  }
+
+  /**
+   * Works towards a goal in steps, using SkillPilot's own tools: reading your skills, jobs, and gaps,
+   * and suggesting tasks, skills, and goals. It never changes anything itself; every change is a
+   * suggestion waiting for approval.
+   */
+  async runAgent(goal: string): Promise<AgentRun> {
+    const { store, aiStore, today } = this.deps
+    const before = aiStore.listProposals().length
+    const tools = Object.entries(AGENT_TOOLS).map(([name, about]) => `- ${name}: ${about}`).join('\n')
+    const messages: AiRequest['messages'] = [
+      {
+        role: 'user',
+        content: `My goal: ${goal}
+
+You are working for me with these tools. Choose exactly one action in each reply, with its input. Read what comes back before the next step. Look things up before suggesting. Suggest only a few changes that clearly help. When you are done, choose finish and write a short, specific answer for me in "answer", saying what you suggested and why. Today is ${today()}.
+
+Tools:
+${tools}`
+      }
+    ]
+
+    const steps: AgentStep[] = []
+    let answer = ''
+    for (let step = 0; step < AGENT_MAX_STEPS; step++) {
+      const reply = await this.ask<{ thought: string; action: AgentTool; input: string; answer: string }>(
+        'Agent',
+        agentStepSchema,
+        'medium',
+        messages
+      )
+      if (reply.action === 'finish') {
+        answer = reply.answer.trim()
+        break
+      }
+      const result = runAgentTool(reply.action, reply.input, { store, aiStore, today: today() })
+      steps.push({ action: reply.action, input: reply.input, result })
+      answer = reply.answer.trim() || answer
+      messages.push({ role: 'assistant', content: JSON.stringify(reply) }, { role: 'user', content: `Result of ${reply.action}: ${result}` })
+    }
+
+    const suggested = aiStore.listProposals().length - before
+    if (!answer) {
+      answer = suggested
+        ? `I looked into it and made ${suggested} ${suggested === 1 ? 'suggestion' : 'suggestions'} for you to review.`
+        : 'I looked into it but had nothing useful to suggest.'
+    }
+    aiStore.addChatMessage('user', goal)
+    aiStore.addChatMessage('assistant', answer)
+    return { answer, steps, suggested, chat: aiStore.listChat() }
   }
 
   async suggestTasks(availableMinutes: number): Promise<number> {
