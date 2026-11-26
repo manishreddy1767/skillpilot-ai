@@ -71,7 +71,7 @@ describe('AssistantView', () => {
     expect(screen.queryByText('Ready to help.')).toBeNull()
   })
 
-  it('explains when AI is unavailable and blocks sending', async () => {
+  it('explains when AI is unavailable, and sends no question, but commands still work', async () => {
     api().getAiStatus.mockResolvedValue({
       ok: true,
       value: { provider: 'off', model: '', localModels: [], blocked: 'AI is off. Choose a provider in Settings.' }
@@ -79,7 +79,9 @@ describe('AssistantView', () => {
     render(<AssistantView />)
     expect(await screen.findByText('AI is off. Choose a provider in Settings.')).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Your message'), { target: { value: 'Hi' } })
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Send' }).disabled).toBe(true)
+    click('Send')
+    expect((await screen.findByRole('alert')).textContent).toContain('Commands such as "open youtube"')
+    expect(api().sendChat).not.toHaveBeenCalled()
   })
 
   it('loads the conversation', async () => {
@@ -356,5 +358,55 @@ describe('the agent in the Assistant', () => {
     await waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Let the agent do it' }).disabled).toBe(false))
     click('Let the agent do it')
     expect((await screen.findByRole('alert')).textContent).toContain('took too long')
+  })
+})
+
+
+describe('typed commands in the Assistant', () => {
+  const typeAndSend = (text: string) => {
+    fireEvent.change(screen.getByLabelText('Your message'), { target: { value: text } })
+    click('Send')
+  }
+
+  it('"open youtube" is carried out at once, not sent to the AI', async () => {
+    api().runCommand.mockResolvedValueOnce({ ok: true, value: { heard: 'open youtube', reply: 'Opening Youtube.' } })
+    render(<AssistantView />)
+    typeAndSend('open youtube')
+    expect(await screen.findByText('Opening Youtube.')).toBeTruthy()
+    expect(api().runCommand).toHaveBeenCalledWith('open youtube')
+    expect(api().sendChat).not.toHaveBeenCalled()
+    expect((screen.getByLabelText('Your message') as HTMLTextAreaElement).value).toBe('')
+  })
+
+  it('works with the AI off', async () => {
+    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'off', model: '', localModels: [], blocked: 'The local AI is off.' } })
+    api().runCommand.mockResolvedValueOnce({ ok: true, value: { heard: 'volume up', reply: 'Turning the volume up.' } })
+    render(<AssistantView />)
+    await screen.findAllByText('The local AI is off.')
+    typeAndSend('volume up')
+    expect(await screen.findByText('Turning the volume up.')).toBeTruthy()
+  })
+
+  it('anything else still goes to the AI', async () => {
+    ready()
+    render(<AssistantView />)
+    await waitFor(() => expect(api().getAiStatus).toHaveBeenCalled())
+    typeAndSend('Am I ready?')
+    await waitFor(() => expect(api().sendChat).toHaveBeenCalledWith('Am I ready?'))
+  })
+
+  it('opens a SkillPilot screen when asked', async () => {
+    const onNavigate = vi.fn()
+    api().runCommand.mockResolvedValueOnce({ ok: true, value: { heard: 'open my skills', reply: 'Opening Skills.', navigate: 'skills' } })
+    render(<AssistantView onNavigate={onNavigate} />)
+    typeAndSend('open my skills')
+    await waitFor(() => expect(onNavigate).toHaveBeenCalledWith('skills', 'Opening Skills.'))
+  })
+
+  it('shows a command problem', async () => {
+    api().runCommand.mockResolvedValueOnce({ ok: false, message: 'That message is too long.' })
+    render(<AssistantView />)
+    typeAndSend('x')
+    expect((await screen.findByRole('alert')).textContent).toBe('That message is too long.')
   })
 })
