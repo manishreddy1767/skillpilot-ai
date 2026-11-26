@@ -11,6 +11,7 @@ export type SectionId =
   | 'goals'
   | 'projects'
   | 'jobs'
+  | 'resume'
   | 'roles'
   | 'roadmaps'
   | 'profile'
@@ -46,6 +47,7 @@ const SPOKEN_SECTIONS: [string[], SectionId, string][] = [
   [['goals', 'goal', 'my goals'], 'goals', 'Goals'],
   [['projects', 'project', 'my projects'], 'projects', 'Projects'],
   [['jobs', 'my jobs', 'job search', 'saved jobs', 'job applications', 'applications'], 'jobs', 'Jobs'],
+  [['resume', 'my resume', 'resume builder', 'cv', 'my cv'], 'resume', 'Resume'],
   [['target roles', 'roles', 'target role'], 'roles', 'Target roles'],
   [['roadmaps', 'roadmap', 'road maps', 'road map'], 'roadmaps', 'Roadmaps'],
   [['profile', 'my profile'], 'profile', 'Profile'],
