@@ -40,6 +40,7 @@ import { APP_WINDOW_SIZE, createAppWindow } from './windows/app-window'
 import { OVERVIEW_SIZE, createOverviewWindow } from './windows/overview'
 import { createWidgetWindow } from './windows/widget'
 import { createJobHandlers } from './jobs/job-handlers'
+import { createResumeHandlers } from './resume/resume-handlers'
 import { createDesktopActions, type DesktopActions } from './voice/desktop-actions'
 import { SpeechHost } from './voice/speech-host'
 import { START_APPS_SCRIPT, StartApps } from './voice/start-apps'
@@ -478,6 +479,39 @@ function start(): void {
   ipcMain.handle(Channel.SearchJobs, fromApp(jobs.searchJobs))
   ipcMain.handle(Channel.OpenJobLink, fromApp(jobs.openJobLink))
   ipcMain.handle(Channel.SuggestJobSkills, fromApp(jobs.suggestJobSkills))
+
+  // Resumes: built, printed, and saved on this laptop. The PDF window runs no scripts and loads nothing.
+  const resumes = createResumeHandlers({
+    getStores: () => (data.store && data.resumes ? { store: data.store, resumes: data.resumes } : null),
+    today: () => localDate(new Date()),
+    logError,
+    chooseSavePath: async (suggestedName, kind) => {
+      const options = {
+        defaultPath: join(app.getPath('documents'), suggestedName),
+        filters: [kind === 'pdf' ? { name: 'PDF', extensions: ['pdf'] } : { name: 'Text', extensions: ['txt'] }]
+      }
+      const result = appWindow ? await dialog.showSaveDialog(appWindow, options) : await dialog.showSaveDialog(options)
+      return result.canceled || !result.filePath ? null : result.filePath
+    },
+    printToPdf: async (html) => {
+      const printer = new BrowserWindow({ show: false, webPreferences: { javascript: false, sandbox: true, spellcheck: false } })
+      try {
+        const page = 'data:text/html;charset=utf-8;base64,' + Buffer.from(html, 'utf8').toString('base64')
+        await printer.loadURL(page)
+        return await printer.webContents.printToPDF({ pageSize: 'A4', printBackground: true, margins: { top: 0, bottom: 0, left: 0, right: 0 } })
+      } finally {
+        printer.destroy()
+      }
+    },
+    polish: (resume, job, skills) => aiHandlers.polishResume(resume, job, skills)
+  })
+  ipcMain.handle(Channel.BuildResume, fromApp(resumes.buildResume))
+  ipcMain.handle(Channel.SaveResume, fromApp(resumes.saveResume))
+  ipcMain.handle(Channel.ListResumes, fromApp(resumes.listResumes))
+  ipcMain.handle(Channel.GetResume, fromApp(resumes.getResume))
+  ipcMain.handle(Channel.DeleteResume, fromApp(resumes.deleteResume))
+  ipcMain.handle(Channel.ExportResume, fromApp(resumes.exportResume))
+  ipcMain.handle(Channel.PolishResume, fromApp(resumes.polishResume))
 
   ipcMain.handle(Channel.Listen, fromApp(() => voice.listen()))
   ipcMain.handle(Channel.StopListening, (event) => {
