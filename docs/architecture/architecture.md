@@ -45,18 +45,31 @@ and AI guidance. There is no server, no accounts, and no public deployment.
 - **A tray icon is always present.** It is the way back if the widget is hidden or off screen, and
   the place to exit completely.
 
-## Repository layout (planned)
+## Repository layout
 
 ```
 src/
-  main/        windows, ipc, db, ai, scheduler, tray
-  preload/     typed bridge
+  main/
+    index.ts        start-up and wiring of windows, IPC, tray, and timers
+    network-lock.ts the check that keeps every request on this laptop
+    ai/             the local model, the AI service, the agent and its tools
+    db/             SQLite migrations, the career store, backups, export and import
+    jobs/           saved job pages and job handlers
+    resume/         resume versions, building, and PDF export
+    voice/          speech engine, commands, spelling, understanding, desktop actions
+    logic/          widget placement, dragging, and hover
+    windows/        the widget, hover panel, and app windows
+  preload/          the typed bridge, the only way pages reach the main process
   renderer/
-    widget/    floating icon
-    overview/  hover panel
-    app/       full interface
-  shared/      types used on both sides of IPC
+    widget/         the floating robot and its microphone
+    overview/       the hover panel
+    app/            the full interface
+  shared/           pure logic and types used on both sides: skills library, job matching,
+                    resumes, commands, spelling, progress, gaps
 tests/
+  integration/      the real app, driven end to end
+  desktop/          the real-mouse test
+  installer/        the real installer
 docs/
 ```
 
