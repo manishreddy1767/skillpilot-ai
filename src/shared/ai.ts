@@ -46,6 +46,31 @@ export interface AgentRun {
   chat: ChatMessage[]
 }
 
+/** The actions the local AI may choose for a request in your own words. */
+export const UNDERSTOOD_ACTIONS = [
+  'open',
+  'web_search',
+  'youtube_search',
+  'job_search',
+  'go_to',
+  'add_task',
+  'add_skill',
+  'add_goal',
+  'answer'
+] as const
+
+/** What the local AI took a request in your own words to mean. */
+export interface Understood {
+  action: (typeof UNDERSTOOD_ACTIONS)[number]
+  /** The app, site, search words, section, or title the action is about. */
+  target: string
+  /** For a job search. */
+  site: 'linkedin' | 'naukri' | 'indeed' | 'foundit' | 'none'
+  location: string
+  /** For "answer": the reply, already saved to the chat. */
+  answer: string
+}
+
 export interface AiStatus {
   provider: string
   model: string
