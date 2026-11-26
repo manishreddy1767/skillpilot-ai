@@ -1,14 +1,14 @@
 # Quality report
 
-Version 2.0.0, tested 2026-11-26 on the development laptop: Windows 11 Home, one monitor, 125% display
+Version 2.1.0, tested 2026-11-26 on the development laptop: Windows 11 Home, one monitor, 125% display
 scaling.
 
 ## Test results
 
 | Layer | Command | Result |
 |---|---|---|
-| Unit | `npm test` | 1192 of 1192 |
-| Integration, the real app with a faked cursor | `npm run test:integration` | 174 of 174, including a WCAG AA scan of every screen, voice through the real Windows speech engine, and a check of Windows' connection table that the app reaches nothing outside the laptop |
+| Unit | `npm test` | 1280 of 1280 |
+| Integration, the real app with a faked cursor | `npm run test:integration` | 177 of 177, including a WCAG AA scan of every screen, voice through the real Windows speech engine, and a check of Windows' connection table that the app reaches nothing outside the laptop |
 | Real local model | `SKILLPILOT_REAL_MODEL=qwen3:4b npx playwright test real-model` | 1 of 1 with `qwen3:4b`, about 1.6 minutes: chat, the agent, resume wording, and role requirements |
 | Installer, the real installed app | `npm run test:installer` | 7 of 7 in 1.4.0; updated for local AI but not rerun for 2.0.0 |
 | Real mouse | `npm run test:desktop` | 39 of 39 in most runs, including the global shortcuts. Not rerun since 1.3.0, see open items. |
