@@ -121,6 +121,7 @@ export const Channel = {
   ExportResume: 'resume:export',
   PolishResume: 'resume:polish',
   RunAgent: 'ai:agent',
+  RunCommand: 'assistant:command',
   Listen: 'voice:listen',
   WidgetListen: 'voice:widget-listen',
   StopListening: 'voice:stop',
@@ -168,6 +169,8 @@ export interface SkillPilotApi {
   sendChat(message: string): Promise<Result<ChatMessage[]>>
   /** The local AI works towards a goal in steps, suggesting changes for approval. */
   runAgent(goal: string): Promise<Result<AgentRun>>
+  /** Carries out a typed command such as "open youtube". Anything else comes back marked to ask the AI. */
+  runCommand(text: string): Promise<Result<VoiceOutcome>>
   clearChat(): Promise<Result<boolean>>
   getGapAnalysis(roleId: number): Promise<Result<{ analysis: GapAnalysis; report: GapReport | null }>>
   draftRequirements(roleId: number): Promise<Result<number>>
