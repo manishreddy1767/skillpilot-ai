@@ -212,3 +212,12 @@ describe('respond', () => {
     expect(deps.logError).toHaveBeenCalled()
   })
 })
+
+describe('the Google search fallback', () => {
+  it('is not used for an overly long name, which is more likely noise than a site', async () => {
+    const { deps, desktop } = setup()
+    const outcome = await respond(command(`open ${'word '.repeat(15).trim()}`), deps)
+    expect(outcome.reply).toContain("I couldn't find an app, website, or folder")
+    expect(desktop.openUrl).not.toHaveBeenCalled()
+  })
+})
