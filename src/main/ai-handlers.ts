@@ -2,6 +2,7 @@ import type { AiLogEntry, AiStatus, ChatMessage, GapReport, Proposal } from '../
 import { validateFields, type Result } from '../shared/career'
 import { analyseGap, type GapAnalysis } from '../shared/gap'
 import { requirementsFor, roadmapFromGaps } from '../shared/library-plans'
+import type { ResumeData, ResumeSuggestion } from '../shared/resume'
 import { libraryRole } from '../shared/skills-library'
 import { buildDashboard } from '../shared/progress'
 import { isLocalAddress, settingFields, type Settings } from '../shared/settings'
@@ -194,6 +195,13 @@ export function createAiHandlers(deps: AiHandlerDeps) {
         : Promise.resolve(failure('Unknown role.')),
 
     suggestProjects: (): Promise<Result<number>> => ai((service) => service.suggestProjects()),
+
+    /** Clearer wording for a resume from the local AI, checked for honesty, as suggestions only. */
+    polishResume: (
+      resume: ResumeData,
+      job: { title: string; description: string } | null,
+      skills: string[]
+    ): Promise<Result<ResumeSuggestion[]>> => ai((service) => service.polishResume(resume, job, skills)),
 
     suggestTasks: (): Promise<Result<number>> => {
       const stores = getStores()
