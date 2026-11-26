@@ -42,22 +42,26 @@ export function closestWord(word: string, known: Set<string>): string | null {
   if (known.has(lower) || LEAVE_ALONE.has(lower) || /\d/.test(lower)) return null
   const limit = allowedMistakes(lower.length)
   if (limit === 0) return null
-  let best: string | null = null
+  let closest: string[] = []
   let bestDistance = limit + 1
-  let tied = false
   for (const candidate of known) {
     if (candidate.includes(' ') || Math.abs(candidate.length - lower.length) > limit) continue
     const distance = editDistance(lower, candidate, limit)
     if (distance < bestDistance) {
-      best = candidate
+      closest = [candidate]
       bestDistance = distance
-      tied = false
     } else if (distance === bestDistance) {
-      tied = true
+      closest.push(candidate)
     }
   }
-  // When two words are equally close, guessing could do the wrong thing, so nothing changes.
-  return best && !tied ? best : null
+  if (closest.length === 1) return closest[0]!
+  // Equally close words that are forms of one word, such as "skill" and "skills", are safe to pick
+  // between. Different words, such as "card" and "care", are not, so nothing changes.
+  const stem = closest[0]?.slice(0, 4) ?? ''
+  if (closest.length > 1 && stem.length === 4 && closest.every((word) => word.startsWith(stem))) {
+    return closest.sort((a, b) => a.length - b.length || a.localeCompare(b))[0]!
+  }
+  return null
 }
 
 /** A message with each misspelled word replaced by the known word it most likely meant. */

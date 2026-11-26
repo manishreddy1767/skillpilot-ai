@@ -69,3 +69,9 @@ describe('wordsOf', () => {
     expect([...wordsOf(['Google Chrome', 'C++', 'Node.js', 'VS Code'])].sort()).toEqual(['c++', 'chrome', 'code', 'google', 'node.js'])
   })
 })
+
+describe('forms of one word', () => {
+  it('picks between forms of one word, such as skill and skills', () => {
+    expect(closestWord('skils', wordsOf(['skill', 'skills']))).toBe('skill')
+  })
+})
