@@ -23,8 +23,13 @@ test.beforeEach(async () => {
     let body = ''
     req.on('data', (chunk) => (body += chunk))
     req.on('end', () => {
-      if (req.url === '/api/chat') requests.push({ url: req.url, headers: req.headers, body: JSON.parse(body) })
-      respond(res, req.url ?? '', req.url === '/api/chat' ? replies.shift() : null)
+      const parsed = req.url === '/api/chat' ? JSON.parse(body) : null
+      // Understanding a typed message: the stand-in treats it as a question, so the chat runs as usual.
+      if (parsed?.format?.properties?.action) {
+        return respond(res, '/api/chat', { action: 'answer', target: '', site: 'none', location: '', answer: '' })
+      }
+      if (parsed) requests.push({ url: req.url!, headers: req.headers, body: parsed })
+      respond(res, req.url ?? '', parsed ? replies.shift() : null)
     })
   })
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
