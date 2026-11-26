@@ -79,9 +79,10 @@ test('the local AI suggests wording, and a suggestion claiming a skill you lack 
       res.writeHead(200, { 'content-type': 'application/json' })
       if (req.url === '/api/tags') return void res.end(JSON.stringify({ models: [{ name: 'qwen3:4b' }] }))
       const reply = {
-        summary: '',
-        experience: [{ entry: 0, bullets: ['Built an interactive React dashboard for managers', 'Wrote Python scripts on Kubernetes'] }],
-        projects: []
+        rewrites: [
+          { line: 2, better: 'Built an interactive React dashboard for managers' },
+          { line: 3, better: 'Wrote Python scripts on Kubernetes' }
+        ]
       }
       res.end(JSON.stringify({ message: { content: JSON.stringify(reply) } }))
     })
