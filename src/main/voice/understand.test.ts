@@ -49,3 +49,12 @@ describe('commandWords', () => {
     for (const word of ['open', 'search', 'notepad', 'naukri', 'youtube', 'skills', 'react', 'kubernetes']) expect(words).toContain(word)
   })
 })
+
+describe('a correction that still makes no sense', () => {
+  it('is thrown away, so a question reaches the AI exactly as written', () => {
+    // "pyhton" corrects to "python", but the message is still a question, not a command.
+    expect(understand('how do i get better at pyhton', apps, today)).toEqual({
+      intent: { kind: 'ask', text: 'how do i get better at pyhton' }
+    })
+  })
+})
