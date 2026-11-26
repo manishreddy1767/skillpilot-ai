@@ -76,6 +76,21 @@ describe('parseVoiceCommand', () => {
     }
   )
 
+  it('adds a reminder time, kept out of the title', () => {
+    expect(parse('remind me to call the mentor at 5 pm tomorrow')).toEqual({
+      kind: 'addTask',
+      title: 'Call the mentor',
+      dueDate: '2026-11-09',
+      remindAt: '17:00'
+    })
+    expect(parse('add task revise sql tomorrow at 9:30 am')).toEqual({
+      kind: 'addTask',
+      title: 'Revise sql',
+      dueDate: '2026-11-09',
+      remindAt: '09:30'
+    })
+  })
+
   it('adds a skill and a goal', () => {
     expect(parse('add skill docker')).toEqual({ kind: 'addSkill', name: 'Docker' })
     expect(parse("I'm learning TypeScript")).toEqual({ kind: 'addSkill', name: 'Typescript' })

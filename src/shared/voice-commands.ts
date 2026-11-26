@@ -22,7 +22,8 @@ export type SectionId =
 
 export type VoiceIntent =
   | { kind: 'navigate'; section: SectionId; label: string }
-  | { kind: 'addTask'; title: string; dueDate: string }
+  /** remindAt is a reminder time as HH:MM, when one was said. */
+  | { kind: 'addTask'; title: string; dueDate: string; remindAt?: string }
   | { kind: 'addSkill'; name: string }
   | { kind: 'addGoal'; title: string }
   | { kind: 'completeTask'; query: string }
@@ -251,8 +252,9 @@ export function parseVoiceCommand(spoken: string, today: string): VoiceIntent {
     text.match(/^(?:add|create|new|make)(?: a)?(?: new)? (?:task|tasks|task's|test|desk|tusk)(?: to| for)?\s+(.+)$/) ??
     text.match(/^remind me to\s+(.+)$/)
   if (task) {
-    const { rest, date } = splitDay(task[1]!, today)
-    if (rest) return { kind: 'addTask', title: capitalise(rest), dueDate: date }
+    const { rest: withoutTime, time } = splitTime(task[1]!)
+    const { rest, date } = splitDay(withoutTime, today)
+    if (rest) return { kind: 'addTask', title: capitalise(rest), dueDate: date, ...(time ? { remindAt: time } : {}) }
   }
 
   const skill = text.match(/^(?:add|create|new)(?: a)?(?: new)? skill\s+(.+)$/) ?? text.match(/^i(?:'m| am) learning\s+(.+)$/)
