@@ -1,22 +1,23 @@
 # Quality report
 
-Version 1.4.0, tested 2026-11-14 on the development laptop: Windows 11 Home, one monitor, 125% display
+Version 2.0.0, tested 2026-11-26 on the development laptop: Windows 11 Home, one monitor, 125% display
 scaling.
 
 ## Test results
 
 | Layer | Command | Result |
 |---|---|---|
-| Unit | `npm test` | 962 of 962 |
-| Integration, the real app with a faked cursor | `npm run test:integration` | 158 of 158, including a WCAG AA scan of every screen and voice through the real Windows speech engine |
-| Installer, the real installed app | `npm run test:installer` | 7 of 7 |
-| Real mouse | `npm run test:desktop` | 39 of 39 in most runs, including the global shortcuts. Not rerun for 1.4.0, see open items. |
+| Unit | `npm test` | 1192 of 1192 |
+| Integration, the real app with a faked cursor | `npm run test:integration` | 174 of 174, including a WCAG AA scan of every screen, voice through the real Windows speech engine, and a check of Windows' connection table that the app reaches nothing outside the laptop |
+| Real local model | `SKILLPILOT_REAL_MODEL=qwen3:4b npx playwright test real-model` | 1 of 1 with `qwen3:4b`, about 1.6 minutes: chat, the agent, resume wording, and role requirements |
+| Installer, the real installed app | `npm run test:installer` | 7 of 7 in 1.4.0; updated for local AI but not rerun for 2.0.0 |
+| Real mouse | `npm run test:desktop` | 39 of 39 in most runs, including the global shortcuts. Not rerun since 1.3.0, see open items. |
 
 Line coverage from unit tests alone is about 96%. Startup wiring is covered by the integration tests.
 
-Each milestone was also checked by breaking the app on purpose, to confirm a test notices. All 113 such
-breaks are caught, including sending private details to the AI, storing the key unencrypted, and letting
-other windows read career data.
+Each milestone was also checked by breaking the app on purpose, to confirm a test notices. All 120 such
+breaks are caught, including letting requests reach the internet, letting the AI claim skills you lack,
+letting the agent save without approval, and letting other windows read career data.
 
 ## Measurements
 
@@ -58,8 +59,7 @@ Memory is the known cost of Electron. See [ADR 0001](decisions/0001-electron-des
 
 | Gap | Why |
 |---|---|
-| A real Claude request | No API key was available. The real SDK ran against a local server speaking the same format, so the first real request is the remaining check. |
-| A real Ollama model | Ollama is not installed. It was tested against a local stand-in. |
+| Other local models | Only `qwen3:4b` was tested for real. `gemma3:4b` and `llama3.2:3b` are installed but untried; smaller models may echo or repeat more. |
 | Two monitors, and other scaling levels | Only one monitor at 125% was available. Display changes are tested with simulated layouts. |
 | Real sleep and wake, and real resolution changes | The same code paths are tested by simulating the events. |
 | Clicking the actual tray icon by hand | Tests click the real menu items, but not through the Windows tray. |
@@ -74,6 +74,12 @@ Memory is the known cost of Electron. See [ADR 0001](decisions/0001-electron-des
   test environment or a brief cold-start delay, but that is not proven.
 - **Shortcut clash found on this laptop.** Another app holds Ctrl+Alt+S, so the shortcuts are
   Ctrl+Alt+Shift+S and Ctrl+Alt+Shift+O. If a clash happens elsewhere, it is noted in the error log.
-- **Real-mouse test not rerun for 1.4.0.** The widget gained a microphone badge. The integration tests
+- **Real-mouse test not rerun since 1.3.0.** The widget gained a microphone badge. The integration tests
   cover its shape, size, and clicks, but the real-mouse test was skipped because it takes over the mouse.
+- **A small local model is less reliable than a large one.** Real-model testing found five problems, all
+  fixed and covered by tests: echoed questions, unchanged resume wording, duplicate requirements, a looping
+  agent, and leaked instructions. Answers can still be vague or slightly embellished, which is why every
+  change waits for approval.
+- **Pushing to GitHub needs signing in again.** The saved GitHub sign-in on this laptop expired during
+  this work, so the latest commits are local until it is renewed.
 - **Unsigned installer.** Windows SmartScreen warns on first run. See [Windows limits](architecture/windows-limits.md).
