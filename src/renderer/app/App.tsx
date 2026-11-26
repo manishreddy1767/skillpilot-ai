@@ -5,6 +5,7 @@ import { DashboardView } from './DashboardView'
 import { LinkPicker } from './LinkPicker'
 import { GoalsView } from './GoalsView'
 import { JobsView } from './JobsView'
+import { ResumeView } from './ResumeView'
 import { ProfileForm } from './ProfileForm'
 import { ProjectsView } from './ProjectsView'
 import { RecordEditor } from './RecordEditor'
@@ -26,6 +27,7 @@ const sections: { id: Section; label: string }[] = [
   { id: 'goals', label: 'Goals' },
   { id: 'projects', label: 'Projects' },
   { id: 'jobs', label: 'Jobs' },
+  { id: 'resume', label: 'Resume' },
   { id: 'roles', label: 'Target roles' },
   { id: 'roadmaps', label: 'Roadmaps' },
   { id: 'profile', label: 'Profile' },
@@ -37,12 +39,15 @@ const sections: { id: Section; label: string }[] = [
 
 interface ScreenProps {
   section: Section
+  /** Opens the resume builder, tailored to a job. */
+  onTailorResume: (jobId: number) => void
+  resumeJobId: number | null
   onNavigate: (section: Section, note: string) => void
   pendingAsk: string | null
   onPendingAskTaken: () => void
 }
 
-function Screen({ section, onNavigate, pendingAsk, onPendingAskTaken }: ScreenProps) {
+function Screen({ section, onNavigate, pendingAsk, onPendingAskTaken, onTailorResume, resumeJobId }: ScreenProps) {
   switch (section) {
     case 'dashboard':
       return <DashboardView />
@@ -51,7 +56,9 @@ function Screen({ section, onNavigate, pendingAsk, onPendingAskTaken }: ScreenPr
     case 'assistant':
       return <AssistantView onNavigate={onNavigate} pendingAsk={pendingAsk} onPendingAskTaken={onPendingAskTaken} />
     case 'jobs':
-      return <JobsView />
+      return <JobsView onTailorResume={onTailorResume} />
+    case 'resume':
+      return <ResumeView key={resumeJobId ?? 'general'} initialJobId={resumeJobId} />
     case 'roles':
       return <RolesView />
     case 'roadmaps':
@@ -122,10 +129,12 @@ export function App() {
   const [note, setNote] = useState('')
 
   const [pendingAsk, setPendingAsk] = useState<string | null>(null)
+  const [resumeJobId, setResumeJobId] = useState<number | null>(null)
 
   const go = (next: Section, why = ''): void => {
     setSection(next)
     setNote(why)
+    if (next !== 'resume') setResumeJobId(null)
   }
 
   // Requests spoken to the widget arrive here. Saying ready lets any that waited while this loaded through.
@@ -176,7 +185,13 @@ export function App() {
               </button>
             </div>
           ) : null}
-          <Screen section={section} onNavigate={go} pendingAsk={pendingAsk} onPendingAskTaken={() => setPendingAsk(null)} />
+          <Screen section={section} onNavigate={go} pendingAsk={pendingAsk} onPendingAskTaken={() => setPendingAsk(null)}
+            onTailorResume={(jobId) => {
+              setResumeJobId(jobId)
+              go('resume')
+            }}
+            resumeJobId={resumeJobId}
+          />
         </main>
       </div>
     </div>

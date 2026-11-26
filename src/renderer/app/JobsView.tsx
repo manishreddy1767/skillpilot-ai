@@ -114,7 +114,7 @@ function SkillList({ title, skills }: { title: string; skills: JobMatch['skills'
   )
 }
 
-function JobDetails({ jobId, title, hasLink }: { jobId: number; title: string; hasLink: boolean }) {
+function JobDetails({ jobId, title, hasLink, onTailorResume }: { jobId: number; title: string; hasLink: boolean; onTailorResume?: (jobId: number) => void }) {
   const [match, setMatch] = useState<JobMatch | null>(null)
   const [message, setMessage] = useState('')
   const [refresh, setRefresh] = useState(0)
@@ -168,6 +168,11 @@ function JobDetails({ jobId, title, hasLink }: { jobId: number; title: string; h
         <button type="button" disabled={!match?.missing.length} onClick={() => void suggest()}>
           Suggest the missing skills to learn
         </button>
+        {onTailorResume ? (
+          <button type="button" className="primary" onClick={() => onTailorResume(jobId)}>
+            Build a tailored resume
+          </button>
+        ) : null}
         {hasLink ? (
           <button type="button" onClick={() => void openLink()}>
             Open job in Chrome
@@ -180,7 +185,7 @@ function JobDetails({ jobId, title, hasLink }: { jobId: number; title: string; h
   )
 }
 
-export function JobsView() {
+export function JobsView({ onTailorResume }: { onTailorResume?: (jobId: number) => void } = {}) {
   const [refresh, setRefresh] = useState(0)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -216,7 +221,7 @@ export function JobsView() {
           emptyText="Add a job by pasting its description, or import a saved job page."
           onChange={() => setRefresh((value) => value + 1)}
           details={(record) => (
-            <JobDetails jobId={record.id} title={record.values['title'] ?? ''} hasLink={Boolean(record.values['url'])} />
+            <JobDetails jobId={record.id} title={record.values['title'] ?? ''} hasLink={Boolean(record.values['url'])} onTailorResume={onTailorResume} />
           )}
         />
       </section>
