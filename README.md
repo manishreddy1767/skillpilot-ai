@@ -1,18 +1,35 @@
 # SkillPilot AI
 
 A private, single-user career assistant for Windows that lives on the desktop as a small floating
-robot widget. It tracks skills, goals, projects, and learning, and uses AI to recommend what to do next.
+robot widget. It tracks skills, goals, projects, and learning, matches you to jobs, builds tailored
+resumes, and uses a local AI to suggest what to do next. **Nothing leaves your laptop**: the AI runs in
+Ollama on this computer, and the app blocks every outside connection.
 
-Status: version 1.4.0, with milestones M0 to M12 and voice built. See the [quality report](docs/quality-report.md) for
+Status: version 2.0.0, with milestones M0 to M17 built. See the [quality report](docs/quality-report.md) for
 test results and what has not been tested yet. See the [roadmap](docs/roadmap.md).
 
 ## Install
 
-Run `npm run dist`, then run `releaseSkillPilot AI Setup 1.4.0.exe`. It is unsigned, so Windows shows a
+Run `npm run dist`, then run `releaseSkillPilot AI Setup 2.0.0.exe`. It is unsigned, so Windows shows a
 SmartScreen warning: choose **More info**, then **Run anyway**.
 
-AI is optional and off by default. To use it, go to Settings, choose a provider, and add your Anthropic API
-key or run a local Ollama model.
+AI runs locally with [Ollama](https://ollama.com). Install it, run `ollama pull qwen3:4b`, and SkillPilot
+uses it automatically; Settings shows whether it is ready. Without it, everything except the AI works.
+
+## What it does
+
+- **Skills library:** SkillPilot's own offline knowledge of over 100 skills and 22 roles. Get a role's
+  requirements and a roadmap for your gaps instantly, with no AI.
+- **Jobs:** search LinkedIn, Naukri, Indeed, or Foundit in Chrome, save a job page (Ctrl+S) and import it,
+  and see your match, essential and nice-to-have skills, and what you are missing.
+- **Resumes:** build a resume tailored to any saved job, check its job keywords, review the local AI's
+  wording line by line, and export a PDF or text. It never claims skills you do not have.
+- **Agent:** give the local AI a goal, such as "get me ready for the React job at Acme", and it looks
+  things up and suggests tasks, skills, and goals for you to approve.
+- **Voice:** press the microphone on the widget or in the Assistant and speak.
+
+SkillPilot never signs in to or reads job sites itself; that would break their terms and risk your
+accounts. See [AI and privacy](docs/architecture/ai-and-privacy.md).
 
 ## Running it
 
