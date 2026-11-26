@@ -258,7 +258,7 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
             rows={2}
             value={draft}
             disabled={busy}
-            placeholder={listening ? 'Listening…' : 'Type, or press the microphone to speak'}
+            placeholder={listening ? 'Listening…' : 'Type anything, such as "open naukri", or press the microphone'}
             onChange={(event) => setDraft(event.target.value)}
           />
           {voice.phase === 'listening' ? <LevelMeter level={voice.level ?? 0} /> : null}
