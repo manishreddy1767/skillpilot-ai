@@ -30,6 +30,8 @@ export interface VoiceOutcome {
   minimize?: boolean
   /** The local AI suggested a change waiting for approval. */
   suggested?: boolean
+  /** The request could not be carried out; the reply says why. */
+  failed?: boolean
 }
 
 export interface BackupInfo {

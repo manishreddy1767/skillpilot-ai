@@ -19,5 +19,6 @@ export async function runTypedCommand(input: unknown, deps: AgentDeps): Promise<
     return { ok: true, value: { heard: text, reply: '', ask: text } }
   }
   const outcome = await respond({ text, confidence: 1, source: 'command' }, { ...deps, actNow: () => true })
-  return { ok: true, value: outcome }
+  // A typed request that could not be understood shows as an error, not a quiet note.
+  return outcome.failed ? { ok: false, message: outcome.reply } : { ok: true, value: outcome }
 }

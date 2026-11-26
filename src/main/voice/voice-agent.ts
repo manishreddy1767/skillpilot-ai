@@ -152,7 +152,7 @@ async function act(intent: VoiceIntent, text: string, deps: AgentDeps): Promise<
         if (!deps.interpret) return { heard: text, ask: text, reply: 'Let me ask the assistant.' }
         // Anything that is not a command is understood by the local AI, then carried out.
         const result = await deps.interpret(text)
-        if (!result.ok) return { heard: text, reply: result.message }
+        if (!result.ok) return { heard: text, reply: result.message, failed: true }
         const understood = result.value
         // A question goes to the chat, which keeps history and can suggest changes.
         if (understood.action === 'answer') return { heard: text, ask: text, reply: 'Let me ask the assistant.' }

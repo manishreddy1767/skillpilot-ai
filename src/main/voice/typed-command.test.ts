@@ -124,6 +124,6 @@ describe('requests in your own words, understood by the local AI', () => {
 
   it('reports a problem understanding', async () => {
     const { deps } = setup({ interpret: () => Promise.resolve({ ok: false, message: 'The local AI took too long to answer.' }) as never })
-    expect(await runTypedCommand('do the thing', deps)).toMatchObject({ ok: true, value: { reply: 'The local AI took too long to answer.' } })
+    expect(await runTypedCommand('do the thing', deps)).toEqual({ ok: false, message: 'The local AI took too long to answer.' })
   })
 })
