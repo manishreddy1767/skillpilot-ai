@@ -124,6 +124,33 @@ These milestones cover parts of the original brief that 1.0 left thin, and gaps 
 - Command phrases first, for reliable recognition, and nothing done on unsure speech
 - Opening apps, websites, searches, and folders, volume, lock, and the time, and version 1.4.0
 
+### M13: Local only, complete
+
+- AI runs only in Ollama on this laptop; the cloud AI, API key, and Anthropic SDK are removed
+- Every connection that would leave the laptop is blocked, and a test checks Windows' connection table
+
+### M14: Skills library, complete
+
+- Over 100 skills and 22 roles, offline
+- Role requirements and gap roadmaps with no AI, and gap analysis that knows other names for skills
+
+### M15: Jobs, complete
+
+- Searches on LinkedIn, Naukri, Indeed, and Foundit open in Chrome; SkillPilot fetches nothing itself
+- Saved job pages imported offline, matched to your skills, ranked, and their gaps suggested to learn
+- Job searches by voice
+
+### M16: Resume builder, complete
+
+- Resumes tailored to a job, with a keyword check, and never claiming what you lack
+- Wording from the local AI, checked for honesty and approved line by line
+- PDF printed offline, plain text, two templates, and saved versions
+
+### M17: Agent, complete
+
+- The local AI works towards a goal with SkillPilot's own tools, suggesting changes for approval
+- Tested against the real qwen3:4b, which found and fixed five problems; version 2.0.0
+
 ## Testing
 
 Every feature ships with unit tests and integration tests, and they must pass before it counts as
