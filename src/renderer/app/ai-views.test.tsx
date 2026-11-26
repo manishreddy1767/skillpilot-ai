@@ -417,16 +417,15 @@ describe('requests understood by the local AI', () => {
     click('Send')
   }
 
-  it('shows an answer in the conversation', async () => {
+  it('sends a question on to the chat', async () => {
     ready()
-    api().runCommand.mockResolvedValueOnce({ ok: true, value: { heard: 'am i ready?', reply: 'Not yet.', answered: true } })
-    api().getChat.mockResolvedValueOnce({ ok: true, value: [] })
-    api().getChat.mockResolvedValueOnce({ ok: true, value: [message(1, 'user', 'am i ready?'), message(2, 'assistant', 'Not yet.')] })
+    api().runCommand.mockResolvedValueOnce({ ok: true, value: { heard: 'am i ready?', reply: 'Let me ask the assistant.', ask: 'am i ready?' } })
+    api().sendChat.mockResolvedValueOnce({ ok: true, value: [message(1, 'user', 'am i ready?'), message(2, 'assistant', 'Not yet.')] })
     render(<AssistantView />)
     await waitFor(() => expect(api().getAiStatus).toHaveBeenCalled())
     typeAndSend('am i ready?')
     expect(await screen.findByText('Not yet.')).toBeTruthy()
-    expect(api().sendChat).not.toHaveBeenCalled()
+    expect(api().sendChat).toHaveBeenCalledWith('am i ready?')
   })
 
   it('shows a suggestion for approval', async () => {

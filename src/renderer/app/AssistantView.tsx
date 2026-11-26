@@ -114,7 +114,7 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
     const result = await window.skillpilot.runCommand(draft)
     setBusy(false)
     if (!result.ok) return setError(result.message)
-    const { ask: question, reply, navigate, minimize, answered, suggested } = result.value
+    const { ask: question, reply, navigate, minimize, suggested } = result.value
     if (question) {
       if (blocked) return setError(`${blocked} Commands such as "open youtube" or "add task …" still work.`)
       await ask(question, false)
@@ -123,17 +123,11 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
     setDraft('')
     if (navigate) return onNavigate(navigate, reply)
     if (minimize) window.skillpilot.minimizeToWidget()
-    await showOutcome(reply, Boolean(answered), Boolean(suggested))
+    await showOutcome(reply, Boolean(suggested))
   }
 
-  /** An answer appears in the conversation; a suggestion appears for approval; anything else as a note. */
-  const showOutcome = async (reply: string, answered: boolean, suggested: boolean, prefix = ''): Promise<void> => {
-    if (answered) {
-      const chat = await window.skillpilot.getChat()
-      if (chat.ok) setMessages(chat.value)
-      setNote(prefix.trim())
-      return
-    }
+  /** A suggestion appears for approval; anything else as a note. */
+  const showOutcome = async (reply: string, suggested: boolean, prefix = ''): Promise<void> => {
     if (suggested) setRefresh((value) => value + 1)
     setNote(`${prefix}${reply}`)
   }
@@ -178,7 +172,7 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
       setError(result.message)
       return
     }
-    const { heard, reply, navigate, minimize, draft: typed, ask: question, answered, suggested } = result.value
+    const { heard, reply, navigate, minimize, draft: typed, ask: question, suggested } = result.value
     if (!heard && !reply) return
     const said = heard ? `Heard "${heard}". ${reply}` : reply
     if (navigate) {
@@ -192,7 +186,7 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
       await ask(question, true)
       return
     }
-    await showOutcome(reply, Boolean(answered), Boolean(suggested), heard ? `Heard "${heard}". ` : '')
+    await showOutcome(reply, Boolean(suggested), heard ? `Heard "${heard}". ` : '')
   }
 
   const clear = async (): Promise<void> => {
