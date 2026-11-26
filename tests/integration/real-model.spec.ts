@@ -93,3 +93,32 @@ test('chat, the agent, resume wording, and role requirements all work with the r
   const blocked = await h.app.evaluate(() => (globalThis as { __skillpilotBlocked?: string[] }).__skillpilotBlocked ?? [])
   expect(blocked).toEqual([])
 })
+
+test('requests in everyday words, with typos, are understood and carried out by the real model', async () => {
+  const page = await openWithCareer()
+  await h.app.evaluate(() => {
+    ;(globalThis as { __skillpilotDesktopLog?: string[] }).__skillpilotDesktopLog = []
+  })
+  const cases: [string, RegExp][] = [
+    ['opne naukari', /openUrl \["https:\/\/www\.naukri\.com"/],
+    ['can you pull up naukri for me', /openUrl \["https:\/\/www\.naukri\.com"/],
+    ['i want to see react jobs near pune', /openUrl \["https:\/\/(www\.linkedin\.com\/jobs|www\.naukri\.com|in\.indeed\.com|www\.foundit\.in).*[Pp]une/],
+    ['whats the weather in hyderabad today', /openUrl \["https:\/\/www\.google\.com\/search\?q=.*hyderabad/i],
+    ['show me some lofi songs', /openUrl \["https:\/\/www\.youtube\.com\/results/],
+    ['what is the latest version of react', /openUrl \["https:\/\/www\.google\.com\/search\?q=.*react/i]
+  ]
+  for (const [text, expected] of cases) {
+    const before = (await h.app.evaluate(() => (globalThis as { __skillpilotDesktopLog?: string[] }).__skillpilotDesktopLog ?? [])).length
+    const result = await timed(text, () => page.evaluate((t) => window.skillpilot.runCommand(t), text))
+    expect(result.ok, result.ok ? '' : result.message).toBe(true)
+    const log = await h.app.evaluate(() => (globalThis as { __skillpilotDesktopLog?: string[] }).__skillpilotDesktopLog ?? [])
+    const done = log.slice(before)
+    console.log(`"${text}" → ${result.ok ? result.value.reply : ''} | ${done.join(' ; ')}`)
+    expect(done.some((line) => expected.test(line)), `"${text}" did ${done.join(' ; ') || 'nothing'}`).toBe(true)
+  }
+  const answer = await timed('question', () => page.evaluate(() => window.skillpilot.runCommand('am i ready for a frontend job?')))
+  console.log('Question:', answer.ok ? answer.value : answer)
+  expect(answer.ok && answer.value.answered).toBe(true)
+  const blocked = await h.app.evaluate(() => (globalThis as { __skillpilotBlocked?: string[] }).__skillpilotBlocked ?? [])
+  expect(blocked).toEqual([])
+})
