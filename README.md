@@ -70,12 +70,14 @@ To exit, right-click the tray icon and choose Quit SkillPilot AI. Unexpected err
 
 ## Documents
 
+- [Commands](docs/commands.md): everything you can type or say
 - [Architecture](docs/architecture/architecture.md): stack, process model, OS integration
 - [Widget behaviour](docs/architecture/widget-behavior.md): floating icon, dragging, hover, expanding
 - [Data model](docs/architecture/data-model.md): storage, tables, computed measures
-- [AI and privacy](docs/architecture/ai-and-privacy.md): AI features, what leaves the laptop
+- [AI and privacy](docs/architecture/ai-and-privacy.md): the local AI, the network lock, and honesty in resumes
 - [Windows limits](docs/architecture/windows-limits.md): platform restrictions and open questions
 - [Roadmap](docs/roadmap.md): MVP and milestones
 - [Quality report](docs/quality-report.md): test results, measurements, and open items
 - Decisions: [Electron](docs/decisions/0001-electron-desktop-shell.md),
-  [built-in SQLite](docs/decisions/0002-built-in-sqlite.md)
+  [built-in SQLite](docs/decisions/0002-built-in-sqlite.md),
+  [local-only AI](docs/decisions/0003-local-only-ai.md)
