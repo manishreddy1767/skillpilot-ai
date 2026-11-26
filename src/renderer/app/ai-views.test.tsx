@@ -442,3 +442,17 @@ describe('requests understood by the local AI', () => {
     await waitFor(() => expect(api().listProposals.mock.calls.length).toBeGreaterThan(loads))
   })
 })
+
+describe('the Local AI panel', () => {
+  it('warns that the first request is slow while the model loads, only when the AI is ready', async () => {
+    api().getSettings.mockResolvedValue({ ok: true, value: { ...defaultSettings } })
+    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'ollama', model: 'qwen3:4b', blocked: '', localModels: ['qwen3:4b'] } })
+    const { unmount } = render(<SettingsView />)
+    expect(await screen.findByText(/first request after starting can take up to a minute/)).toBeTruthy()
+    unmount()
+    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'ollama', model: 'qwen3:4b', blocked: 'Ollama is not running.', localModels: null } })
+    render(<SettingsView />)
+    await screen.findByText('Ollama is not running.')
+    expect(screen.queryByText(/first request after starting/)).toBeNull()
+  })
+})
