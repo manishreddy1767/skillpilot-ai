@@ -75,3 +75,13 @@ describe('forms of one word', () => {
     expect(closestWord('skils', wordsOf(['skill', 'skills']))).toBe('skill')
   })
 })
+
+describe('everyday words', () => {
+  it('are never turned into a nearby known word', () => {
+    // "pune" is one edit from "pane", and "jobs" from "jabs", but both are meant as they are.
+    const close = wordsOf(['pane', 'jabs', 'tusk'])
+    expect(closestWord('pune', close)).toBeNull()
+    expect(closestWord('jobs', close)).toBeNull()
+    expect(closestWord('task', close)).toBeNull()
+  })
+})
