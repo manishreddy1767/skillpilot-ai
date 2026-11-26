@@ -61,3 +61,16 @@ test('other windows cannot run commands', async () => {
     expect(await (await h.page(title)).evaluate(() => window.skillpilot.runCommand('open youtube'))).toEqual({ ok: false, message: 'Not allowed.' })
   }
 })
+
+test('"remind me to … at …" sets a reminder, and the notification arrives at that time', async () => {
+  const page = await assistant()
+  await send(page, 'remind me to stretch at 12 am')
+  await expect(page.locator('.voice-state')).toHaveText(/Added the task "Stretch" for today, with a reminder at 12:00 am\./)
+  const tasks = await page.evaluate(() => window.skillpilot.listRecords('task'))
+  expect(tasks.ok && tasks.value[0]!.values).toMatchObject({ title: 'Stretch', remindAt: '00:00' })
+  // 12 am has already passed today, so the next check sends the reminder.
+  await h.app.evaluate(({ powerMonitor }) => void powerMonitor.emit('resume'))
+  await expect
+    .poll(() => h.app.evaluate(() => ((globalThis as unknown as { __notices?: { title: string; body: string }[] }).__notices ?? []).map((n) => `${n.title}: ${n.body}`)))
+    .toContain('Reminder: Stretch')
+})
