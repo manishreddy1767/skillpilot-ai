@@ -1,116 +1,114 @@
 # AI integration and privacy
 
-## Approach
+## Nothing leaves the laptop
 
-AI is optional. With it off, everything else works, including skill-gap scores.
+SkillPilot works entirely on this computer. Since version 2.0 there is no cloud AI and no API key, and
+the app blocks every connection that would leave the laptop:
 
-Each AI feature is one request that returns structured JSON. There is no agent loop and no tool use, so
-the app stays simple and two providers fit behind one small interface (`AiProvider`):
+| Layer | What it does |
+|---|---|
+| Pages | The app's windows may load only its own files and local addresses. Every other request is cancelled before it is sent (`src/main/network-lock.ts`). |
+| Main process | `fetch` is wrapped so it can reach only `localhost`, `127.0.0.1`, or `[::1]`, which is where Ollama runs. |
+| Chromium | Background networking, component updates, domain reliability, safe-browsing checks, sync, pings, and DNS prefetch are switched off before start-up. The spell checker is off, because it downloads dictionaries. |
+| Proof | A test asks Windows which connections the running app's processes hold, and requires every one to be local. |
 
-| Provider | How it runs | Data leaves the laptop? |
-|---|---|---|
-| Claude | `@anthropic-ai/sdk`, streamed, from the main process | Yes, to Anthropic |
-| Ollama | A local model at a `localhost` address | No |
-| Off | The default | No |
+Blocked attempts are written to the error log by host name only, never the full address.
 
-For Claude, the default model is `claude-opus-5-5`, and Sonnet 5.5 and Haiku 5.5 are options in Settings.
-API use is billed per token to your own Anthropic account, separately from any Claude subscription. At
-the listed $4 per million input tokens and $20 per million output tokens, a chat turn with 5,000 tokens
-of context and a 1,000-token reply costs about $0.04, plus thinking tokens. Sonnet 5.5 is $2 and $10, and
-Haiku 5.5 is $0.10 and $0.50. These prices are from reference data dated 2026-10-06, so check them.
+The only thing that reaches the internet is **your own browser**, when you ask SkillPilot to open a job
+search or a website. That is Chrome talking to the site, as if you had typed the address; SkillPilot
+itself sends nothing, and never signs in to, reads, or scrapes LinkedIn, Naukri, or any other site.
+Automated access to those sites breaks their terms and would put your accounts at risk, so it is not offered.
 
-Requests opt in to Anthropic's server-side fallback (`fallbacks: "default"`), so a request declined by a
-safety classifier can be retried on another model. Haiku has no such fallback.
+A cloud API key saved by an older version is deleted at start-up.
+
+## The local model
+
+AI runs in [Ollama](https://ollama.com) on this laptop. It is on by default with `qwen3:4b`; Settings
+lists the installed models and whether Ollama is running. To add a model, run `ollama pull <name>`.
+
+Each request asks for structured JSON with a fixed shape, and skips the model's separate "thinking"
+pass, which small models take minutes over. A request times out after five minutes with a plain message.
+
+With AI off, or Ollama not running, everything else works: gap scores, the skills library, job matching,
+resumes, voice commands, and progress.
 
 ## What the AI does
 
 | Feature | How it works |
 |---|---|
-| Role requirements | The AI drafts the skills a target role needs, as suggestions to accept. |
-| Skill-gap report | Code calculates readiness and gaps. The AI explains them and sets priorities. It cannot change the scores. |
-| Roadmap | The AI drafts ordered topics, effort, exercises, and resources, as one suggestion. Everything can be edited. |
-| Daily tasks | The AI suggests tasks that fit the daily time set in Settings. |
-| Project ideas | The AI suggests up to three projects that would demonstrate missing skills. Accepted ideas are linked to skills you already have. |
-| Assistant | Chat that knows your career data. It can suggest new skills, goals, and tasks, and changes to existing items: your level for a skill, or marking a roadmap topic done. A change shows the current and new value, and is refused if the item changed after it was suggested. |
-| Resources | Named so they can be searched for. The AI is told not to give links, because invented links are a known failure. |
+| Assistant | Chat that knows your career data. It can suggest skills, goals, tasks, a level change, or marking a roadmap topic done, at most three per reply. |
+| Agent | Given a goal, it works in up to six steps with SkillPilot's own tools: reading your skills, tasks, jobs, job matches, and role gaps, and suggesting tasks, skills, and goals. A repeated step is not run again, and a second repeat ends the run. |
+| Role requirements | Drafted for a target role, under the skills' usual names, once each. |
+| Skill-gap report | Code calculates readiness and gaps. The AI explains them and sets priorities; it cannot change the scores. |
+| Roadmap | Ordered topics with effort, exercises, and resources, as one suggestion. |
+| Daily tasks and project ideas | Suggested to fit your time and close your gaps. |
+| Resume wording | Clearer wording for each line of a resume, for one job. |
 
-## Changes need confirmation
+## You approve every change
 
-The AI can only create suggestions. Each one waits in a review list, showing what would be added. Nothing
-is saved until you accept it, and accepted content is validated like anything you typed. This holds for
-every AI suggestion, which is stricter than confirming only the important ones.
+The AI only ever suggests. Each suggestion waits in a review list showing what would change, and
+nothing is saved until you accept it. Accepted content is validated like anything you typed.
 
-One exception, chosen by you: a question **spoken** to the assistant applies the suggestions it
-produces straight away, so voice can act hands-free. Only suggestions created by that question are
-accepted, they are validated as usual, and the app says how many were applied. Typed messages never
-do this. Turn off **Carry out spoken requests straight away** in Settings to review everything again.
+One exception, chosen by you: a question **spoken** to the assistant applies the suggestions it produces
+straight away, so voice can act hands-free. Turn off **Carry out spoken requests straight away** in
+Settings to review everything again.
+
+## Honesty in resumes
+
+The resume builder only uses what you entered. It puts a job's skills first and picks your most relevant
+projects, but it never adds a skill or experience you do not have: skills a job wants that you lack are
+listed as missing, with a reminder to add them only if they are true.
+
+Wording from the local AI is checked before you see it. A suggestion that names a skill that is neither
+in the original line nor among your skills is dropped, as is one that grows too long. You accept or
+reject each remaining line.
+
+## Without AI: the skills library
+
+`src/shared/skills-library.ts` holds SkillPilot's own knowledge: over 100 skills with the names job
+descriptions use for them, prerequisites, what to study, and a practice exercise each, and 22 roles common
+in Indian hiring with the level and importance of each skill they need. It makes these work offline and
+instantly, with no model at all:
+
+- suggesting a role's requirements, and a roadmap for its gaps
+- finding the skills a job description asks for, essential or nice to have, and your match
+- counting "ReactJS" as React, "k8s" as Kubernetes, and so on, in gap analysis
+
+## Jobs
+
+Jobs are added by pasting a description or importing a page saved from the browser (Ctrl+S on LinkedIn,
+Naukri, or Indeed). The page is read on this laptop: the structured job data sites embed is used first,
+with the page text as a fallback. Scripts in the page are dropped, never run, and only web links are kept.
+Search buttons, and voice commands such as "search Naukri for React jobs in Pune", open the site's search
+in Chrome.
 
 ## Voice
 
 There are two microphones: one in the assistant's input bar, and one on the widget at the robot's
 bottom-right. Both use Windows' own offline speech engine (`System.Speech`), kept running in a hidden
-PowerShell between requests so listening starts at once. It closes after 10 idle minutes and with the
-app. Recognition happens on the laptop: audio is never saved and never sent anywhere. Only the app
-window and the widget may start listening.
+PowerShell between requests. Recognition happens on the laptop; audio is never saved or sent. Listening
+checks first that Windows has not muted the microphone.
 
-**How it listens.** The engine first listens for the app's own command phrases, such as "open ...",
-"add task ...", or "search for ...", with the names of installed apps, websites, folders, and sections.
-This is far more reliable than free dictation, especially across accents. Anything else falls back to
-dictation. Speech the engine is unsure of is never acted on: the app says what it thought it heard and
-asks again.
-
-**What it can do,** at once and without AI:
-
-| Say | Does |
-|---|---|
-| "open Chrome", "open VS Code", "open WhatsApp" | Opens the installed app, by its Start menu entry |
-| "open YouTube in Chrome", "go to example dot com" | Opens the website, in the named browser if installed |
-| "search for React hooks", "play lofi on YouTube" | Opens a Google or YouTube search |
-| "open downloads", "open Windows settings" | Opens the folder or Windows settings |
-| "volume up", "mute", "lock my computer" | Presses the volume keys, or locks Windows |
-| "what time is it", "what's the date today" | Says the time or date |
-| "open my skills", "add task read the guide tomorrow", "mark the guide as done", "add skill Python", "what's due today" | SkillPilot itself |
-
-Anything else is sent to the AI assistant when it is on.
-
-**Safety.** Spoken text is never run as a command. Apps launch only from the Windows Start menu list,
-web pages only as `http` or `https` addresses, and folders only from a fixed list. Nothing is closed,
-deleted, or bought by voice. A task is ticked off only when exactly one open task matches.
-
-**Replies** show in the assistant, or for the widget in the hover panel, which stays open while it talks.
-They are also spoken aloud with Windows' offline voice; turn this off with **Speak replies aloud** in
-Settings.
-
-## What leaves the laptop
-
-Only when using Claude, only when you run an AI feature, and only to the Anthropic API.
-
-| Sent when relevant | Never sent |
-|---|---|
-| Headline, about me, goals, target roles, interests, preferences | API key, except to authenticate |
-| Skills, levels, and status | Full name |
-| Qualifications, job titles, and certifications | Email, phone, and location |
-| Goals, projects, and role gaps | Employer and school names |
-| The messages you write | Backups and the database file |
-
-Free text is sent as written, so a name typed into "About me" or a message would be included. Settings
-shows the exact text of your last 30 requests under **What was sent**, stored only on this laptop. How
-Anthropic retains API data is set by its policies and your account, so check those directly.
-
-## Keeping the key safe
-
-- Entered in Settings, encrypted with `safeStorage` (Windows DPAPI), and stored in `api-key.enc`.
-- Only the main process decrypts it. Renderers can save or remove it, but can never read it.
-- It is kept out of the database, so it is not in logs, backups, or exports.
-- The key is passed to the SDK explicitly, so credentials in environment variables are never used.
-
-## Without a key or connection
-
-AI buttons are disabled with the reason shown. Profile, skills, goals, projects, tasks, gap scores,
-progress, and notifications keep working.
+The engine listens for the app's own command phrases first, which is far more reliable than free
+dictation, and never acts on speech it is unsure of. Commands open apps, websites, searches, job
+searches, folders, and SkillPilot screens, change the volume, lock the computer, and add or tick off
+tasks. Spoken text is never run as a command, and nothing is closed, deleted, or bought by voice.
 
 ## How this was tested
 
-The real SDK runs against a local server speaking Anthropic's streaming format, so requests, auth, and
-error handling are exercised end to end. The real Anthropic service has not been called, because no key
-was available during development. The first real request is the remaining check.
+Unit and integration tests use a stand-in Ollama server on this computer, so requests and errors are
+exercised end to end without a model. An opt-in test, run with `SKILLPILOT_REAL_MODEL=qwen3:4b`, drives
+the real app against the real model and prints what it said.
+
+Testing with the real `qwen3:4b` found problems no stand-in could show, now fixed:
+
+| Found | Fix |
+|---|---|
+| Chat copied the question as its answer, every time | The message is labelled, rules sit with the instructions, and an echo is retried once, then reported |
+| Resume wording handed every line back unchanged | Each line is numbered and asked for separately, with an example |
+| Requirements listed both Git and Version Control | Requirements use usual names, once each |
+| The agent once repeated one lookup six times | Repeats are skipped, then the run ends |
+| Chat quoted internal instructions | Rules moved out of the message |
+
+Small models remain less reliable than large ones. Answers can be vague or slightly embellished, which is
+why every change waits for your approval.
