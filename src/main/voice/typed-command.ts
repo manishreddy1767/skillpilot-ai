@@ -14,7 +14,10 @@ export async function runTypedCommand(input: unknown, deps: AgentDeps): Promise<
   const text = typeof input === 'string' ? input.trim() : ''
   if (!text) return { ok: false, message: 'Type a message first.' }
   if (text.length > MAX_LENGTH) return { ok: false, message: 'That message is too long.' }
-  if (understand(text, await deps.apps(), deps.today()).intent.kind === 'ask') return { ok: true, value: { heard: text, reply: '', ask: text } }
+  // Not a command and no AI to understand it: the Assistant explains, rather than doing nothing.
+  if (understand(text, await deps.apps(), deps.today()).intent.kind === 'ask' && (!deps.interpret || (await deps.aiBlocked()))) {
+    return { ok: true, value: { heard: text, reply: '', ask: text } }
+  }
   const outcome = await respond({ text, confidence: 1, source: 'command' }, { ...deps, actNow: () => true })
   return { ok: true, value: outcome }
 }

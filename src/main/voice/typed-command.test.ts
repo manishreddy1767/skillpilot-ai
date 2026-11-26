@@ -82,3 +82,48 @@ describe('typed commands', () => {
     expect((await runTypedCommand(text, deps)).ok).toBe(false)
   })
 })
+
+describe('requests in your own words, understood by the local AI', () => {
+  const understood = (over: object) => ({ ok: true as const, value: { action: 'open', target: '', site: 'none', location: '', answer: '', ...over } })
+
+  it('"can you pull up naukri for me" opens Naukri', async () => {
+    const interpret = vi.fn(() => Promise.resolve(understood({ action: 'open', target: 'naukri' })))
+    const { deps, desktop } = setup({ interpret: interpret as never })
+    expect(await runTypedCommand('can you pull up naukri for me', deps)).toMatchObject({ ok: true, value: { reply: 'Opening Naukri.' } })
+    expect(interpret).toHaveBeenCalledWith('can you pull up naukri for me')
+    expect(desktop.openUrl).toHaveBeenCalledWith('https://www.naukri.com', undefined)
+  })
+
+  it('questions about the world become a Google search', async () => {
+    const { deps, desktop } = setup({ interpret: () => Promise.resolve(understood({ action: 'web_search', target: 'latest version of react 2026' })) as never })
+    await runTypedCommand('what is the latest version of react', deps)
+    expect(desktop.openUrl).toHaveBeenCalledWith('https://www.google.com/search?q=latest%20version%20of%20react', undefined)
+  })
+
+  it('an answer is shown, and a change is only suggested', async () => {
+    const answer = setup({ interpret: () => Promise.resolve(understood({ action: 'answer', answer: 'Not yet.' })) as never })
+    expect(await runTypedCommand('am i ready?', answer.deps)).toEqual({ ok: true, value: { heard: 'am i ready?', reply: 'Not yet.', answered: true } })
+    const add = setup({ interpret: () => Promise.resolve(understood({ action: 'add_skill', target: 'Docker' })) as never })
+    expect(await runTypedCommand('i want to learn docker', add.deps)).toMatchObject({ ok: true, value: { suggested: true } })
+    expect(add.deps.data.saveRecord).not.toHaveBeenCalled()
+  })
+
+  it('commands never wait for the AI', async () => {
+    const interpret = vi.fn()
+    const { deps } = setup({ interpret: interpret as never })
+    await runTypedCommand('open youtube', deps)
+    expect(interpret).not.toHaveBeenCalled()
+  })
+
+  it('with the AI off, a request goes back to the Assistant to explain', async () => {
+    const interpret = vi.fn()
+    const { deps } = setup({ interpret: interpret as never, aiBlocked: () => 'The local AI is off.' })
+    expect(await runTypedCommand('can you pull up naukri', deps)).toMatchObject({ ok: true, value: { ask: 'can you pull up naukri' } })
+    expect(interpret).not.toHaveBeenCalled()
+  })
+
+  it('reports a problem understanding', async () => {
+    const { deps } = setup({ interpret: () => Promise.resolve({ ok: false, message: 'The local AI took too long to answer.' }) as never })
+    expect(await runTypedCommand('do the thing', deps)).toMatchObject({ ok: true, value: { reply: 'The local AI took too long to answer.' } })
+  })
+})

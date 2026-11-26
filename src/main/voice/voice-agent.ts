@@ -2,6 +2,9 @@ import { resolveOpen, searchUrl, type StartApp } from '../../shared/desktop-comm
 import { JOB_SITES, jobSearchUrl } from '../../shared/job-match'
 import { carryOut, isDataIntent, type VoiceApi } from '../../shared/voice-actions'
 import type { VoiceIntent } from '../../shared/voice-commands'
+import type { Result } from '../../shared/career'
+import type { Understood } from '../../shared/ai'
+import { intentFor } from './interpret'
 import { understand } from './understand'
 import type { VoiceOutcome } from '../../shared/ipc'
 import type { DesktopActions } from './desktop-actions'
@@ -19,6 +22,8 @@ export interface AgentDeps {
   actNow(): boolean
   /** Why the AI assistant cannot answer, or empty when it can. */
   aiBlocked(): string | Promise<string>
+  /** Asks the local AI what a request in your own words means. Left out where only commands should run. */
+  interpret?(text: string): Promise<Result<Understood>>
   logError(error: unknown): void
 }
 
@@ -144,7 +149,22 @@ async function act(intent: VoiceIntent, text: string, deps: AgentDeps): Promise<
         if (blocked) {
           return { heard: text, draft: text, reply: `I can't answer that yet, because the local AI is not ready. ${EXAMPLES}` }
         }
-        return { heard: text, ask: text, reply: 'Let me ask the assistant.' }
+        if (!deps.interpret) return { heard: text, ask: text, reply: 'Let me ask the assistant.' }
+        // Anything that is not a command is understood by the local AI, then carried out.
+        const result = await deps.interpret(text)
+        if (!result.ok) return { heard: text, reply: result.message }
+        const understood = result.value
+        if (understood.action === 'answer') return { heard: text, reply: understood.answer, answered: true }
+        if (understood.action.startsWith('add_')) {
+          return {
+            heard: text,
+            reply: `I suggested adding "${understood.target}". Accept it in the Assistant to save it.`,
+            suggested: true
+          }
+        }
+        const next = intentFor(understood, text, deps.today())
+        if (!next) return { heard: text, reply: `I'm not sure what to do with that. ${EXAMPLES}` }
+        return act(next, text, deps)
       }
     }
   } catch (error) {
