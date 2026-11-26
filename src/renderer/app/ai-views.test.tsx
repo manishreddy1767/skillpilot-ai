@@ -310,3 +310,51 @@ describe('SettingsView', () => {
     expect(screen.getByText(/failed/)).toBeTruthy()
   })
 })
+
+describe('the agent in the Assistant', () => {
+  it('works towards what you typed, and shows each step it took', async () => {
+    ready()
+    api().runAgent.mockResolvedValue({
+      ok: true,
+      value: {
+        answer: 'Power BI is your gap, so I suggested learning it.',
+        steps: [
+          { action: 'list_jobs', input: '', result: 'Data Analyst: 40% match, missing Power BI' },
+          { action: 'suggest_skill', input: 'Power BI', result: 'Suggested learning Power BI. It waits for approval.' }
+        ],
+        suggested: 1,
+        chat: [message(1, 'user', 'Get me ready'), message(2, 'assistant', 'Power BI is your gap, so I suggested learning it.')]
+      }
+    })
+    render(<AssistantView />)
+    await waitFor(() => expect(api().getAiStatus).toHaveBeenCalled())
+    fireEvent.change(screen.getByLabelText('Your message'), { target: { value: 'Get me ready' } })
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Let the agent do it' }).disabled).toBe(false))
+    click('Let the agent do it')
+    expect(await screen.findByText('Power BI is your gap, so I suggested learning it.')).toBeTruthy()
+    expect(screen.getByText('What the agent did (2 steps)')).toBeTruthy()
+    expect(screen.getByText('suggest skill')).toBeTruthy()
+    expect(screen.getByText('The agent made 1 suggestion. Review them below.')).toBeTruthy()
+    expect(api().runAgent).toHaveBeenCalledWith('Get me ready')
+    expect(api().sendChat).not.toHaveBeenCalled()
+  })
+
+  it('needs a goal and the local AI', async () => {
+    api().getAiStatus.mockResolvedValue({ ok: true, value: { provider: 'ollama', model: 'm', localModels: null, blocked: 'Ollama is not running.' } })
+    render(<AssistantView />)
+    fireEvent.change(screen.getByLabelText('Your message'), { target: { value: 'Plan' } })
+    await screen.findAllByText('Ollama is not running.')
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Let the agent do it' }).disabled).toBe(true)
+  })
+
+  it('shows an agent problem', async () => {
+    ready()
+    api().runAgent.mockResolvedValue({ ok: false, message: 'The local AI took too long to answer.' })
+    render(<AssistantView />)
+    await waitFor(() => expect(api().getAiStatus).toHaveBeenCalled())
+    fireEvent.change(screen.getByLabelText('Your message'), { target: { value: 'Plan' } })
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Let the agent do it' }).disabled).toBe(false))
+    click('Let the agent do it')
+    expect((await screen.findByRole('alert')).textContent).toContain('took too long')
+  })
+})
