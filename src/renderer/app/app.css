@@ -949,3 +949,103 @@ button.mic:disabled {
 .level-meter span:nth-child(3) { height: 65%; }
 .level-meter span:nth-child(4) { height: 85%; }
 .level-meter span:nth-child(5) { height: 100%; }
+
+/* Resume builder: editing beside a paper preview. */
+.resume-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .resume-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.resume-editor .field {
+  margin-bottom: 10px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--panel);
+}
+
+.chips button {
+  padding: 0 6px;
+  border-color: transparent;
+  background: transparent;
+}
+
+/* The preview is paper, as it will print. */
+.resume-preview {
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #ffffff;
+  color: #111111;
+  font: 10pt/1.4 'Calibri', 'Segoe UI', Arial, sans-serif;
+}
+
+.resume-preview.compact {
+  font-size: 9pt;
+}
+
+.resume-preview h1 {
+  display: block;
+  margin: 0;
+  color: #111111;
+  font: 600 16pt 'Calibri', 'Segoe UI', Arial, sans-serif;
+}
+
+.resume-preview h1::before {
+  content: none;
+}
+
+.resume-preview h2 {
+  margin: 10px 0 4px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #555555;
+  color: #111111;
+  font: 600 10pt 'Calibri', 'Segoe UI', Arial, sans-serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.resume-preview .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.resume-preview .sub,
+.resume-preview .headline,
+.resume-preview .contact {
+  margin: 0;
+  color: #333333;
+}
+
+.resume-preview ul {
+  margin: 2px 0 6px 18px;
+  padding: 0;
+}
+
+.resume-preview p {
+  margin: 0;
+}
