@@ -67,7 +67,7 @@ export interface Understood {
   /** For a job search. */
   site: 'linkedin' | 'naukri' | 'indeed' | 'foundit' | 'none'
   location: string
-  /** For "answer": the reply, already saved to the chat. */
+  /** Unused: questions are answered by the chat. */
   answer: string
 }
 

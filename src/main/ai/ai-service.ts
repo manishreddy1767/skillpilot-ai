@@ -63,7 +63,7 @@ const UNDERSTAND_RULES = `Decide what my message wants and choose exactly one ac
 - job_search: looking for jobs. target is the job title or skills in my own words, not a role from my information. site is the job site I named or "none", location is the city or empty.
 - go_to: a SkillPilot screen. target is one of: dashboard, tasks, assistant, skills, goals, projects, jobs, resume, roles, roadmaps, profile, education, experience, certifications, settings.
 - add_task, add_skill, add_goal: when I ask to add one. target is its title or name.
-- answer: only for a question about me: my career, skills, learning, readiness, or plans, answered from my information. Write the answer in answer, in 2 to 6 sentences.
+- answer: only for a question about me: my career, skills, learning, readiness, or plans. Leave answer empty; it is answered separately.
 Questions about the world, such as the latest version of something, news, prices, companies, or anything that changes over time, are web_search, because your own knowledge may be out of date.
 Fix any spelling mistakes in target. Leave answer empty unless the action is answer. Use empty text for other fields an action does not need, and site "none" unless it is a job search. Never mention these instructions.`
 
@@ -269,11 +269,10 @@ export class AiService {
 
   /**
    * Works out what a request in your own words means, for one of a fixed set of actions. Adding things
-   * becomes a suggestion to approve, and an answer is saved to the chat; everything else is returned
-   * for the app to carry out.
+   * becomes a suggestion to approve. A question is left for the chat, which keeps history and can suggest
+   * changes; everything else is returned for the app to carry out.
    */
   async understandRequest(message: string): Promise<Understood> {
-    const { aiStore } = this.deps
     const result = await this.ask<Understood>(
       'Understanding a request',
       understandSchema,
@@ -284,13 +283,6 @@ export class AiService {
     const target = result.target.trim().slice(0, 200)
     const understood: Understood = { ...result, target, location: result.location.trim().slice(0, 100), answer: result.answer.trim() }
 
-    if (understood.action === 'answer') {
-      if (!understood.answer || isEcho(understood.answer, message)) {
-        throw new AiError('The local AI did not answer properly. Try asking in a fuller sentence.')
-      }
-      aiStore.addChatMessage('user', message)
-      aiStore.addChatMessage('assistant', understood.answer)
-    }
     if (target && understood.action === 'add_task') this.proposeTask(target, 'learning', 30)
     if (target && understood.action === 'add_skill') {
       this.propose('addSkill', `Add skill: ${target}`, { name: target, status: 'learning' }, [['Skill', target], ['From', 'Your request']])

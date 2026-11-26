@@ -105,15 +105,9 @@ describe('understanding a request in your own words', () => {
     ])
   })
 
-  it('saves an answer to the chat', async () => {
-    const { ai, aiStore } = scripted([understood({ action: 'answer', answer: 'Not yet: prove React with a project first.' })])
-    await ai.understandRequest('am i ready for a frontend job?')
-    expect(aiStore.listChat().map((m) => m.content)).toEqual(['am i ready for a frontend job?', 'Not yet: prove React with a project first.'])
-  })
-
-  it('refuses an empty or echoed answer', async () => {
-    const { ai, aiStore } = scripted([understood({ action: 'answer', answer: 'am I ready?' })])
-    await expect(ai.understandRequest('am I ready?')).rejects.toThrow('did not answer properly')
+  it('leaves a question for the chat, saving nothing itself', async () => {
+    const { ai, aiStore } = scripted([understood({ action: 'answer' })])
+    await expect(ai.understandRequest('am i ready for a frontend job?')).resolves.toMatchObject({ action: 'answer' })
     expect(aiStore.listChat()).toEqual([])
   })
 })
