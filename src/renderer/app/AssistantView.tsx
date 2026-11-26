@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { ChatMessage } from '../../shared/ai'
+import type { AgentStep, ChatMessage } from '../../shared/ai'
 import type { VoiceStatus } from '../../shared/ipc'
 import type { SectionId } from '../../shared/voice-commands'
 import { RobotIcon } from '../RobotIcon'
@@ -52,6 +52,7 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
   const [note, setNote] = useState('')
   const [refresh, setRefresh] = useState(0)
   const [voice, setVoice] = useState<VoiceStatus>({ phase: 'idle' })
+  const [steps, setSteps] = useState<AgentStep[]>([])
   const waiting = useRef(false)
   const blocked = useAiBlocked()
 
@@ -107,6 +108,25 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
   const send = async (event: FormEvent): Promise<void> => {
     event.preventDefault()
     await ask(draft, false)
+  }
+
+  /** The agent works towards what you typed, step by step, and only suggests changes. */
+  const delegate = async (): Promise<void> => {
+    setBusy(true)
+    setError('')
+    setSteps([])
+    const result = await window.skillpilot.runAgent(draft)
+    setBusy(false)
+    if (!result.ok) return setError(result.message)
+    setMessages(result.value.chat)
+    setSteps(result.value.steps)
+    setDraft('')
+    setRefresh((value) => value + 1)
+    setNote(
+      result.value.suggested
+        ? `The agent made ${result.value.suggested} ${result.value.suggested === 1 ? 'suggestion' : 'suggestions'}. Review them below.`
+        : ''
+    )
   }
 
   const listening = voice.phase === 'starting' || voice.phase === 'listening'
@@ -186,6 +206,20 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
         ))}
       </ul>
 
+      {steps.length ? (
+        <details className="sent" open>
+          <summary>What the agent did ({steps.length} {steps.length === 1 ? 'step' : 'steps'})</summary>
+          <ol className="agent-steps">
+            {steps.map((step, index) => (
+              <li key={index}>
+                <strong>{step.action.replace(/_/g, ' ')}</strong>
+                {step.input ? ` "${step.input}"` : ''}: <span className="muted">{step.result}</span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      ) : null}
+
       <ProposalList refresh={refresh} />
 
       <form onSubmit={(event) => void send(event)}>
@@ -215,6 +249,14 @@ export function AssistantView({ onNavigate = () => undefined, pendingAsk = null,
           </button>
           <button type="submit" className="primary" disabled={busy || !draft.trim() || Boolean(blocked)}>
             {busy ? 'Thinking…' : 'Send'}
+          </button>
+          <button
+            type="button"
+            title="The agent looks things up and suggests tasks, skills, and goals for you to approve"
+            disabled={busy || !draft.trim() || Boolean(blocked)}
+            onClick={() => void delegate()}
+          >
+            Let the agent do it
           </button>
         </div>
         <p className="voice-state" role="status">
