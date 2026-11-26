@@ -44,7 +44,8 @@ import { createResumeHandlers } from './resume/resume-handlers'
 import { createDesktopActions, type DesktopActions } from './voice/desktop-actions'
 import { SpeechHost } from './voice/speech-host'
 import { START_APPS_SCRIPT, StartApps } from './voice/start-apps'
-import { respond } from './voice/voice-agent'
+import { respond, type AgentDeps } from './voice/voice-agent'
+import { runTypedCommand } from './voice/typed-command'
 import { VoiceController } from './voice/voice-controller'
 
 const PANEL_GAP = 8
@@ -422,6 +423,26 @@ function start(): void {
     panelTalking = false
     hover.release()
   }
+  /** How spoken and typed commands are carried out, shared so both always behave the same. */
+  const commandDeps: AgentDeps = {
+    data: {
+      listRecords: (kind) => handlers.listRecords(kind),
+      saveRecord: (kind, id, values) => handlers.saveRecord(kind, id, values),
+      completeTask: (id) => handlers.completeTask(id)
+    },
+    desktop,
+    apps: () => startApps.get(),
+    today: () => localDate(new Date()),
+    now: () => new Date(),
+    actNow: () => data.aiStore?.getSettings()['voiceActNow'] !== 'off',
+    aiBlocked: async () => {
+      const status = await aiHandlers.getAiStatus()
+      return status.ok ? status.value.blocked : status.message
+    },
+    logError
+  }
+  ipcMain.handle(Channel.RunCommand, fromApp((text: unknown) => runTypedCommand(text, commandDeps)))
+
   const voice = new VoiceController({
     host: {
       listen: (...args) => speech.listen(...args),
@@ -433,23 +454,7 @@ function start(): void {
     },
     respond: async (heard) => {
       await teachSpeech()
-      return respond(heard, {
-        data: {
-          listRecords: (kind) => handlers.listRecords(kind),
-          saveRecord: (kind, id, values) => handlers.saveRecord(kind, id, values),
-          completeTask: (id) => handlers.completeTask(id)
-        },
-        desktop,
-        apps: () => startApps.get(),
-        today: () => localDate(new Date()),
-        now: () => new Date(),
-        actNow: () => data.aiStore?.getSettings()['voiceActNow'] !== 'off',
-        aiBlocked: async () => {
-          const status = await aiHandlers.getAiStatus()
-          return status.ok ? status.value.blocked : status.message
-        },
-        logError
-      })
+      return respond(heard, commandDeps)
     },
     language: () => data.aiStore?.getSettings()['voiceLanguage'] ?? 'en-US',
     speakReplies: () => data.aiStore?.getSettings()['voiceReplies'] !== 'off',
