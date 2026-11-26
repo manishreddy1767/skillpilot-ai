@@ -147,7 +147,10 @@ const SITE_WORDS = Object.keys(JOB_SITE_NAMES).join('|')
  */
 export function parseJobSearch(text: string): VoiceIntent | null {
   const named = text.match(new RegExp(`^(?:search|find|look for)(?: on)? (${SITE_WORDS}) for (.+)$`))
-  const plain = text.match(new RegExp(`^(?:search(?: for)?|find(?: me)?|look for|show me) (.+?) (?:jobs?|openings|vacancies|job openings)(?: (?:in|at|near) (.+?))?(?: on (${SITE_WORDS}))?$`))
+  // Everyday ways of asking too, such as "i want to see react jobs near pune" or "are there any python jobs".
+  const asking =
+    'search(?: for)?|find(?: me)?|look for|show me|i want(?: to see)?|i(?:\'m| am) looking for|looking for|get me|are there(?: any)?|any'
+  const plain = text.match(new RegExp(`^(?:${asking}) (?:some |any )?(.+?) (?:jobs?|openings|vacancies|job openings)(?: (?:in|at|near|around) (.+?))?(?: on (${SITE_WORDS}))?$`))
   if (!named && !plain) return null
   let site: JobSite = 'linkedin'
   let rest = ''

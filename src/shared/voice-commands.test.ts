@@ -132,7 +132,10 @@ describe('desktop commands', () => {
     ['find data analyst jobs on indeed', { site: 'indeed', keywords: 'data analyst', location: '' }],
     ['find me java developer jobs in bengaluru', { site: 'linkedin', keywords: 'java developer', location: 'bengaluru' }],
     ['search for python jobs near hyderabad on naukri', { site: 'naukri', keywords: 'python', location: 'hyderabad' }],
-    ['look for fresher openings on foundit', { site: 'foundit', keywords: 'fresher', location: '' }]
+    ['look for fresher openings on foundit', { site: 'foundit', keywords: 'fresher', location: '' }],
+    ['i want to see react jobs near pune', { site: 'linkedin', keywords: 'react', location: 'pune' }],
+    ["i'm looking for python jobs in hyderabad on naukri", { site: 'naukri', keywords: 'python', location: 'hyderabad' }],
+    ['are there any data analyst jobs around bengaluru', { site: 'linkedin', keywords: 'data analyst', location: 'bengaluru' }]
   ])('"%s" searches a job site', (text, search) => {
     expect(parse(text)).toEqual({ kind: 'jobSearch', ...search })
   })
