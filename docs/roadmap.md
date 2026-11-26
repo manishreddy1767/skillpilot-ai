@@ -151,6 +151,12 @@ These milestones cover parts of the original brief that 1.0 left thin, and gaps 
 - The local AI works towards a goal with SkillPilot's own tools, suggesting changes for approval
 - Tested against the real qwen3:4b, which found and fixed five problems; version 2.0.0
 
+### M18: Ask anything, complete
+
+- Typed commands work like spoken ones, even with the AI off
+- Spelling mistakes corrected, like a search engine's "did you mean"
+- Requests in your own words understood by the local AI and carried out; version 2.1.0
+
 ## Testing
 
 Every feature ships with unit tests and integration tests, and they must pass before it counts as
