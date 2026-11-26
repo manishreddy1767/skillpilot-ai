@@ -292,6 +292,7 @@ function start(): void {
   ipcMain.handle(Channel.GetAiStatus, fromApp(aiHandlers.getAiStatus))
   ipcMain.handle(Channel.GetChat, fromApp(aiHandlers.getChat))
   ipcMain.handle(Channel.SendChat, fromApp(aiHandlers.sendChat))
+  ipcMain.handle(Channel.RunAgent, fromApp(aiHandlers.runAgent))
   ipcMain.handle(Channel.ClearChat, fromApp(aiHandlers.clearChat))
   ipcMain.handle(Channel.GetGapAnalysis, fromApp(aiHandlers.getGapAnalysis))
   ipcMain.handle(Channel.DraftRequirements, fromApp(aiHandlers.draftRequirements))
