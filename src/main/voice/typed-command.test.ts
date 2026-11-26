@@ -59,6 +59,15 @@ describe('typed commands', () => {
     expect(await runTypedCommand('open my skills', deps)).toMatchObject({ ok: true, value: { navigate: 'skills' } })
   })
 
+  it('understands misspelled commands, and says how it read them', async () => {
+    const { deps, desktop } = setup()
+    expect(await runTypedCommand('opne naukari', deps)).toEqual({
+      ok: true,
+      value: { heard: 'opne naukari', reply: 'I read that as "open naukri". Opening Naukri.' }
+    })
+    expect(desktop.openUrl).toHaveBeenCalledWith('https://www.naukri.com', undefined)
+  })
+
   it('passes anything else to the AI, untouched', async () => {
     const { deps, desktop } = setup()
     expect(await runTypedCommand('  Am I ready for a junior role?  ', deps)).toEqual({
