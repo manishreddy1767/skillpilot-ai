@@ -80,6 +80,4 @@ Memory is the known cost of Electron. See [ADR 0001](decisions/0001-electron-des
   fixed and covered by tests: echoed questions, unchanged resume wording, duplicate requirements, a looping
   agent, and leaked instructions. Answers can still be vague or slightly embellished, which is why every
   change waits for approval.
-- **Pushing to GitHub needs signing in again.** The saved GitHub sign-in on this laptop expired during
-  this work, so the latest commits are local until it is renewed.
 - **Unsigned installer.** Windows SmartScreen warns on first run. See [Windows limits](architecture/windows-limits.md).
