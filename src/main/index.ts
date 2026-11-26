@@ -439,6 +439,7 @@ function start(): void {
       const status = await aiHandlers.getAiStatus()
       return status.ok ? status.value.blocked : status.message
     },
+    interpret: (text) => aiHandlers.understandRequest(text),
     logError
   }
   ipcMain.handle(Channel.RunCommand, fromApp((text: unknown) => runTypedCommand(text, commandDeps)))
