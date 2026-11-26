@@ -302,6 +302,28 @@ describe('AiService', () => {
   })
 })
 
+describe('drafting role requirements', () => {
+  it('uses usual names, once each, and skips ones the role already lists', async () => {
+    const { ai, store, aiStore } = service({
+      requirements: [
+        { skillName: 'Git', requiredLevel: 2, importance: 2 },
+        { skillName: 'Version Control', requiredLevel: 2, importance: 2 },
+        { skillName: 'ReactJS', requiredLevel: 3, importance: 3 },
+        { skillName: 'API Integration', requiredLevel: 2, importance: 2 },
+        { skillName: 'HTML5', requiredLevel: 3, importance: 3 }
+      ]
+    })
+    const role = store.saveRecord('targetRole', null, { title: 'Frontend Developer' })!
+    store.saveRecord('roleRequirement', null, { skillName: 'html', requiredLevel: '3', importance: '3' }, role.id)
+    expect(await ai.draftRequirements(role.id)).toBe(3)
+    expect(aiStore.listProposals().map((p) => p.summary)).toEqual([
+      'Add requirement: Git',
+      'Add requirement: React',
+      'Add requirement: REST APIs'
+    ])
+  })
+})
+
 describe('resume wording', () => {
   const resume = {
     name: 'Asha',

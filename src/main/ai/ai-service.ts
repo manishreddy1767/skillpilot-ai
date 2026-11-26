@@ -3,6 +3,7 @@ import { AGENT_TOOLS, runAgentTool, type AgentTool } from './agent-tools'
 import { recordFields, validateFields, type FieldValues } from '../../shared/career'
 import { analyseGap } from '../../shared/gap'
 import { addsUnclaimedSkill, type ResumeData, type ResumeSuggestion } from '../../shared/resume'
+import { canonicalSkillName } from '../../shared/skills-library'
 import { buildDashboard } from '../../shared/progress'
 import type { CareerStore } from '../db/career-store'
 import type { AiStore } from './ai-store'
@@ -256,22 +257,31 @@ requiredLevel is 1 to 5 for an entry-level hire at this role, importance is 1 ni
       }
     ])
 
+    // Usual names, once each: "Version Control" and "Git" are one requirement, and listed ones are skipped.
+    const seen = new Set(
+      this.deps.store.listRecords('roleRequirement', roleId).map((item) => canonicalSkillName(item.values['skillName'] ?? '').toLowerCase())
+    )
+    let proposed = 0
     for (const item of requirements) {
+      const skillName = canonicalSkillName(item.skillName)
+      if (!skillName || seen.has(skillName.toLowerCase())) continue
+      seen.add(skillName.toLowerCase())
       const requiredLevel = String(clamp(item.requiredLevel, 1, 5))
       const importance = String(clamp(item.importance, 1, 3))
       this.propose(
         'addRoleRequirement',
-        `Add requirement: ${item.skillName}`,
-        { roleId, skillName: item.skillName, requiredLevel, importance },
+        `Add requirement: ${skillName}`,
+        { roleId, skillName, requiredLevel, importance },
         [
           ['Role', title],
-          ['Skill', item.skillName],
+          ['Skill', skillName],
           ['Level needed', requiredLevel],
           ['Importance', `${importance} of 3`]
         ]
       )
+      proposed++
     }
-    return requirements.length
+    return proposed
   }
 
   async gapReport(roleId: number): Promise<GapReport> {
