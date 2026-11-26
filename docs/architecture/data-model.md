@@ -43,6 +43,10 @@ and can always be traced back to the evidence behind it.
 | AI | `chat_message`, `proposed_change`, `ai_request` |
 | App | `setting`, `notification_log` |
 | History | `progress_snapshot`, one row a day with overall progress and each skill's levels |
+| Jobs | `job`, saved by hand or from an imported page, with its description and status |
+| Resumes | `resume`, saved versions as JSON, each for a job or general, the newest ten kept per job |
+
+The database is at version 7. Jobs and resumes arrived in version 7, and a job's resumes are removed with it.
 
 `milestone` serves both goals and projects. Skills and evidence link to projects so that finishing a
 project feeds straight into skill and goal progress.
