@@ -74,7 +74,12 @@ export async function respond(heard: Heard, deps: AgentDeps): Promise<VoiceOutco
       case 'open': {
         const target = resolveOpen(intent.target, await deps.apps(), intent.browser)
         if (!target) {
-          return { heard: text, reply: `I couldn't find an app, website, or folder called "${intent.target}".` }
+          // A name it does not know is searched for, so "open" always does something useful.
+          if (!/^[a-z0-9 .'-]{2,60}$/i.test(intent.target)) {
+            return { heard: text, reply: `I couldn't find an app, website, or folder called "${intent.target}".` }
+          }
+          const note = await deps.desktop.openUrl(searchUrl(intent.target, 'google'), intent.browser)
+          return { heard: text, reply: `I don't know an app or site called "${intent.target}", so I searched Google for it.${note}` }
         }
         switch (target.type) {
           case 'app':

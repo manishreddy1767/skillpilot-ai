@@ -143,11 +143,26 @@ describe('respond', () => {
     expect(desktop.openWindowsSettings).toHaveBeenCalled()
   })
 
-  it('says when it cannot find what to open', async () => {
-    const { deps } = setup()
+  it('opens Naukri and other Indian job sites by name', async () => {
+    const { deps, desktop } = setup()
+    for (const [said, url] of [
+      ['open naukri', 'https://www.naukri.com'],
+      ['open indeed', 'https://in.indeed.com'],
+      ['open internshala', 'https://internshala.com'],
+      ['open foundit', 'https://www.foundit.in']
+    ]) {
+      await respond(command(said), deps)
+      expect(desktop.openUrl).toHaveBeenLastCalledWith(url, undefined)
+    }
+    await expect(respond(command('open naukri in chrome'), deps)).resolves.toMatchObject({ reply: 'Opening Naukri in Chrome.' })
+  })
+
+  it('searches Google for a name it does not know, rather than doing nothing', async () => {
+    const { deps, desktop } = setup()
     await expect(respond(command('open the pod bay doors'), deps)).resolves.toMatchObject({
-      reply: 'I couldn\'t find an app, website, or folder called "pod bay doors".'
+      reply: 'I don\'t know an app or site called "pod bay doors", so I searched Google for it.'
     })
+    expect(desktop.openUrl).toHaveBeenCalledWith('https://www.google.com/search?q=pod%20bay%20doors', undefined)
   })
 
   it('changes the volume and locks the computer', async () => {
