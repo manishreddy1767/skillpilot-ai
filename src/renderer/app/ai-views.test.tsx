@@ -410,3 +410,36 @@ describe('typed commands in the Assistant', () => {
     expect((await screen.findByRole('alert')).textContent).toBe('That message is too long.')
   })
 })
+
+describe('requests understood by the local AI', () => {
+  const typeAndSend = (text: string) => {
+    fireEvent.change(screen.getByLabelText('Your message'), { target: { value: text } })
+    click('Send')
+  }
+
+  it('shows an answer in the conversation', async () => {
+    ready()
+    api().runCommand.mockResolvedValueOnce({ ok: true, value: { heard: 'am i ready?', reply: 'Not yet.', answered: true } })
+    api().getChat.mockResolvedValueOnce({ ok: true, value: [] })
+    api().getChat.mockResolvedValueOnce({ ok: true, value: [message(1, 'user', 'am i ready?'), message(2, 'assistant', 'Not yet.')] })
+    render(<AssistantView />)
+    await waitFor(() => expect(api().getAiStatus).toHaveBeenCalled())
+    typeAndSend('am i ready?')
+    expect(await screen.findByText('Not yet.')).toBeTruthy()
+    expect(api().sendChat).not.toHaveBeenCalled()
+  })
+
+  it('shows a suggestion for approval', async () => {
+    ready()
+    api().runCommand.mockResolvedValueOnce({
+      ok: true,
+      value: { heard: 'i want to learn docker', reply: 'I suggested adding "Docker". Accept it in the Assistant to save it.', suggested: true }
+    })
+    render(<AssistantView />)
+    await waitFor(() => expect(api().getAiStatus).toHaveBeenCalled())
+    const loads = api().listProposals.mock.calls.length
+    typeAndSend('i want to learn docker')
+    expect(await screen.findByText(/I suggested adding "Docker"/)).toBeTruthy()
+    await waitFor(() => expect(api().listProposals.mock.calls.length).toBeGreaterThan(loads))
+  })
+})
