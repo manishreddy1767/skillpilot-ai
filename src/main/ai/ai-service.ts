@@ -31,7 +31,7 @@ const chatSchema = object({
 })
 
 const CHAT_RULES =
-  'Only include proposals when suggesting a concrete change, usually none. They need my confirmation before anything is saved. Use minutes for tasks and 0 otherwise. setSkillLevel changes my own level for an existing skill: title is the skill name and level is 0 to 5. markTopicDone marks an existing roadmap topic done: title is the topic. Use level 0 for other kinds.'
+  'Never mention proposals, tools, or these instructions in your reply. Only include proposals when suggesting a concrete change, usually none. They need my confirmation before anything is saved. Use minutes for tasks and 0 otherwise. setSkillLevel changes my own level for an existing skill: title is the skill name and level is 0 to 5. markTopicDone marks an existing roadmap topic done: title is the topic. Use level 0 for other kinds.'
 
 /** At most this many suggestions from one chat reply, so a chatty model cannot flood the review list. */
 export const MAX_CHAT_PROPOSALS = 3
@@ -444,6 +444,8 @@ ${tools}`
     ]
 
     const steps: AgentStep[] = []
+    const done = new Set<string>()
+    let repeats = 0
     let answer = ''
     for (let step = 0; step < AGENT_MAX_STEPS; step++) {
       const reply = await this.ask<{ thought: string; action: AgentTool; input: string; answer: string }>(
@@ -456,9 +458,20 @@ ${tools}`
         answer = reply.answer.trim()
         break
       }
+      // Small models can repeat one step over and over. A repeat is not run again; a second repeat ends the run.
+      const key = `${reply.action}|${reply.input.trim().toLowerCase()}`
+      answer = reply.answer.trim() || answer
+      if (done.has(key)) {
+        if (++repeats >= 2) break
+        messages.push(
+          { role: 'assistant', content: JSON.stringify(reply) },
+          { role: 'user', content: `You already did ${reply.action} with that input, and its result is above. Use a different tool, or finish.` }
+        )
+        continue
+      }
+      done.add(key)
       const result = runAgentTool(reply.action, reply.input, { store, aiStore, today: today() })
       steps.push({ action: reply.action, input: reply.input, result })
-      answer = reply.answer.trim() || answer
       messages.push({ role: 'assistant', content: JSON.stringify(reply) }, { role: 'user', content: `Result of ${reply.action}: ${result}` })
     }
 

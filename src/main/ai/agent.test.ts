@@ -59,11 +59,31 @@ describe('the agent', () => {
   })
 
   it(`stops after ${AGENT_MAX_STEPS} steps, so a confused model cannot loop forever`, async () => {
-    const { agent, complete } = scripted([step('list_skills')])
+    const { agent, complete } = scripted(
+      ['Data Analyst', 'Frontend Developer', 'DevOps Engineer', 'QA Engineer', 'Cloud Engineer', 'SDET', 'iOS Developer'].map((role) =>
+        step('role_gap', role)
+      )
+    )
     const run = await agent.runAgent('Loop please')
     expect(complete).toHaveBeenCalledTimes(AGENT_MAX_STEPS)
     expect(run.steps).toHaveLength(AGENT_MAX_STEPS)
     expect(run.answer).toBe('I looked into it but had nothing useful to suggest.')
+  })
+
+  it('does not run a repeated step again, and stops if the model keeps repeating', async () => {
+    const { agent, complete } = scripted([step('list_jobs'), step('list_jobs'), step('list_jobs'), step('list_skills')])
+    const run = await agent.runAgent('Help')
+    expect(run.steps.map((s) => s.action)).toEqual(['list_jobs'])
+    expect(complete).toHaveBeenCalledTimes(3)
+    const nudge = (complete.mock.calls[2] as unknown as [{ messages: { content: string }[] }])[0].messages.at(-1)!.content
+    expect(nudge).toBe('You already did list_jobs with that input, and its result is above. Use a different tool, or finish.')
+  })
+
+  it('moves on when nudged after one repeat', async () => {
+    const { agent } = scripted([step('list_jobs'), step('list_jobs'), step('list_skills'), step('finish', '', 'Done.')])
+    const run = await agent.runAgent('Help')
+    expect(run.steps.map((s) => s.action)).toEqual(['list_jobs', 'list_skills'])
+    expect(run.answer).toBe('Done.')
   })
 
   it('writes an answer when the model gives none', async () => {
