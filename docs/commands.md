@@ -36,13 +36,15 @@ Codeforces, Kaggle, Coursera, Udemy, NPTEL, SWAYAM, W3Schools, MDN, YouTube, Gma
 |---|---|
 | open my skills, go to tasks, open my resume, open jobs | Opens that screen |
 | add task read the guide tomorrow, remind me to call the mentor on friday | Adds a task for that day |
+| remind me to call the mentor at 5 pm tomorrow | Adds the task with a reminder: a Windows notification at 5 pm |
 | add skill docker, i'm learning typescript | Adds a skill |
 | set a goal to get a junior role | Adds a goal |
 | mark the guide as done, i finished practise sql | Ticks off the one task that matches |
 | what's due today | Lists today's and overdue tasks |
 | minimise | Hides the app to the widget |
 
-Days for tasks can be today, tomorrow, a weekday, next Monday, next week, or "in 3 days".
+Days for tasks can be today, tomorrow, a weekday, next Monday, next week, or "in 3 days". Reminder times can be "at 5 pm", "at 9:30 am", or "at 17:30"; a bare "at 5" means 5 pm.
+Reminders need **Reminders I set on tasks** on in Settings → Notifications, which it is by default.
 
 ## Your computer
 
