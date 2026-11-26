@@ -60,7 +60,7 @@ const UNDERSTAND_RULES = `Decide what my message wants and choose exactly one ac
 - open: open an app, website, or folder. target is its name, such as "naukri", "youtube", "vs code", or "downloads".
 - youtube_search: videos, songs, or music of any kind. target is the search query.
 - web_search: anything else needing up-to-date or general information from the internet, such as news, weather, prices, people, places, or how-to guides. target is a short search query, without dates unless I gave one.
-- job_search: looking for jobs. target is the job title or skills, site is the job site named or "none", location is the city or empty.
+- job_search: looking for jobs. target is the job title or skills in my own words, not a role from my information. site is the job site I named or "none", location is the city or empty.
 - go_to: a SkillPilot screen. target is one of: dashboard, tasks, assistant, skills, goals, projects, jobs, resume, roles, roadmaps, profile, education, experience, certifications, settings.
 - add_task, add_skill, add_goal: when I ask to add one. target is its title or name.
 - answer: only for a question about me: my career, skills, learning, readiness, or plans, answered from my information. Write the answer in answer, in 2 to 6 sentences.
