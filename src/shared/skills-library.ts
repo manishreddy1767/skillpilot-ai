@@ -95,7 +95,7 @@ export const LIBRARY_SKILLS: LibrarySkill[] = [
   s('Flask', [], 'technical', ['Python'], 'Flask Mega-Tutorial', 'Build a small web app with Flask and SQLite'),
   s('FastAPI', [], 'technical', ['Python'], 'FastAPI tutorial', 'Build a typed REST API with FastAPI and tests'),
   s('.NET', ['asp.net', 'asp.net core', 'dotnet', '.net core', 'entity framework'], 'technical', ['C#'], 'Microsoft Learn ASP.NET Core path', 'Build a Web API with ASP.NET Core and Entity Framework'),
-  s('REST APIs', ['restful', 'rest api', 'restful apis', 'restful services', 'web services'], 'technical', [], 'MDN HTTP; Microsoft REST API guidelines', 'Design and document an API with OpenAPI'),
+  s('REST APIs', ['restful', 'rest api', 'restful apis', 'restful services', 'web services', 'api integration', 'api development'], 'technical', [], 'MDN HTTP; Microsoft REST API guidelines', 'Design and document an API with OpenAPI'),
   s('GraphQL', [], 'technical', ['REST APIs'], 'How to GraphQL', 'Add a GraphQL endpoint to an existing API'),
   s('Microservices', ['microservice architecture', 'micro services'], 'technical', ['REST APIs', 'Docker'], 'Building Microservices (Newman)', 'Split a monolith app into two services with a message queue'),
   s('Kafka', ['apache kafka', 'rabbitmq', 'message queues'], 'tool', ['Microservices'], 'Confluent Kafka 101', 'Stream events between two services with Kafka'),
